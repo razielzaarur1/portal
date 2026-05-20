@@ -342,6 +342,7 @@
                 const res = await fetch('grade_calc/courses.json?t=' + new Date().getTime());
                 baseCourses = await res.json();
                 
+                sessionStorage.removeItem('adminMode');
                 const tz = localStorage.getItem('student_tz');
                 if (tz) {
                     await loadUserData(tz);
