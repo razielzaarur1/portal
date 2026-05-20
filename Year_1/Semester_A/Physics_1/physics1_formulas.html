@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>דף נוסחאות פיזיקה 1 - רזיאל זערור</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            font-size: 13px; 
+            margin: 0; 
+            padding: 15px; 
+            background: #f4f6f7; 
+            color: #000; 
+        }
+        
+        /* כפתור חזרה שהוספנו */
+        .back-btn {
+            display: inline-block;
+            text-decoration: none;
+            background: #2c3e50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        h1 { text-align: center; border-bottom: 3px solid #000; font-size: 22px; margin-bottom: 20px; padding-bottom: 5px; }
+        h2 { background: #f0f0f0; padding: 4px 8px; border-right: 4px solid #333; font-size: 16px; margin-top: 15px; margin-bottom: 8px; font-weight: bold; }
+        
+        .container { 
+            column-count: 2; 
+            column-gap: 25px; 
+            column-rule: 1px solid #ccc; 
+            margin-bottom: 20px;
+        }
+        
+        /* התאמה למובייל - עמודה אחת במקום שתיים */
+        @media (max-width: 600px) {
+            .container {
+                column-count: 1;
+            }
+        }
+        
+        .box { 
+            break-inside: avoid; 
+            margin-bottom: 20px; 
+            border: 1px solid #e0e0e0; 
+            padding: 8px; 
+            border-radius: 6px; 
+            background-color: #fafafa;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 5px; background: #fff; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: center; } 
+        th { background-color: #eaeaea; font-weight: bold; }
+        td:first-child { text-align: right; font-weight: bold; width: 30%; }
+
+        .note { font-size: 11px; color: #666; margin-top: 2px; }
+        .highlight { border: 2px solid #000; padding: 5px; margin: 5px 0; text-align: center; background: #fff; font-weight: bold; }
+        .ltr { direction: ltr; display: inline-block; }
+
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #000;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<a href="index.html" class="back-btn">← חזרה לראשי</a>
+
+<h1>דף נוסחאות פיזיקה 1</h1>
+
+<div class="container">
+
+    <div class="box">
+        <h2>קבועים ותחיליות</h2>
+        <table>
+            <tr><th>שם</th><th>סימון</th><th>ערך/חזקה</th></tr>
+            <tr><td>Giga</td><td>$G$</td><td>$10^9$</td></tr>
+            <tr><td>Mega</td><td>$M$</td><td>$10^6$</td></tr>
+            <tr><td>Kilo</td><td>$k$</td><td>$10^3$</td></tr>
+            <tr><td>Milli</td><td>$m$</td><td>$10^{-3}$</td></tr>
+            <tr><td>Micro</td><td>$\mu$</td><td>$10^{-6}$</td></tr>
+            <tr><td>Nano</td><td>$n$</td><td>$10^{-9}$</td></tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>וקטורים ומתמטיקה</h2>
+        <div style="margin-bottom: 5px;"><strong>וקטור יחידה:</strong> <span class="ltr">$\hat{A} = \frac{\vec{A}}{|\vec{A}|}$</span></div>
+        
+        <h3>מכפלה סקלרית (תוצאה סקלר)</h3>
+        <div class="ltr" style="text-align: center;">
+            $\vec{A}\cdot\vec{B} = |A||B|\cos\alpha = A_xB_x + A_yB_y + A_zB_z$
+        </div>
+
+        <h3>מכפלה וקטורית (תוצאה וקטור)</h3>
+        <div class="ltr" style="text-align: center;">
+            $|\vec{A}\times\vec{B}| = |A||B|\sin\alpha$
+        </div>
+        <div class="ltr" style="text-align: center; font-size: 12px; margin-top: 5px;">
+            $\vec{A}\times\vec{B} = \begin{vmatrix} \hat{x} & \hat{y} & \hat{z} \\ A_x & A_y & A_z \\ B_x & B_y & B_z \end{vmatrix}$
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>קינמטיקה</h2>
+        <h3>וקטורים וחדו"א</h3>
+        <div style="text-align: center;">
+            <span class="ltr">$\vec{r}(t) = \vec{r}_0 + \int \vec{v} dt$</span><br>
+            <span class="ltr">$\vec{v}(t) = \vec{v}_0 + \int \vec{a} dt$</span>
+        </div>
+        
+        <h3>תאוצה במרחב</h3>
+        <table>
+            <tr><td>וקטור תאוצה</td><td class="ltr">$\vec{a} = \vec{a}_T + \vec{a}_N$</td></tr>
+            <tr><td>גודל משיקית</td><td class="ltr">$a_T = \frac{\vec{a}\cdot\vec{v}}{|\vec{v}|}$</td></tr>
+            <tr><td>גודל נורמלית</td><td class="ltr">$a_N = \sqrt{|\vec{a}|^2 - a_T^2} = \frac{v^2}{R}$</td></tr>
+        </table>
+
+        <h3>תאוצה קבועה (1D)</h3>
+        <div style="text-align: center; line-height: 1.6;">
+            <span class="ltr">$v(t) = v_0 + at$</span><br>
+            <span class="ltr">$x(t) = x_0 + v_0t + \frac{1}{2}at^2$</span><br>
+            <span class="ltr">$v^2 = v_0^2 + 2a\Delta x$</span>
+        </div>
+
+        <h3>תנועה יחסית</h3>
+        <div class="ltr" style="text-align:center;">$\vec{r} = \vec{r}' + \vec{u}t, \quad \vec{v} = \vec{v}' + \vec{u}$</div>
+        <div class="note" style="text-align:center;">($\vec{u}$ מהירות המערכת, ' מסמן יחסי)</div>
+    </div>
+
+    <div class="box">
+        <h2>דינמיקה (חוקי ניוטון)</h2>
+        
+        <div style="margin-bottom: 5px;"><strong>חוק שני (כללי - מסה משתנה):</strong></div>
+        <div class="highlight ltr">
+            $\sum \vec{F} = \frac{d\vec{p}}{dt} = m\vec{a} + \vec{v}\frac{dm}{dt}$
+        </div>
+        <div class="note">עבור מסה קבועה: $\sum \vec{F} = m\vec{a}$</div>
+
+        <div style="margin-top:10px;"><strong>חוק שלישי:</strong> $\vec{F}_{1,2} = -\vec{F}_{2,1}$</div>
+        
+        <h3>כוחות מיוחדים</h3>
+        <table>
+            <tr>
+                <td><strong>כוח גרר</strong></td>
+                <td class="ltr">$F_D = \frac{1}{2} C \rho A v^2$</td>
+            </tr>
+            <tr>
+                <td><strong>חיכוך</strong></td>
+                <td>$f_s \leq \mu_s N$ (סטטי)<br>$f_k = \mu_k N$ (קינטי)</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>עבודה ואנרגיה</h2>
+        
+        <div><strong>הגדרת עבודה:</strong> <span class="ltr">$W = \int \vec{F} \cdot d\vec{r}$</span></div>
+        <div><strong>הגדרת פוטנציאל:</strong> <span class="ltr">$E_p(\vec{r}) = -\int_{\vec{r}_0}^{\vec{r}} \vec{F}_{cons} \cdot d\vec{r}$</span></div>
+        
+        <div style="margin-top: 8px;"><strong>אנרגיות:</strong></div>
+        <ul>
+            <li>קינטית: <span class="ltr">$E_k = \frac{1}{2}mv^2$</span></li>
+            <li>כובדית: <span class="ltr">$E_p = mgh$</span></li>
+            <li>קפיץ: <span class="ltr">$E_{sp} = \frac{1}{2}k(\Delta x)^2$</span></li>
+        </ul>
+
+        <h3>חוק שימור אנרגיה</h3>
+        <div class="highlight ltr">
+            $W_{nc} = \Delta E_{mech} = E_f - E_i$
+        </div>
+        <div class="note">
+            $E_{mech} = E_k + E_p$
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>מתקף ותנע</h2>
+        <div style="margin-bottom: 5px;"><strong>מתקף:</strong> $\vec{J} = \Delta \vec{p} = \int \vec{F} dt$</div>
+        <div style="margin-bottom: 5px;"><strong>שימור תנע:</strong> $\sum \vec{F}_{ext} = 0 \Rightarrow \vec{p} = \text{const}$</div>
+        
+        <h3>מרכז מסה (CM)</h3>
+        <div class="ltr" style="text-align: center;">
+            $\vec{r}_{cm} = \frac{\sum m_i \vec{r}_i}{\sum m_i}, \quad \vec{r}_{cm} = \frac{1}{M}\int \vec{r} dm$
+        </div>
+        <div class="ltr" style="text-align: center; margin-top:3px;">
+            $\vec{F}_{ext} = M\vec{a}_{cm}$
+        </div>
+
+        <h3>התנגשויות ($e$)</h3>
+        <div style="direction:ltr; text-align:center;">$e = -\frac{v_{1f} - v_{2f}}{v_{1i} - v_{2i}}$</div>
+        <table>
+            <tr><th>סוג</th><th>e</th><th>נשמר</th></tr>
+            <tr><td><strong>אלסטית</strong></td><td>$1$</td><td>תנע + אנרגיה</td></tr>
+            <tr><td><strong>אי-אלסטית</strong></td><td>$0..1$</td><td>תנע בלבד</td></tr>
+            <tr><td><strong>פלסטית</strong></td><td>$0$</td><td>תנע (נדבקים)</td></tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>גוף קשיח</h2>
+        <div class="ltr" style="text-align:center;">$\vec{v} = \vec{\omega} \times \vec{r}, \quad \vec{a} = \vec{\alpha} \times \vec{r} + \vec{\omega} \times (\vec{\omega} \times \vec{r})$</div>
+        
+        <h3>מומנט התמד (Inertia)</h3>
+        <div class="ltr" style="text-align:center;">$I = \sum m_i r_i^2, \quad I = \int r^2 dm$</div>
+        <div><strong>משפט שטיינר:</strong> <span class="ltr">$I = I_{cm} + Md^2$</span></div>
+
+        <table style="font-size: 11px;">
+            <tr><th>גוף</th><th>ציר</th><th class="ltr">I</th></tr>
+            <tr><td>טבעת דקה</td><td>מרכז</td><td class="ltr">$MR^2$</td></tr>
+            <tr><td>טבעת עבה</td><td>מרכז</td><td class="ltr">$\frac{1}{2}M(R_1^2+R_2^2)$</td></tr>
+            <tr><td>דיסקה/גליל</td><td>מרכז</td><td class="ltr">$\frac{1}{2}MR^2$</td></tr>
+            <tr><td>מוט דק</td><td>מרכז</td><td class="ltr">$\frac{1}{12}ML^2$</td></tr>
+            <tr><td>מוט דק</td><td><strong>קצה</strong></td><td class="ltr">$\frac{1}{3}ML^2$</td></tr>
+            <tr><td>כדור מלא</td><td>מרכז</td><td class="ltr">$\frac{2}{5}MR^2$</td></tr>
+        </table>
+
+        <h3>דינמיקה סיבובית</h3>
+        <div><strong>מומנט כוח:</strong> <span class="ltr">$\vec{\tau} = \vec{r} \times \vec{F}$</span></div>
+        <div><strong>חוק שני:</strong> <span class="ltr">$\sum \vec{\tau} = I\vec{\alpha} = \frac{d\vec{L}}{dt}$</span></div>
+        <div><strong>תנע זוויתי:</strong> <span class="ltr">$\vec{L} = \vec{r} \times \vec{p} = I\vec{\omega}$</span></div>
+        
+        <h3>אנרגיה וגלגול</h3>
+        <div>קינטית סיבובית: <span class="ltr">$E_k = \frac{1}{2}I\omega^2$</span></div>
+        <div style="border-top:1px dashed #ccc; padding-top:2px; margin-top:2px;">
+            <strong>גלגול (כולל):</strong> <span class="ltr">$E_{tot} = \frac{1}{2}MV_{cm}^2 + \frac{1}{2}I_{cm}\omega^2$</span>
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>תנועה הרמונית (SHM)</h2>
+        <div class="ltr" style="text-align: center;">$x(t) = A\cos(\omega t + \phi)$</div>
+        <table>
+            <tr><td>קפיץ</td><td class="ltr">$\omega = \sqrt{k/m}$</td></tr>
+            <tr><td>מטוטלת</td><td class="ltr">$\omega = \sqrt{g/L}$</td></tr>
+        </table>
+    </div>
+    
+    <div class="box">
+        <h2>גאומטריה</h2>
+        <div class="note" style="text-align:center; color:red;">חובה רדיאנים!</div>
+        <table>
+            <tr><td>קשת</td><td class="ltr">$s = R\theta$</td></tr>
+            <tr><td>היקף</td><td class="ltr">$2\pi R$</td></tr>
+            <tr><td>שטח כדור</td><td class="ltr">$4\pi R^2$</td></tr>
+            <tr><td>נפח כדור</td><td class="ltr">$\frac{4}{3}\pi R^3$</td></tr>
+        </table>
+    </div>
+
+</div>
+
+<div class="footer">
+    נערך ונכתב ע"י רזיאל זערור
+</div>
+
+</body>
+</html>

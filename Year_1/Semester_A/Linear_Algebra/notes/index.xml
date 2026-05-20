@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+      <title>Quartz 4</title>
+      <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes</link>
+      <description>Last 10 notes on Quartz 4</description>
+      <generator>Quartz -- quartz.jzhao.xyz</generator>
+      <item>
+    <title>מציאת מטריצה הופכית</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%A6%D7%99%D7%90%D7%AA-%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%94-%D7%94%D7%95%D7%A4%D7%9B%D7%99%D7%AA</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%A6%D7%99%D7%90%D7%AA-%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%94-%D7%94%D7%95%D7%A4%D7%9B%D7%99%D7%AA</guid>
+    <description><![CDATA[ מציאת מטריצה הופכית ישנן שתי דרכים מרכזיות לחשב בפועל את ה-מטריצה הופכית A^{-1} של מטריצה הפיכה A: אלגוריתם דירוג גאוס-ז’ורדן (השיטה הפרקטית והנפוצה): בונים מטריצה מורחבת מהצורה (A | I). ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:20:31 GMT</pubDate>
+  </item><item>
+    <title>מטריצה הופכית</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%94-%D7%94%D7%95%D7%A4%D7%9B%D7%99%D7%AA</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%94-%D7%94%D7%95%D7%A4%D7%9B%D7%99%D7%AA</guid>
+    <description><![CDATA[ מטריצה הופכית המטריצה ההופכית למטריצה A (מסומנת כ-A^{-1}) היא המטריצה שכאשר כופלים אותה ב-A (מכל צד), מקבלים את מטריצת יחידה: A \cdot A^{-1} = A^{-1} \cdot A = I מטריצה הופכית קיימת אך ורק עבור מטריצות ריבועיות שהן הפיכות (ראה מטריצה הפיכה), כלומר מטריצות שה-דטרמיננטה שלהן שונה מאפס. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:20:15 GMT</pubDate>
+  </item><item>
+    <title>מטריצת יחידה</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%AA-%D7%99%D7%97%D7%99%D7%93%D7%94</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%98%D7%A8%D7%99%D7%A6%D7%AA-%D7%99%D7%97%D7%99%D7%93%D7%94</guid>
+    <description><![CDATA[ מטריצת יחידה מטריצת היחידה (מסומנת לרוב באות I או I_n עבור סדר n) היא מטריצה אלכסונית ריבועית שבה כל איברי האלכסון הראשי הם 1, וכל שאר האיברים הם 0. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:20:01 GMT</pubDate>
+  </item><item>
+    <title>חיבור וקטורים</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%97%D7%99%D7%91%D7%95%D7%A8-%D7%95%D7%A7%D7%98%D7%95%D7%A8%D7%99%D7%9D</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%97%D7%99%D7%91%D7%95%D7%A8-%D7%95%D7%A7%D7%98%D7%95%D7%A8%D7%99%D7%9D</guid>
+    <description><![CDATA[ חיבור וקטורים חיבור וקטורים היא הפעולה הבסיסית השנייה המגדירה מרחב וקטורי. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:19:47 GMT</pubDate>
+  </item><item>
+    <title>כפל בסקלר</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9B%D7%A4%D7%9C-%D7%91%D7%A1%D7%A7%D7%9C%D7%A8</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9B%D7%A4%D7%9C-%D7%91%D7%A1%D7%A7%D7%9C%D7%A8</guid>
+    <description><![CDATA[ כפל בסקלר כפל בסקלר הוא אחת משתי הפעולות הבסיסיות המגדירות מרחב וקטורי. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:19:36 GMT</pubDate>
+  </item><item>
+    <title>המשפט הספקטרלי</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%94%D7%9E%D7%A9%D7%A4%D7%98-%D7%94%D7%A1%D7%A4%D7%A7%D7%98%D7%A8%D7%9C%D7%99</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%94%D7%9E%D7%A9%D7%A4%D7%98-%D7%94%D7%A1%D7%A4%D7%A7%D7%98%D7%A8%D7%9C%D7%99</guid>
+    <description><![CDATA[ המשפט הספקטרלי (Spectral Theorem) אחד המשפטים האלגנטיים והעוצמתיים ביותר באלגברה לינארית. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:17:42 GMT</pubDate>
+  </item><item>
+    <title>אופרטור נורמלי</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%90%D7%95%D7%A4%D7%A8%D7%98%D7%95%D7%A8-%D7%A0%D7%95%D7%A8%D7%9E%D7%9C%D7%99</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%90%D7%95%D7%A4%D7%A8%D7%98%D7%95%D7%A8-%D7%A0%D7%95%D7%A8%D7%9E%D7%9C%D7%99</guid>
+    <description><![CDATA[ אופרטור נורמלי (Normal Operator) אופרטור לינארי T נקרא “נורמלי” אם הוא מתחלף בכפל (קומוטטיבי) עם ה-העתקה צמודה שלו T^*. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:17:36 GMT</pubDate>
+  </item><item>
+    <title>העתקה צמודה</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%94%D7%A2%D7%AA%D7%A7%D7%94-%D7%A6%D7%9E%D7%95%D7%93%D7%94</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%94%D7%A2%D7%AA%D7%A7%D7%94-%D7%A6%D7%9E%D7%95%D7%93%D7%94</guid>
+    <description><![CDATA[ העתקה צמודה (Adjoint Transformation) לכל אופרטור לינארי T על מרחב מכפלה פנימית, מוגדרת “העתקה צמודה” T^*. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:17:28 GMT</pubDate>
+  </item><item>
+    <title>משלים אורתוגונלי</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%A9%D7%9C%D7%99%D7%9D-%D7%90%D7%95%D7%A8%D7%AA%D7%95%D7%92%D7%95%D7%A0%D7%9C%D7%99</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%9E%D7%A9%D7%9C%D7%99%D7%9D-%D7%90%D7%95%D7%A8%D7%AA%D7%95%D7%92%D7%95%D7%A0%D7%9C%D7%99</guid>
+    <description><![CDATA[ משלים אורתוגונלי (Orthogonal Complement) יהי W תת-מרחב וקטורי של V. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:17:20 GMT</pubDate>
+  </item><item>
+    <title>תהליך גרם-שמידט</title>
+    <link>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%AA%D7%94%D7%9C%D7%99%D7%9A-%D7%92%D7%A8%D7%9D-%D7%A9%D7%9E%D7%99%D7%93%D7%98</link>
+    <guid>https://razielzaarur1.github.io/my-study-portal/Year_1/Semester_A/Linear_Algebra/notes/%D7%90%D7%9C%D7%92%D7%91%D7%A8%D7%94-%D7%9C%D7%99%D7%A0%D7%90%D7%A8%D7%99%D7%AA/%D7%93%D7%A4%D7%99-%D7%94%D7%A8%D7%97%D7%91%D7%94/%D7%AA%D7%94%D7%9C%D7%99%D7%9A-%D7%92%D7%A8%D7%9D-%D7%A9%D7%9E%D7%99%D7%93%D7%98</guid>
+    <description><![CDATA[ תהליך גרם-שמידט (Gram-Schmidt Process) זהו אלגוריתם המקבל בסיס רגיל של מרחב וקטורי, ומייצר ממנו בסיס חדש שהוא אורתוגונלי (או בסיס אורתונורמלי) שפורש בדיוק את אותו המרחב. ]]></description>
+    <pubDate>Tue, 24 Feb 2026 21:17:09 GMT</pubDate>
+  </item>
+    </channel>
+  </rss>

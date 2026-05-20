@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מערכת תרגול - אלגברה לינארית</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script src="linear_questions.js"></script>
+    <script src="linear_solutions.js"></script>
+
+    <style>
+        :root {
+            --primary: #2c3e50; --accent: #3498db; --bg-light: #f4f6f9; --white: #ffffff;
+            --text-main: #2d3436; --text-muted: #636e72; --border: #e2e8f0;
+            --easy-bg: #d1fae5; --easy-text: #065f46;
+            --med-bg: #fee2e2; --med-text: #991b1b;
+            --hard-bg: #fef3c7; --hard-text: #92400e;
+            --topic-bg: #e0e7ff; --topic-text: #3730a3; --proof-bg: #f3e8ff; --proof-text: #6b21a8;
+            --whatsapp: #25D366;
+            --sidebar-width: 280px;
+            --warning-bg: #fff3cd; --warning-text: #856404; --warning-border: #ffeeba;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            height: 100dvh; 
+            margin: 0; padding: 0; overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light); color: var(--text-main);
+        }
+
+        body { display: flex; flex-direction: row; }
+
+        /* --- Sidebar --- */
+        aside { 
+            width: var(--sidebar-width); background: var(--white); border-left: 1px solid var(--border); 
+            display: flex; flex-direction: column; padding: 15px; 
+            z-index: 20; flex-shrink: 0; height: 100%; transition: transform 0.3s ease;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding-left: 5px; }
+        .brand { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        
+        #exam-list-container {
+            max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 5px; background: #f8fafc; margin-bottom: 10px;
+        }
+
+        /* --- Main Layout --- */
+        main { 
+            flex: 1; display: flex; flex-direction: column; height: 100%; 
+            position: relative; overflow: hidden; width: 100%;
+        }
+
+        .top-bar { 
+            background: var(--white); padding: 0 15px; height: 60px; min-height: 60px;
+            display: flex; align-items: center; justify-content: space-between; 
+            border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 10;
+        }
+
+        /* BUTTONS HIDDEN ON DESKTOP */
+        .menu-toggle { display: none; }
+        .close-sidebar-btn { display: none; }
+
+        /* --- MOBILE SIDEBAR CONFIG --- */
+        @media (max-width: 768px) {
+            aside { 
+                position: fixed; right: -100%; top: 0; height: 100%; width: 85%; 
+                box-shadow: -5px 0 20px rgba(0,0,0,0.2); transition: right 0.3s ease;
+            }
+            aside.open { right: 0; }
+            
+            .menu-toggle { display: block; background: none; border: none; font-size: 1.4rem; color: var(--primary); cursor: pointer; margin-left: 10px; }
+            .close-sidebar-btn { display: block; background: none; border: none; font-size: 1.5rem; color: #666; cursor: pointer; }
+            
+            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 15; }
+            .sidebar-overlay.open { display: block; }
+            
+            .questions-count { display: none; }
+        }
+
+        .search-container { position: relative; flex: 1; max-width: 400px; }
+        .search-container input { width: 100%; padding: 10px 40px 10px 15px; border-radius: 50px; border: 1px solid var(--border); background: #f8fafc; font-size: 1rem; }
+        .search-container i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        
+        /* --- Disclaimer Alert --- */
+        .disclaimer-alert {
+            background-color: var(--warning-bg);
+            color: var(--warning-text);
+            border-bottom: 1px solid var(--warning-border);
+            padding: 8px 15px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .disclaimer-alert i { margin-left: 5px; }
+
+        /* =========================================
+           GRID VIEW
+           ========================================= */
+        .content-area-grid { 
+            flex: 1; overflow-y: auto; padding: 20px;
+            display: grid; 
+            gap: 20px; align-content: start; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (min-width: 769px) {
+            .content-area-grid { grid-template-columns: repeat(auto-fill, minmax(700px, 1fr)); padding: 30px; gap: 30px; }
+            .question-text { overflow: visible !important; max-height: none !important; }
+        }
+
+        @media (max-width: 768px) {
+            .content-area-grid { grid-template-columns: 1fr; padding: 10px; }
+        }
+
+        .question-card { 
+            background: var(--white); border-radius: 12px; padding: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); 
+            display: flex; flex-direction: column; position: relative;
+        }
+        
+        .card-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px;
+            padding-left: 40px; 
+        }
+
+        .header-right { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+        .header-left { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        
+        .id-badge { background: #e2e8f0; color: #475569; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; flex-shrink: 0; }
+        .source-label { font-size: 0.9rem; font-weight: 700; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+        .tag { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; white-space: nowrap; }
+        .tag.easy { background: var(--easy-bg); color: var(--easy-text); }
+        .tag.medium { background: var(--med-bg); color: var(--med-text); }
+        .tag.hard { background: var(--hard-bg); color: var(--hard-text); }
+        .tag.topic { background: var(--topic-bg); color: var(--topic-text); }
+        .tag.proof { background: var(--proof-bg); color: var(--proof-text); }
+
+        .card-share-btn { position: absolute; top: 20px; left: 20px; background: transparent; border: none; color: #cbd5e1; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; z-index: 2; }
+        .card-share-btn:hover { color: var(--accent); transform: scale(1.1); }
+
+        .question-text { 
+            font-size: 1.1rem; line-height: 1.6; color: #2d3436; margin-bottom: 15px; 
+            white-space: pre-wrap; overflow-wrap: break-word; direction: rtl; 
+        }
+        .question-text mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; display: inline-block; vertical-align: middle; }
+
+        /* =========================================
+           FLASHCARD VIEW
+           ========================================= */
+        .content-area-flashcards {
+            flex: 1; display: none; flex-direction: column;
+            background: #eef2f7; height: 100%; overflow: hidden; padding: 10px;
+        }
+
+        .flashcard-wrapper {
+            display: flex; flex-direction: column; width: 100%; max-width: 800px;
+            margin: 0 auto; height: 100%; gap: 10px; min-height: 0;
+        }
+
+        .flashcard-status {
+            flex-shrink: 0; display: flex; justify-content: space-between; 
+            color: var(--text-muted); font-size: 0.9rem; font-weight: 600; padding: 0 5px;
+        }
+
+        .flip-card { flex: 1; position: relative; perspective: 1000px; min-height: 0; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card-inner.flipped { transform: rotateY(180deg); }
+
+        .flip-card-front, .flip-card-back {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            background-color: white; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid white;
+            display: flex; flex-direction: column; padding: 25px;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
+
+        .flip-card-back { transform: rotateY(180deg); background-color: #fffbf0; border-color: #fce7b0; }
+
+        .flashcard-nav {
+            flex-shrink: 0; height: 60px; display: flex; justify-content: center; align-items: center; gap: 20px;
+        }
+
+        .nav-btn { background: white; border: 1px solid var(--border); padding: 10px 25px; border-radius: 50px; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .nav-btn:disabled { opacity: 0.5; }
+        
+        .fc-action-btn { margin-top: auto; align-self: center; padding: 12px 30px; border-radius: 50px; font-weight: 700; border: none; cursor: pointer; width: 100%; max-width: 250px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-reveal { background: var(--accent); color: white; }
+        .btn-return { background: white; border: 2px solid var(--primary); color: var(--primary); }
+
+        .fc-top-share { position: absolute; top: 20px; left: 20px; z-index: 5; }
+        .fc-share-icon { background: #f1f5f9; width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .share-btn-large { padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: white; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+        
+        .action-buttons { display: flex; gap: 10px; }
+        .icon-btn { background: none; border: none; font-size: 1.2rem; color: #666; cursor: pointer; padding: 5px; }
+        
+        .card-footer { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
+        .action-small-btn { flex: 1; background: #f8fafc; color: var(--primary); border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .action-small-btn:hover { background: #e2e8f0; }
+
+        /* Toggles */
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .options-container { margin-top: 20px; padding-top: 15px; border-top: 1px dashed var(--border); }
+        .option-btn { display: block; width: 100%; text-align: right; padding: 12px 15px; margin-bottom: 8px; border: 2px solid transparent; background: #f8fafc; border-radius: 8px; cursor: pointer; font-size: 1rem; color: var(--text-main); }
+        .option-btn.selected { background: #e0f2fe; border-color: var(--accent); font-weight: 600; }
+        .option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+        .option-btn.incorrect { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+        .check-answer-btn { margin-top: 10px; background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 20px; font-weight: 600; cursor: pointer; }
+
+        /* Filter Active State Fix */
+        .filter-btn { display: flex; align-items: center; width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid transparent; background: transparent; border-radius: 8px; cursor: pointer; text-align: right; color: var(--text-main); font-size: 0.95rem; }
+        .filter-btn:hover { background-color: #f1f5f9; }
+        .filter-btn.active { background-color: #e0f2fe; color: var(--accent); font-weight: 700; }
+
+        .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .mode-btn.active { background: var(--primary); color: white; }
+        .mode-btn:not(.active) { background: white; color: var(--text-main); }
+
+        @media (max-width: 768px) {
+            .nav-btn span { display: none; }
+            .nav-btn { width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 50%; }
+            .flashcard-nav { height: 60px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside id="mainSidebar">
+    <div class="brand">
+        <div><i class="fas fa-graduation-cap"></i> <span>לינארית PRO</span></div>
+        <button onclick="toggleSidebar()" class="close-sidebar-btn"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="sidebar-content">
+        <div class="mode-switch-container">
+            <button class="mode-btn active" id="mode-list" onclick="setMode('list')"><i class="fas fa-list"></i> רשימה</button>
+            <button class="mode-btn" id="mode-flashcards" onclick="setMode('flashcards')"><i class="fas fa-clone"></i> כרטיסיות</button>
+        </div>
+
+        <div class="filter-group">
+            <div class="filter-header">תרגול לפי מבחנים <i class="fas fa-file-alt"></i></div>
+            <div id="exam-list-container"></div>
+        </div>
+
+        <div class="filter-group" id="topics-group">
+            <div class="filter-header">נושא הלימוד</div>
+            <button class="filter-btn active" id="btn-all-topics" onclick="toggleTopic('all')">הכל</button>
+            <button class="filter-btn" id="btn-systems" onclick="toggleTopic('systems')">מערכות משוואות</button>
+            <button class="filter-btn" id="btn-matrices" onclick="toggleTopic('matrices')">מטריצות</button>
+            <button class="filter-btn" id="btn-spaces" onclick="toggleTopic('spaces')">מרחבים וקטורים</button>
+            <button class="filter-btn" id="btn-eigen" onclick="toggleTopic('eigen')">ע"ע והעתקות</button>
+            <button class="filter-btn" id="btn-complex" onclick="toggleTopic('complex')">מרוכבים</button>
+            <div style="margin:5px 0; border-top:1px solid #eee;"></div>
+            <button class="filter-btn" id="btn-proofs" onclick="toggleTopic('proofs')"><b>הוכחות (מחייב)</b></button>
+        </div>
+
+        <div class="filter-group" id="diff-group">
+            <div class="filter-header">רמת קושי</div>
+            <button class="filter-btn active" id="btn-all-diff" onclick="toggleDifficulty('all')">הכל</button>
+            <button class="filter-btn" id="btn-easy" onclick="toggleDifficulty('easy')">קל</button>
+            <button class="filter-btn" id="btn-medium" onclick="toggleDifficulty('medium')">בינוני</button>
+            <button class="filter-btn" id="btn-hard" onclick="toggleDifficulty('hard')">קשה</button>
+        </div>
+    </div>
+</aside>
+
+<main>
+    <div class="top-bar">
+        <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="חפש שאלה..." oninput="handleSearch()">
+            <i class="fas fa-search"></i>
+        </div>
+        <div class="action-buttons">
+            <span id="questionsCount" class="questions-count">...</span>
+            <button class="icon-btn" onclick="toggleSettingsModal()"><i class="fas fa-cog"></i></button>
+        </div>
+    </div>
+
+    <div class="disclaimer-alert">
+        <i class="fas fa-exclamation-triangle"></i> מרבית התשובות אינן נכונות / מבוססות על AI, לכן אין להסתמך עליהן.
+    </div>
+
+    <div id="gridArea" class="content-area-grid"></div>
+
+    <div id="flashcardArea" class="content-area-flashcards">
+        <div class="flashcard-wrapper">
+            <div class="flashcard-status">
+                <span id="fc-progress"></span>
+                <span id="fc-difficulty" class="tag"></span>
+            </div>
+            
+            <div class="flip-card">
+                <div class="flip-card-inner" id="cardInner">
+                    <div class="flip-card-front" id="cardFront"></div>
+                    <div class="flip-card-back" id="cardBack"></div>
+                </div>
+            </div>
+
+            <div class="flashcard-nav">
+                <button class="nav-btn" onclick="nextCard(-1)" id="btn-prev"><i class="fas fa-arrow-right"></i> <span>הקודם</span></button>
+                <button class="nav-btn" onclick="nextCard(1)" id="btn-next"><span>הבא</span> <i class="fas fa-arrow-left"></i></button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="settingsModal" class="modal-overlay">
+    <div class="modal-content" style="width:400px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:bold;">
+            <span>הגדרות</span>
+            <button onclick="toggleSettingsModal()" style="border:none; background:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><div>תרגול אמריקאי</div><div style="font-size:0.8rem; color:#666;">הצג אפשרויות בחירה</div></div>
+            <label class="switch"><input type="checkbox" id="mcModeToggle" onchange="toggleMCMode()"><span class="slider"></span></label>
+        </div>
+        <button onclick="toggleSettingsModal()" style="margin-top:20px; padding:8px 15px; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">סגור</button>
+    </div>
+</div>
+
+<div id="solutionModal" class="modal-overlay">
+    <div class="modal-content">
+        <button onclick="closeSolutionModal()" style="float:left; border:none; background:none; font-size:1.5rem;">&times;</button>
+        <div class="disclaimer-alert" style="margin-bottom:15px; border-radius:6px; font-size:0.8rem;">
+            <i class="fas fa-exclamation-triangle"></i> תשובה זו מבוססת AI ועשויה להכיל טעויות.
+        </div>
+        <div id="modalBody" class="question-text"></div>
+    </div>
+</div>
+
+<div id="shareModal" class="modal-overlay">
+    <div class="modal-content" style="text-align:center;">
+        <h3>שתף שאלה</h3>
+        <p style="color:#666;">עזור לחברים שנתקעו</p>
+        <div class="share-options">
+            <button class="share-btn-large" onclick="copyLink()"><i class="far fa-copy"></i> העתק קישור</button>
+            <button class="share-btn-large" onclick="shareWhatsapp()" style="color:var(--whatsapp); border-color:#dcfce7; background:#f0fdf4;"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+        </div>
+        <button onclick="closeShareModal()" style="margin-top:15px; border:none; background:none; text-decoration:underline; color:#888;">ביטול</button>
+    </div>
+</div>
+
+<script>
+    // State
+    let state = { 
+        viewMode: 'list', currentCardIndex: 0, filteredQuestions: [],
+        selectedTopics: [], selectedDifficulty: [], selectedExam: null,
+        search: '', mcMode: false, answers: {}, currentShareId: null, isStandalone: false
+    };
+
+    window.addEventListener('load', () => {
+        if (typeof questionsData !== 'undefined') {
+            generateExamList();
+            checkDeepLink();
+        } else {
+            document.getElementById('gridArea').innerHTML = '<div style="text-align:center; padding:20px;">שגיאה בטעינת הקובץ questions.js</div>';
+        }
+    });
+
+    // --- Logic ---
+    function generateExamList() {
+        const exams = [...new Set(questionsData.map(q => q.source.split(' שאלה')[0].trim()))].sort();
+        const container = document.getElementById('exam-list-container');
+        container.innerHTML = '';
+        exams.forEach(exam => {
+            const btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.innerHTML = `<i class="far fa-file-alt" style="margin-left:8px;"></i> ${exam}`;
+            btn.onclick = () => filterByExam(exam, btn);
+            btn.id = `btn-exam-${exam.replace(/\s/g, '_')}`;
+            container.appendChild(btn);
+        });
+    }
+
+    function filterByExam(examName, btnElem) {
+        state.selectedTopics = []; state.selectedDifficulty = []; state.search = ''; state.selectedExam = examName;
+        updateTopicButtonsUI(); updateDiffButtonsUI(); document.getElementById('searchInput').value = '';
+        
+        document.querySelectorAll('#exam-list-container .filter-btn').forEach(b => b.classList.remove('active'));
+        if(btnElem) btnElem.classList.add('active');
+        
+        if(window.innerWidth <= 768) toggleSidebar();
+        runFilter();
+    }
+
+    function checkDeepLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const qId = urlParams.get('q');
+        if (qId) {
+            const index = questionsData.findIndex(q => q.id == qId);
+            if (index !== -1) {
+                state.isStandalone = true;
+                state.filteredQuestions = [questionsData[index]];
+                state.currentCardIndex = 0;
+                setMode('flashcards');
+                renderFlashcard();
+            } else runFilter();
+        } else runFilter();
+    }
+
+    function setMode(mode) {
+        state.viewMode = mode;
+        document.getElementById('mode-list').classList.toggle('active', mode === 'list');
+        document.getElementById('mode-flashcards').classList.toggle('active', mode === 'flashcards');
+        document.getElementById('gridArea').style.display = mode === 'list' ? 'grid' : 'none';
+        document.getElementById('flashcardArea').style.display = mode === 'flashcards' ? 'flex' : 'none';
+        if (mode === 'flashcards') { resetFlip(); renderFlashcard(); } else { renderGrid(); }
+        if(window.innerWidth <= 768) document.getElementById('mainSidebar').classList.remove('open');
+    }
+
+    function runFilter() {
+        if (state.isStandalone) return;
+        let temp = questionsData;
+        
+        temp = temp.filter(q => {
+            if(state.selectedExam) return q.source.includes(state.selectedExam);
+            
+            const diff = state.selectedDifficulty.length === 0 || state.selectedDifficulty.includes(q.difficulty);
+            const srch = q.text.includes(state.search) || q.source.includes(state.search);
+            let topic = true;
+            if (state.selectedTopics.length > 0) {
+                const proofs = state.selectedTopics.includes('proofs');
+                const others = state.selectedTopics.filter(t => t !== 'proofs');
+                if (proofs && !q.topic.includes('proofs')) topic = false;
+                if (topic && others.length > 0) {
+                    let eff = [...others];
+                    if (eff.includes('eigen')) eff.push('transformations');
+                    if (!q.topic.some(t => eff.includes(t))) topic = false;
+                }
+            }
+            return diff && srch && topic;
+        });
+
+        if(state.selectedExam) {
+            temp.sort((a,b) => (parseInt(a.source.match(/שאלה\s*(\d+)/)?.[1]||999) - parseInt(b.source.match(/שאלה\s*(\d+)/)?.[1]||999)));
+        }
+
+        state.filteredQuestions = temp;
+        document.getElementById('questionsCount').innerText = `${state.filteredQuestions.length}`;
+        state.currentCardIndex = 0;
+        resetFlip();
+        if (state.viewMode === 'list') renderGrid(); else renderFlashcard();
+    }
+
+    // --- Renderers ---
+    function renderGrid() {
+        const container = document.getElementById('gridArea');
+        container.innerHTML = '';
+        if (state.filteredQuestions.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">לא נמצאו שאלות</div>';
+            return;
+        }
+        state.filteredQuestions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.innerHTML = generateCardContent(q);
+            container.appendChild(card);
+        });
+        refreshMath();
+    }
+
+    function renderFlashcard() {
+        const q = state.filteredQuestions[state.currentCardIndex];
+        const front = document.getElementById('cardFront');
+        const back = document.getElementById('cardBack');
+        
+        document.querySelector('.flashcard-nav').style.display = state.isStandalone ? 'none' : 'flex';
+        document.getElementById('btn-prev').disabled = state.currentCardIndex === 0;
+        document.getElementById('btn-next').disabled = state.currentCardIndex >= state.filteredQuestions.length - 1;
+
+        if (!q) { front.innerHTML = 'אין שאלות'; return; }
+
+        document.getElementById('fc-progress').innerText = state.isStandalone ? 'שאלה בודדת' : `שאלה ${state.currentCardIndex + 1} / ${state.filteredQuestions.length}`;
+        document.getElementById('fc-difficulty').innerText = ""; 
+        document.getElementById('fc-difficulty').className = "";
+
+        // FRONT
+        let tags = q.topic.map(t => `<span class="tag topic">${translateTopic(t)}</span>`).join('');
+        let diff = `<span class="tag ${q.difficulty}">${translateDifficulty(q.difficulty)}</span>`;
+        let options = state.mcMode ? generateOptionsHTML(q) : '';
+        
+        front.innerHTML = `
+            <div class="fc-top-share">
+                <button class="fc-share-icon" onclick="openShareModal(${q.id})"><i class="fas fa-share-alt"></i></button>
+            </div>
+            <div class="card-header">
+                <div class="header-right">
+                    <span class="id-badge">#${q.id}</span>
+                    <span class="source-label">${q.source}</span>
+                </div>
+                <div class="header-left">
+                    <div class="tags">${tags} ${diff}</div>
+                </div>
+            </div>
+            <div class="question-text">${q.text}</div>
+            ${options}
+            <button class="fc-action-btn btn-reveal" onclick="toggleFlip()">הצג פתרון מלא</button>
+        `;
+
+        // BACK
+        const sol = solutionsData[q.id] || "טרם הוזן פתרון.";
+        back.innerHTML = `
+            <div class="disclaimer-alert" style="margin-bottom:15px; border-radius:6px; font-size:0.8rem;">
+                <i class="fas fa-exclamation-triangle"></i> תשובה זו מבוססת AI ועשויה להכיל טעויות.
+            </div>
+            <div class="solution-title">פתרון מלא</div>
+            <div class="solution-text">${sol}</div>
+            <button class="fc-action-btn btn-return" onclick="toggleFlip()">חזור לשאלה</button>
+        `;
+        refreshMath();
+    }
+
+    function generateCardContent(q) {
+        let tags = q.topic.map(t => `<span class="tag topic">${translateTopic(t)}</span>`).join('');
+        let diff = `<span class="tag ${q.difficulty}">${translateDifficulty(q.difficulty)}</span>`;
+        let options = state.mcMode ? generateOptionsHTML(q) : '';
+        
+        return `
+            <div class="question-card">
+                <button class="card-share-btn" onclick="openShareModal(${q.id})"><i class="fas fa-share-alt"></i></button>
+                <div class="card-header">
+                    <div class="header-right">
+                        <span class="id-badge">#${q.id}</span>
+                        <span class="source-label">${q.source}</span>
+                    </div>
+                    <div class="header-left">
+                        <div class="tags">${tags} ${diff}</div>
+                    </div>
+                </div>
+                <div class="question-text">${q.text}</div>
+                ${options}
+                <div class="card-footer">
+                    <button class="action-small-btn" onclick="showListSolution(${q.id})"><i class="far fa-eye"></i> פתרון</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function generateOptionsHTML(q) {
+        const opts = ["תשובה א", "תשובה ב", "תשובה ג", "תשובה ד"];
+        const btns = opts.map((o,i) => {
+            const cls = (state.answers[q.id]===i) ? 'selected' : '';
+            return `<button class="option-btn ${cls}" onclick="selectOption(${q.id}, ${i})">${o}</button>`;
+        }).join('');
+        return `<div class="options-container" style="display:block">${btns}<button class="check-answer-btn" onclick="checkAnswer(${q.id})">בדוק תשובה</button></div>`;
+    }
+
+    // --- Helpers ---
+    function translateTopic(t) { const map = { 'systems':'מערכות', 'matrices':'מטריצות', 'spaces':'מרחבים', 'eigen':'ע"ע', 'complex':'מרוכבים', 'proofs':'הוכחות' }; return map[t] || t; }
+    function translateDifficulty(d) { return d==='easy'?'קל':(d==='medium'?'בינוני':'קשה'); }
+    function refreshMath() { if(window.MathJax) MathJax.typesetPromise(); }
+    
+    function toggleFlip() { document.getElementById('cardInner').classList.toggle('flipped'); }
+    function resetFlip() { document.getElementById('cardInner').classList.remove('flipped'); }
+    
+    function nextCard(dir) {
+        resetFlip();
+        setTimeout(() => {
+            state.currentCardIndex += dir;
+            renderFlashcard();
+        }, 300);
+    }
+
+    // --- TOGGLE FIX START ---
+    function toggleTopic(t) { 
+        state.selectedExam = null; // Clear exam mode if filtering by topic
+        document.querySelectorAll('#exam-list-container .filter-btn').forEach(b => b.classList.remove('active'));
+
+        if(t === 'all') {
+            state.selectedTopics = []; 
+        } else {
+            const idx = state.selectedTopics.indexOf(t);
+            if(idx > -1) {
+                // Remove if already selected
+                state.selectedTopics.splice(idx, 1);
+            } else {
+                // Add if not selected
+                state.selectedTopics.push(t);
+            }
+        }
+        
+        updateTopicButtonsUI(); 
+        runFilter(); 
+    }
+
+    function updateTopicButtonsUI() {
+        const container = document.getElementById('topics-group'); 
+        if(!container) return;
+
+        // Clear all active classes in group
+        container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+
+        // If list empty -> 'All' is active. Else -> specific buttons are active.
+        if (state.selectedTopics.length === 0) {
+            document.getElementById('btn-all-topics').classList.add('active');
+        } else {
+            state.selectedTopics.forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if(btn) btn.classList.add('active');
+            });
+        }
+    }
+
+    function toggleDifficulty(d) { 
+        if(d === 'all') {
+            state.selectedDifficulty = []; 
+        } else { 
+            const idx = state.selectedDifficulty.indexOf(d); 
+            if(idx > -1) {
+                state.selectedDifficulty.splice(idx, 1);
+            } else {
+                state.selectedDifficulty.push(d);
+            }
+        }
+        updateDiffButtonsUI(); 
+        runFilter(); 
+    }
+
+    function updateDiffButtonsUI() { 
+        const container = document.getElementById('diff-group');
+        if(!container) return;
+
+        container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+
+        if (state.selectedDifficulty.length === 0) {
+            document.getElementById('btn-all-diff').classList.add('active');
+        } else {
+            state.selectedDifficulty.forEach(d => {
+                const btn = document.getElementById(`btn-${d}`);
+                if(btn) btn.classList.add('active');
+            });
+        }
+    }
+    // --- TOGGLE FIX END ---
+    
+    function toggleSidebar() { document.getElementById('mainSidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('open'); }
+    function toggleSettingsModal() { const m=document.getElementById('settingsModal'); m.style.display=m.style.display==='flex'?'none':'flex'; }
+    function toggleMCMode() { state.mcMode = !state.mcMode; runFilter(); }
+    function showListSolution(id) { document.getElementById('modalBody').innerHTML=solutionsData[id]||"אין פתרון"; document.getElementById('solutionModal').style.display='flex'; refreshMath(); }
+    function closeSolutionModal() { document.getElementById('solutionModal').style.display='none'; }
+    function handleSearch() { state.search=document.getElementById('searchInput').value; runFilter(); }
+    
+    function openShareModal(id) { state.currentShareId=id; document.getElementById('shareModal').style.display='flex'; }
+    function closeShareModal() { document.getElementById('shareModal').style.display='none'; }
+    function getShareLink() { return `${window.location.origin}${window.location.pathname}?q=${state.currentShareId}`; }
+    function copyLink() { navigator.clipboard.writeText(getShareLink()).then(()=>{alert('הועתק!'); closeShareModal();}); }
+    function shareWhatsapp() { window.open(`https://wa.me/?text=${encodeURIComponent('שאלה: '+getShareLink())}`, '_blank'); closeShareModal(); }
+    function selectOption(id, idx) { state.answers[id] = idx; if(state.viewMode==='list') renderGrid(); else renderFlashcard(); }
+    function checkAnswer(id) { if (state.answers[id] !== undefined) { state.answers[id+'_checked'] = true; if(state.viewMode==='list') renderGrid(); else renderFlashcard(); } }
+
+</script>
+</body>
+</html>

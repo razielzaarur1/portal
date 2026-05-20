@@ -1,0 +1,398 @@
+[
+  {
+    "id": 1,
+    "year": 1,
+    "semester": "A",
+    "name": "אלגברה לינארית",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 2,
+    "year": 1,
+    "semester": "A",
+    "name": "חשבון אינפיניטסימלי 1",
+    "credits": 5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 3,
+    "year": 1,
+    "semester": "A",
+    "name": "פיזיקה 1 מכניקה",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 4,
+    "year": 1,
+    "semester": "A",
+    "name": "מבוא לתכנות שפת C",
+    "credits": 3,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 5,
+    "year": 1,
+    "semester": "A",
+    "name": "מערכות ספרתיות",
+    "credits": 5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 6,
+    "year": 1,
+    "semester": "B",
+    "name": "חשבון אינפיניטסימלי 2",
+    "credits": 5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 7,
+    "year": 1,
+    "semester": "B",
+    "name": "פיזיקה 2 - חשמל",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 8,
+    "year": 2,
+    "semester": "A",
+    "name": "חומרים הנדסיים",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 9,
+    "year": 2,
+    "semester": "A",
+    "name": "מעבדה בפיזיקה",
+    "credits": 1.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 10,
+    "year": 2,
+    "semester": "A",
+    "name": "מבוא להנדסת חשמל",
+    "credits": 5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 11,
+    "year": 1,
+    "semester": "B",
+    "name": "משוואות דיפרנציאליות רגילות",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 12,
+    "year": 1,
+    "semester": "B",
+    "name": "אנליזה מתקדמת פורייה לפלאס",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 13,
+    "year": 2,
+    "semester": "A",
+    "name": "גלים ופיזיקה מודרנית",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 14,
+    "year": 2,
+    "semester": "A",
+    "name": "מבוא להמרת אנרגיה",
+    "credits": 2.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 15,
+    "year": 2,
+    "semester": "A",
+    "name": "מעבדה 1",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 16,
+    "year": 2,
+    "semester": "A",
+    "name": "מערכות ליניאריות דינמיות",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 17,
+    "year": 2,
+    "semester": "A",
+    "name": "מורשת ישראל",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 18,
+    "year": 2,
+    "semester": "B",
+    "name": "משוואות דיפרנציאליות חלקיות",
+    "credits": 2.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 19,
+    "year": 2,
+    "semester": "B",
+    "name": "אותות ומערכות",
+    "credits": 4.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 20,
+    "year": 2,
+    "semester": "B",
+    "name": "הסתברות וסטטיסטיקה",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 21,
+    "year": 2,
+    "semester": "B",
+    "name": "התקני מוליכים למחצה",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 22,
+    "year": 2,
+    "semester": "B",
+    "name": "שדות אלקטרומגנטיים",
+    "credits": 4,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 23,
+    "year": 2,
+    "semester": "B",
+    "name": "מורשת ישראל",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 24,
+    "year": 3,
+    "semester": "A",
+    "name": "גלים ומערכות מפולגות",
+    "credits": 4.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 25,
+    "year": 3,
+    "semester": "A",
+    "name": "אותות אקראיים ורעש",
+    "credits": 4.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 26,
+    "year": 3,
+    "semester": "A",
+    "name": "מבוא למערכות תקשורת",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 27,
+    "year": 3,
+    "semester": "A",
+    "name": "מעבדה 2",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 28,
+    "year": 3,
+    "semester": "A",
+    "name": "מעגלים ליניארים",
+    "credits": 4.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 29,
+    "year": 3,
+    "semester": "A",
+    "name": "עיבוד אותות",
+    "credits": 4.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 30,
+    "year": 3,
+    "semester": "A",
+    "name": "המרת אנרגיה",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 31,
+    "year": 3,
+    "semester": "B",
+    "name": "אנגלית למהנדסים",
+    "credits": 3,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 32,
+    "year": 1,
+    "semester": "B",
+    "name": "מבנה מחשבים",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 33,
+    "year": 3,
+    "semester": "B",
+    "name": "מעגלים ספרתיים",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 34,
+    "year": 3,
+    "semester": "B",
+    "name": "מערכות בקרה",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 35,
+    "year": 3,
+    "semester": "B",
+    "name": "מעבדה 3",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 36,
+    "year": 3,
+    "semester": "B",
+    "name": "מערכות הספק 1",
+    "credits": 3.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 37,
+    "year": 3,
+    "semester": "B",
+    "name": "קדם פרויקט",
+    "credits": 2,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 38,
+    "year": 4,
+    "semester": "A",
+    "name": "מעבדת בחירה 1",
+    "credits": 3,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 39,
+    "year": 4,
+    "semester": "A",
+    "name": "מעבדת בחירה 2",
+    "credits": 3,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 40,
+    "year": 4,
+    "semester": "A",
+    "name": "קורסי בחירה",
+    "credits": 10.5,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 41,
+    "year": 4,
+    "semester": "A",
+    "name": "פרויקט 1/א",
+    "credits": 4,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 42,
+    "year": 4,
+    "semester": "B",
+    "name": "מעבדת בחירה/זרם חזק",
+    "credits": 3,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 43,
+    "year": 4,
+    "semester": "B",
+    "name": "קורסי בחירה",
+    "credits": 14,
+    "grade": 0,
+    "active": false
+  },
+  {
+    "id": 44,
+    "year": 4,
+    "semester": "B",
+    "name": "פרויקט ב",
+    "credits": 4,
+    "grade": 0,
+    "active": false
+  }
+]

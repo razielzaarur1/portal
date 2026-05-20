@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheat Sheet - מבוא לתכנות C</title>
+    <style>
+        /* משתנים - ברירת מחדל (כהה) */
+        :root {
+            --bg-color: #1e1e1e;
+            --card-bg: #252526;
+            --text-main: #d4d4d4;
+            --text-highlight: #569cd6; /* כחול */
+            --text-keyword: #c586c0;   /* סגול */
+            --text-string: #ce9178;    /* כתום/חום */
+            --text-comment: #6a9955;   /* ירוק */
+            --border-color: #3e3e42;
+            --accent-color: #007acc;
+            --th-bg: #333333;
+            --pre-bg: #101010;
+        }
+
+        /* משתנים - מצב בהיר */
+        body.light-theme {
+            --bg-color: #ffffff;
+            --card-bg: #ffffff;
+            --text-main: #000000;
+            --text-highlight: #0000ff;
+            --text-keyword: #800080;
+            --text-string: #a31515;
+            --text-comment: #008000;
+            --border-color: #bbbbbb;
+            --accent-color: #005a9e;
+            --th-bg: #e6e6e6;
+            --pre-bg: #f5f5f5;
+        }
+
+        /* כפתורי שליטה */
+        .controls {
+            text-align: center;
+            margin-bottom: 15px;
+            direction: ltr;
+        }
+        
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.2;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 5px;
+        }
+
+        h1 {
+            color: var(--text-main);
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        p.subtitle {
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* --- Masonry Layout --- */
+        .grid-container {
+            column-count: 3;
+            column-gap: 12px;
+        }
+
+        @media (max-width: 1200px) { .grid-container { column-count: 2; } }
+        @media (max-width: 768px) { .grid-container { column-count: 1; } }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 12px;
+            break-inside: avoid;
+            box-sizing: border-box;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+        }
+
+        .sub-header {
+            color: var(--text-main);
+            opacity: 0.9;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            border-bottom: 1px dashed var(--border-color);
+            font-size: 0.95em;
+        }
+
+        pre {
+            background-color: var(--pre-bg);
+            padding: 6px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11.5px;
+            direction: ltr;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            margin: 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 3px 5px;
+            text-align: right;
+        }
+
+        th {
+            background-color: var(--th-bg);
+            color: var(--text-main);
+            font-weight: bold;
+        }
+
+        .note {
+            background-color: rgba(255, 165, 0, 0.1);
+            border-right: 3px solid orange;
+            padding: 5px;
+            margin: 6px 0;
+            font-size: 0.9em;
+            color: var(--text-main);
+            opacity: 0.9;
+        }
+
+        .kw { color: var(--text-keyword); font-weight: bold; }
+        .tp { color: var(--text-highlight); }
+        .str { color: var(--text-string); }
+        .cm { color: var(--text-comment); font-style: italic; }
+        .fn { color: #dcdcaa; }
+        body.light-theme .fn { color: #795e26; } 
+
+        /* --- הגדרות הדפסה (תיקון חיתוך טקסט) --- */
+        @media print {
+            .controls { display: none; }
+            
+            @page {
+                margin: 5mm; 
+                size: A4 portrait;
+            }
+
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                padding: 0;
+                
+                /* החזרתי ל-0.75 כדי שיהיה גדול וקריא */
+                zoom: 0.60; 
+                font-size: 15pt; 
+                color: #000;
+            }
+
+            header {
+                margin-bottom: 5px;
+                padding-bottom: 2px;
+                border-bottom: 1px solid var(--accent-color) !important;
+            }
+
+            h1 { font-size: 1.4rem; margin-bottom: 2px; }
+            .subtitle { font-size: 0.8rem; margin: 0; }
+
+            /* שינוי קריטי: 2 עמודות במקום 3 */
+            /* זה נותן יותר רוחב לכל כרטיסייה ומונע חיתוך */
+            .grid-container {
+                column-count: 2; 
+                column-gap: 10px;
+                display: block;
+            }
+
+            .card {
+                box-shadow: none;
+                break-inside: avoid;
+                page-break-inside: avoid; /* תוספת למניעת חיתוך באמצע */
+                margin-bottom: 5px;
+                padding: 5px;
+                border: 1px solid #777 !important;
+                background-color: #fff !important;
+                overflow: visible !important; /* מוודא ששום דבר לא מוסתר */
+            }
+
+            /* תיקון קריטי: שבירת שורות ארוכות בקוד */
+            pre { 
+                white-space: pre-wrap; /* שובר שורות ארוכות */
+                word-wrap: break-word;
+                margin: 2px 0; 
+                padding: 2px; 
+                font-size: 9pt; 
+                border: 1px solid #ccc;
+            }
+
+            table { margin: 2px 0; font-size: 10pt; }
+            th, td { padding: 1px 3px; }
+            
+            p { margin: 2px 0; }
+            .note { margin: 3px 0; padding: 2px; }
+            
+            .span-all {
+                column-span: all !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+    <script>
+        function toggleTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+            } else {
+                document.body.classList.remove('light-theme');
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="controls">
+        <button class="btn" onclick="toggleTheme('dark')">מצב כהה (Dark)</button>
+        <button class="btn" style="background-color: #ddd; color: black;" onclick="toggleTheme('light')">מצב בהיר (Light/Print)</button>
+    </div>
+
+    <header>
+        <h1>דף נוסחאות מורחב - מבוא לתכנות C</h1>
+        <p class="subtitle">דף נוסחאות מותאם לפי המצגות. נבנה והוכן ע"י רזיאל זערור ו-AI כמובן</p>
+    </header>
+
+    <div class="grid-container">
+
+        <div class="card">
+            <h2>0. הקדמה (Preprocessor)</h2>
+            <div class="sub-header">ייבוא ספריות וקבועים</div>
+            <p>פקודות המתחילות ב-<code>#</code> מטופלות <em>לפני</em> הקומפילציה.</p>
+<pre>
+<span class="kw">#include</span> &lt;stdio.h&gt; <span class="cm">// ייבוא ספריית הקלט/פלט הסטנדרטית</span>
+<span class="kw">#include</span> &lt;stdlib.h&gt; <span class="cm">// הקצאות זיכרון, רנדום וכו'</span>
+
+<span class="cm">// #define: החלפה טקסטואלית ("העתק-הדבק") לפני הריצה</span>
+<span class="kw">#define</span> SIZE 10     <span class="cm">// בכל מקום שכתוב SIZE, המחשב יראה 10</span>
+<span class="kw">#define</span> PI 3.14
+
+<span class="tp">int</span> main() {
+    <span class="tp">int</span> arr[SIZE];  <span class="cm">// הקומפיילר רואה: int arr[10];</span>
+    <span class="kw">return</span> 0;
+}
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>1. יסודות, פלט (printf) וקלט</h2>
+            <div class="note">⚠ <strong>דגש קריטי:</strong> שימוש ב-<code>scanf_s</code>.</div>
+            
+            <div class="sub-header">טיפוסים ופורמטים</div>
+            <table>
+                <thead>
+                    <tr><th>תיאור</th><th>Specifier (%)</th><th>סימן מקדים (scanf)</th><th>הערה</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>שלם (int)</td><td dir="ltr">%d</td><td dir="ltr">&</td><td></td></tr>
+                    <tr><td>תו (char)</td><td dir="ltr">%c</td><td dir="ltr">&</td><td></td></tr>
+                    <tr><td>עשרוני (float)</td><td dir="ltr">%f</td><td dir="ltr">&</td><td>הדפסה: <code>%.2f</code></td></tr>
+                    <tr><td>עשרוני בגודל כפול (double)</td><td dir="ltr">%lf</td><td dir="ltr">&</td><td>הדפסה: <code>%.2lf</code></td></tr>
+                    <tr><td>מחרוזת</td><td dir="ltr">%s</td><td>ללא</td><td>חובה לציין גודל!</td></tr>
+                    <tr><td>כתובת</td><td dir="ltr">%p</td><td>-</td><td></td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header">תווי בקרה (Escape Sequences)</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">\n</td><td>ירידת שורה (New Line)</td></tr>
+                    <tr><td dir="ltr">\t</td><td>טאב (Tab)</td></tr>
+                    <tr><td dir="ltr">\"</td><td>הדפסת גרשיים</td></tr>
+                    <tr><td dir="ltr">\\</td><td>הדפסת לוכסן</td></tr>
+                    <tr><td dir="ltr">%%</td><td>הדפסת אחוז</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header">אופרטורים וקיצורים</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">i++, ++i</td><td>הגדלה ב-1 (פוסט/פרה)</td><td dir="ltr">x += 5</td><td><code>x = x + 5</code></td></tr>
+                    <tr><td dir="ltr">i--, --i</td><td>הקטנה ב-1 (פוסט/פרה)</td><td dir="ltr">x *= 2</td><td><code>x = x * 2</code></td></tr>
+                    <tr><td dir="ltr">x %= 3</td><td>שארית</td><td dir="ltr">x /= 2</td><td><code>x = x / 2</code></td></tr>
+                </tbody>
+            </table>
+
+            <p><strong>דוגמת הדפסה (printf):</strong></p>
+<pre>
+<span class="tp">int</span> age = 20; <span class="tp">float</span> avg = 95.5;
+<span class="cm">// שימוש ב-\n ודיוק עשרוני:</span>
+<span class="fn">printf</span>(<span class="str">"Age: %d\nAverage: %.1f%%\n"</span>, age, avg);
+<span class="cm">// פלט:</span>
+<span class="cm">// Age: 20</span>
+<span class="cm">// Average: 95.5%</span>
+</pre>
+            
+            <p><strong>קליטה בטוחה (Visual Studio):</strong></p>
+<pre>
+<span class="tp">int</span> x; <span class="tp">char</span> str[20];
+<span class="fn">scanf_s</span>(<span class="str">"%d"</span>, &x);
+<span class="cm">// במחרוזת חובה לציין גודל:</span>
+<span class="fn">scanf_s</span>(<span class="str">"%s"</span>, str, (<span class="tp">unsigned</span>)<span class="kw">sizeof</span>(str));
+</pre>
+
+            <p><strong>Casting & Arithmetic:</strong></p>
+<pre>
+<span class="tp">int</span> a = 5, b = 2;
+<span class="tp">float</span> r1 = a / b;          <span class="cm">// = 2.0 (טעות!)</span>
+<span class="tp">float</span> r2 = (<span class="tp">float</span>)a / b;  <span class="cm">// = 2.5 (תקין)</span>
+<span class="tp">int</span> mod = 10 % 3;          <span class="cm">// = 1 (שארית)</span>
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>2. תנאים (Conditions)</h2>
+            <p><strong>אופרטורים לוגיים:</strong></p>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">&&</td><td>וגם (AND)</td><td dir="ltr">||</td><td>או (OR)</td><td dir="ltr">!=</td><td>שלילה</td></tr>
+                </tbody>
+            </table>
+
+            <p><strong>משתנה בוליאני (stdbool.h):</strong></p>
+<pre>
+<span class="kw">#include</span> &lt;stdbool.h&gt;
+<span class="tp">bool</span> flag = <span class="kw">true</span>;
+<span class="kw">if</span> (flag == <span class="kw">false</span>) { ... }
+</pre>
+            <p><strong>מבנה if-else:</strong></p>
+<pre>
+<span class="kw">if</span> (x > 0 && x < 10) { <span class="cm">/* תנאי */</span> } 
+<span class="kw">else if</span> (x == 0) { <span class="cm">/* אחרת... */</span> } 
+<span class="kw">else</span> { <span class="cm">/* ברירת מחדל */</span> }
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>3. לולאות (Loops)</h2>
+<pre>
+<span class="cm">// For:</span>
+<span class="kw">for</span> (<span class="tp">int</span> i=0; i<10; i++) {
+    <span class="kw">if</span> (i==5) <span class="kw">continue</span>;
+    <span class="kw">if</span> (i==8) <span class="kw">break</span>;
+}
+
+<span class="cm">// While: עם פעולה בתוך התנאי</span>
+<span class="tp">int</span> num;
+<span class="cm">// קולט מספר כל עוד הקלט הצליח</span>
+<span class="kw">while</span> (<span class="fn">scanf_s</span>(<span class="str">"%d"</span>, &num) == 1) {
+    <span class="fn">printf</span>(<span class="str">"Read: %d\n"</span>, num);
+}
+
+<span class="cm">// Do-While (נקודה פסיק בסוף!)</span>
+<span class="kw">do</span> {
+    <span class="fn">scanf_s</span>(<span class="str">"%d"</span>, &num);
+} <span class="kw">while</span> (num < 0);
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>4. פונקציות ומצביעים</h2>
+            <p><strong>מילון מצביעים:</strong></p>
+            <table>
+                <thead><tr><th>פקודה</th><th>משמעות</th></tr></thead>
+                <tbody>
+                    <tr><td dir="ltr">int *p;</td><td>הצהרה (p יכיל כתובת)</td></tr>
+                    <tr><td dir="ltr">p = &x;</td><td>הכנסת הכתובת של x לתוך p</td></tr>
+                    <tr><td dir="ltr">*p = 10;</td><td>שינוי הערך בתא המוצבע</td></tr>
+                    <tr><td dir="ltr">printf("%p", p);</td><td>מדפיס את הכתובת ש-p מכיל</td></tr>
+                    <tr><td dir="ltr">printf("%p", &p);</td><td>מדפיס את הכתובת של p עצמו</td></tr>
+                    <tr><td dir="ltr">printf("%d", *p);</td><td>מדפיס את הערך (Dereference)</td></tr>
+                </tbody>
+            </table>
+
+            <p><strong>העברה By Ref:</strong></p>
+<pre>
+<span class="tp">void</span> <span class="fn">func2</span>(<span class="tp">int</span> *x) { *x = 10; } <span class="cm">// משנה מקור</span>
+<span class="tp">int</span> main() { <span class="tp">int</span> num=5; <span class="fn">func2</span>(&num); }
+</pre>
+            <p><strong>מצביע לפונקציה (Pointer to Function):</strong></p>
+<pre>
+<span class="cm">// 1. הגדרת פונקציה רגילה</span>
+<span class="tp">int</span> <span class="fn">add</span>(<span class="tp">int</span> a, <span class="tp">int</span> b) { <span class="kw">return</span> a + b; }
+<span class="cm">// 2. הגדרת מצביע לפונקציה</span>
+<span class="tp">int</span> (*func_ptr)(<span class="tp">int</span>, <span class="tp">int</span>);
+<span class="cm">// 3. השמה ושימוש</span>
+func_ptr = add; 
+<span class="tp">int</span> res = func_ptr(5, 3); <span class="cm">// הפעלה דרך המצביע</span>
+</pre>
+
+            <p><strong>החזרת ערכים (דוגמת calc):</strong></p>
+<pre>
+<span class="tp">void</span> <span class="fn">calc</span>(<span class="tp">int</span> a, <span class="tp">int</span> *sum, <span class="tp">int</span> *diff) {
+    *sum = a + 5;  <span class="cm">// כתיבה לכתובת</span>
+    *diff = a - 5;
+}
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>5. מערכים ומחרוזות (Safe)</h2>
+            
+            <div class="sub-header">קליטת מחרוזת בטוחה (fgets)</div>
+            <div class="note"><code>gets</code> מסוכן לשימוש! השתמש ב-<code>fgets</code> לקליטת שורה כולל רווחים.</div>
+<pre>
+<span class="tp">char</span> str[100];
+<span class="fn">printf</span>(<span class="str">"Enter sentence: "</span>);
+
+<span class="cm">// (לאן לקלוט, גודל מקסימלי, מאיפה - stdin)</span>
+<span class="fn">fgets</span>(str, <span class="kw">sizeof</span>(str), stdin);
+
+<span class="cm">// fgets קולטת גם את האנטר (\n). כך מסירים אותו:</span>
+str[<span class="fn">strcspn</span>(str, <span class="str">"\n"</span>)] = 0;
+</pre>
+
+            <div class="sub-header">מערך דו-ממדי</div>
+<pre>
+<span class="tp">int</span> mat[2][3] = {{1, 2, 3}, {4, 5, 6}};
+</pre>
+            <p><strong>אלגוריתם מטריצה:</strong> <span class="note" style="padding:2px">חובה לציין עמודות!</span></p>
+<pre>
+<span class="tp">void</span> <span class="fn">initMatrix</span>(<span class="tp">int</span> mat[][3], <span class="tp">int</span> rows) {
+    <span class="kw">for</span> (<span class="tp">int</span> i = 0; i < rows; i++) {
+        <span class="kw">for</span> (<span class="tp">int</span> j = 0; j < 3; j++) {
+            mat[i][j] = 0;
+            <span class="fn">printf</span>(<span class="str">"%d "</span>, mat[i][j]);
+        }
+        <span class="fn">printf</span>(<span class="str">"\n"</span>);
+    }
+}
+</pre>
+            
+            <div class="sub-header">פונקציות מחרוזת (Safe)</div>
+            <div class="note">העתקה בטוחה: פונקציות <code>_s</code> דורשות גודל יעד.</div>
+<pre>
+<span class="tp">char</span> src[]=<span class="str">"Hello"</span>; <span class="tp">char</span> dst[20];
+<span class="fn">strlen</span>(src);       <span class="cm">// אורך נטו (ללא \0)</span>
+
+<span class="cm">// העתקה בטוחה: (יעד, גודל יעד, מקור)</span>
+<span class="fn">strcpy_s</span>(dst, <span class="kw">sizeof</span>(dst), src); 
+
+<span class="fn">strcmp</span>(s1, s2);    <span class="cm">// 0 אם שווים!</span>
+
+<span class="cm">// שרשור בטוח:</span>
+<span class="fn">strcat_s</span>(dst, <span class="kw">sizeof</span>(dst), <span class="str">" World"</span>);
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>6. ניהול זיכרון דינמי (stdlib.h)</h2>
+            <div class="note">חובה לבדוק <code>== NULL</code> ולעשות <code>free</code>!</div>
+<pre>
+<span class="cm">// 1. הקצאת מערך</span>
+<span class="tp">int</span> *arr = (<span class="tp">int</span>*)<span class="fn">malloc</span>(size * <span class="kw">sizeof</span>(<span class="tp">int</span>));
+<span class="kw">if</span> (arr == NULL) <span class="fn">exit</span>(1);
+
+<span class="cm">// 2. אתחול לאפסים</span>
+<span class="tp">int</span> *arr2 = (<span class="tp">int</span>*)<span class="fn">calloc</span>(size, <span class="kw">sizeof</span>(<span class="tp">int</span>));
+
+<span class="cm">// 3. שינוי גודל (realloc)</span>
+<span class="tp">int</span> *tmp = (<span class="tp">int</span>*)<span class="fn">realloc</span>(arr, new_size);
+<span class="kw">if</span> (tmp != NULL) arr = tmp;
+
+<span class="cm">// 4. שחרור</span>
+<span class="fn">free</span>(arr);
+</pre>
+            <p><strong>מערך דו-ממדי דינמי:</strong></p>
+<pre>
+<span class="cm">// א. הקצאת שורות</span>
+<span class="tp">int</span> **mat = (<span class="tp">int**</span>)<span class="fn">malloc</span>(rows * <span class="kw">sizeof</span>(<span class="tp">int*</span>));
+<span class="kw">for</span>(<span class="tp">int</span> i=0; i&lt;rows; i++) {
+    <span class="cm">// ב. הקצאת עמודות</span>
+    mat[i] = (<span class="tp">int*</span>)<span class="fn">malloc</span>(cols * <span class="kw">sizeof</span>(<span class="tp">int</span>));
+}
+<span class="cm">// ג. שחרור (בסדר הפוך!)</span>
+<span class="kw">for</span>(<span class="tp">int</span> i=0; i&lt;rows; i++) <span class="fn">free</span>(mat[i]);
+<span class="fn">free</span>(mat);
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>7. מערך דו-ממדי כשטוח (Flattened 2D Array)</h2>
+            <p>גישה למטריצה שהוקצתה ב-malloc אחד גדול:</p>
+            <p>עבור מטריצה עם rows שורות ו-cols עמודות, הגישה לתא בשורה $i$ ועמודה $j$ תתבצע כך: <br> 
+            <code>arr[i * cols + j]</code></p>
+            <p>דוגמת קוד קצרה:</p>
+<pre>
+<span class="tp">int</span> *arr = (<span class="tp">int</span> *)<span class="fn">malloc</span>(rows * cols * <span class="kw">sizeof</span>(<span class="tp">int</span>));
+<span class="cm">// Accessing element at (i, j):</span>
+arr[i * cols + j] = 5;
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>8. מבנים ואיגודים (Struct & Union)</h2>
+<pre>
+<span class="kw">typedef struct</span> { 
+    <span class="tp">char</span> name[50]; 
+    <span class="tp">float</span> avg; 
+} Student;
+</pre>
+            <p><strong>דוגמה מעשית ל-Union בתוך Struct:</strong></p>
+            <div class="note">Union חוסך זיכרון - שדה אחד פעיל.</div>
+<pre>
+<span class="kw">typedef union</span> { 
+    <span class="tp">int</span> id_num; 
+    <span class="tp">float</span> salary; 
+} Data;
+
+<span class="kw">typedef struct</span> {
+    <span class="tp">int</span> type; <span class="cm">// 0 for ID, 1 for Salary</span>
+    Data info; <span class="cm">// ה-Union יושב כאן</span>
+} Record;
+
+<span class="tp">void</span> <span class="fn">printRecord</span>(Record r) {
+    <span class="kw">if</span> (r.type == 0) <span class="fn">printf</span>(<span class="str">"ID: %d"</span>, r.info.id_num);
+    <span class="kw">else</span> <span class="fn">printf</span>(<span class="str">"Salary: %.2f"</span>, r.info.salary);
+}
+
+<span class="cm">// שימוש:</span>
+Record r1;
+r1.type = 1;
+r1.info.salary = 5000.5; <span class="cm">// כתיבה ל-Union</span>
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>9. קבצים (Files)</h2>
+            <div class="note">EOF = END OF FILE (סימון סוף הקובץ).</div>
+            <p><strong>מצבי פתיחה:</strong></p>
+            <table>
+                <thead><tr><th>מצב</th><th>תיאור</th></tr></thead>
+                <tbody>
+                    <tr><td dir="ltr">"r"</td><td>קריאה בלבד</td></tr>
+                    <tr><td dir="ltr">"w"</td><td>כתיבה (דורס תוכן קיים!)</td></tr>
+                    <tr><td dir="ltr">"a"</td><td>הוספה (כותב לסוף הקובץ)</td></tr>
+                </tbody>
+            </table>
+
+            <p><strong>פונקציות עיקריות (Safe):</strong></p>
+            <table>
+                <thead><tr><th>פונקציה</th><th>תיאור</th></tr></thead>
+                <tbody>
+                    <tr><td dir="ltr">fopen_s</td><td>(&fp, name, mode)</td></tr>
+                    <tr><td dir="ltr">fscanf_s</td><td>קריאה מקובץ (כמו scanf_s)</td></tr>
+                    <tr><td dir="ltr">fgets</td><td>קריאת שורה (כולל רווחים)</td></tr>
+                    <tr><td dir="ltr">fprintf</td><td>כתיבה לקובץ (כמו printf)</td></tr>
+                    <tr><td dir="ltr">fclose</td><td>סגירת קובץ (חובה!)</td></tr>
+                </tbody>
+            </table>
+
+<pre>
+<span class="tp">FILE</span> *fp;<span class="cm">// פתיחה בטוחה</span>
+<span class="fn">fopen_s</span>(&fp, <span class="str">"file.txt"</span>, <span class="str">"r"</span>);
+<span class="kw">if</span> (fp == NULL) <span class="fn">printf</span>(<span class="str">"Error"</span>);
+
+<span class="cm">// אפשרות א': קריאה מפורמטת (כמו scanf)</span>
+<span class="tp">int</span> num;
+<span class="kw">while</span> (<span class="fn">fscanf_s</span>(fp, <span class="str">" %d"</span>, &num) != EOF) {
+    <span class="fn">printf</span>(<span class="str">"%d\n"</span>, num);
+}
+
+<span class="cm">// אפשרות ב': קריאת שורות (fgets)</span>
+<span class="tp">char</span> line[100];
+<span class="cm">// קריאה עד סוף הקובץ (NULL)</span>
+<span class="kw">while</span> (<span class="fn">fgets</span>(line, <span class="kw">sizeof</span>(line), fp) != NULL) {
+    <span class="fn">printf</span>(<span class="str">"%s"</span>, line);
+}
+
+<span class="fn">fprintf</span>(fp, <span class="str">"Result: %d"</span>, num); <span class="cm">// כתיבה</span>
+<span class="fn">fclose</span>(fp); <span class="cm">// חובה!</span>
+</pre>
+        </div>
+
+        <div class="card">
+            <h2>10. אלגוריתמים שימושיים</h2>
+            <p><strong>מיון בועות (Bubble Sort):</strong></p>
+<pre>
+<span class="tp">void</span> <span class="fn">bubbleSort</span>(<span class="tp">int</span> arr[], <span class="tp">int</span> n) {
+  <span class="kw">for</span> (<span class="tp">int</span> i = 0; i < n-1; i++)
+    <span class="kw">for</span> (<span class="tp">int</span> j = 0; j < n-i-1; j++)
+      <span class="kw">if</span> (arr[j] > arr[j+1]) {
+         <span class="tp">int</span> temp = arr[j];
+         arr[j] = arr[j+1];
+         arr[j+1] = temp;
+      }
+}
+</pre>
+            <p><strong>חיפוש בינארי (Binary Search):</strong></p>
+            <div class="note">עובד רק על מערך ממוין!</div>
+<pre>
+<span class="tp">int</span> <span class="fn">binarySearch</span>(<span class="tp">int</span> arr[], <span class="tp">int</span> n, <span class="tp">int</span> x) {
+    <span class="tp">int</span> l = 0, r = n - 1;
+    <span class="kw">while</span> (l <= r) {
+        <span class="tp">int</span> m = l + (r - l) / 2;
+        <span class="kw">if</span> (arr[m] == x) <span class="kw">return</span> m;
+        <span class="kw">if</span> (arr[m] < x) l = m + 1;
+        <span class="kw">else r = m - 1;
+    }
+    <span class="kw">return</span> -1;
+}
+</pre>
+        </div>
+
+        <div class="card span-all" style="column-span: all; width: 100%; margin-bottom: 0;">
+            <h2>11. ספריות נפוצות (Libraries)</h2>
+            
+            <div class="sub-header"><span dir="ltr">&lt;stdio.h&gt;</span> (Standard I/O)</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">printf</td><td>הדפסה למסך</td></tr>
+                    <tr><td dir="ltr">scanf_s</td><td>קלט מהמשתמש</td></tr>
+                    <tr><td dir="ltr">fopen_s / fclose</td><td>פתיחה/סגירת קבצים</td></tr>
+                    <tr><td dir="ltr">fprintf / fscanf_s</td><td>פלט/קלט לקבצים</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header"><span dir="ltr">&lt;stdlib.h&gt;</span> (Memory & Utils)</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">malloc</td><td>הקצאת זיכרון</td></tr>
+                    <tr><td dir="ltr">calloc</td><td>הקצאה ואתחול ל-0</td></tr>
+                    <tr><td dir="ltr">realloc</td><td>שינוי גודל הקצאה</td></tr>
+                    <tr><td dir="ltr">free</td><td>שחרור זיכרון</td></tr>
+                    <tr><td dir="ltr">abs(x)</td><td>ערך מוחלט (שלמים)</td></tr>
+                    <tr><td dir="ltr">exit(1)</td><td>יציאה מהתוכנית</td></tr>
+                    <tr><td dir="ltr">rand() / srand()</td><td>מספרים אקראיים</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header"><span dir="ltr">&lt;string.h&gt;</span> (Strings - Safe)</div>
+            <div class="note" style="margin-top:0;">בפונקציות Safe הפרמטר השני הוא גודל היעד!</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">strlen</td><td>אורך מחרוזת</td></tr>
+                    <tr><td dir="ltr">strcpy_s</td><td>(dst, size, src) העתקה</td></tr>
+                    <tr><td dir="ltr">strcmp</td><td>השוואת מחרוזות</td></tr>
+                    <tr><td dir="ltr">strcat_s</td><td>(dst, size, src) שרשור</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header"><span dir="ltr">&lt;math.h&gt;</span> (Mathematics)</div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">pow(x, y)</td><td>חזקה (x בחזקת y)</td></tr>
+                    <tr><td dir="ltr">sqrt(x)</td><td>שורש ריבועי</td></tr>
+                    <tr><td dir="ltr">fabs(x)</td><td>ערך מוחלט (מספרים ממשיים)</td></tr>
+                    <tr><td dir="ltr">sin/cos/tan</td><td>פונקציות טריגונומטריות</td></tr>
+                </tbody>
+            </table>
+
+            <div class="sub-header"><span dir="ltr">&lt;stdbool.h&gt;</span></div>
+            <table>
+                <tbody>
+                    <tr><td dir="ltr">bool, true, false</td><td>טיפוס בוליאני</td></tr>
+                </tbody>
+            </table>
+
+        </div>
+
+    </div>
+</body>
+</html>

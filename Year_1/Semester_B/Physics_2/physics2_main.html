@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פיזיקה 2 - חשמל | בחירת מקור לימוד</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rubik', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .header { text-align: center; margin-bottom: 40px; margin-top: 20px; }
+        .header h1 { font-size: 2rem; color: #92400e; margin-bottom: 5px; }
+        .header p { color: #64748b; margin: 0; }
+        .back-btn { align-self: flex-start; text-decoration: none; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 8px; margin-bottom: 20px; background: white; padding: 8px 15px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .options-container { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 900px; }
+        .option-btn { display: flex; align-items: center; padding: 20px; border-radius: 16px; text-decoration: none; transition: 0.2s; border: 1px solid #e2e8f0; }
+        .option-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+        .opt-site { background: #ffffff; color: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .opt-site .opt-icon { background: #e2e8f0; color: #475569; }
+        .opt-notebook { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; color: #1e40af; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.1); }
+        .opt-notebook .opt-icon { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; }
+        .opt-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-left: 20px; flex-shrink: 0; }
+        .opt-text h4 { margin: 0; font-size: 1.2rem; }
+        .opt-text p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <a href="../../../index.html" class="back-btn"><i class="fas fa-arrow-right"></i> חזרה לראשי</a>
+    <div class="header">
+        <h1>פיזיקה 2 – חשמל</h1>
+        <p>בחר מקור לימוד</p>
+    </div>
+    <div class="options-container">
+        <a href="physics2_formulas.html" class="option-btn opt-site">
+            <div class="opt-text" style="flex:1">
+                <h4>דף נוסחאות</h4>
+                <p>נוסחאות אלקטרוסטטיקה, מגנטיות וחשמל</p>
+            </div>
+            <div class="opt-icon"><i class="far fa-file-alt"></i></div>
+        </a>
+        <a href="#" onclick="return false;" class="option-btn opt-notebook" style="opacity: 0.6; cursor: not-allowed;">
+            <div class="opt-text" style="flex:1">
+                <h4>מחברת חכמה – טרם חובר</h4>
+                <p>המחברת תעודכן בהמשך הסמסטר</p>
+            </div>
+            <div class="opt-icon"><img src="https://www.gstatic.com/images/branding/product/1x/notebooklm_48dp.png" style="width: 28px; height: 28px; filter: brightness(0) invert(1);" alt="NotebookLM"></div>
+        </a>
+    
+    </div>
+
+    <!-- מוזרק אוטומטית: חלונית הדרייב -->
+    <div style="width: 100%; max-width: 1000px; margin-top: 40px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;">
+        <div style="background: #f8fafc; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e40af; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-folder-open"></i> קבצי הקורס
+        </div>
+        <iframe id="course-drive-iframe" src="../../../drive.html?courseId=7&embed=true" style="width: 100%; height: 600px; border: none;"></iframe>
+    
+</body>
+</html>

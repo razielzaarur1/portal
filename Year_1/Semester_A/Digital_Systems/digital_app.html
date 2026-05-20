@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מערכת תרגול - מערכות ספרתיות</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            /* Theme colors for Digital Systems */
+            --primary: #4c1d95; --accent: #8b5cf6; --bg-light: #f8fafc; --white: #ffffff;
+            --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
+            --easy-bg: #d1fae5; --easy-text: #065f46;
+            --med-bg: #fee2e2; --med-text: #991b1b;
+            --hard-bg: #fef3c7; --hard-text: #92400e;
+            --topic-bg: #f3e8ff; --topic-text: #6b21a8;
+            --whatsapp: #25D366;
+            --sidebar-width: 280px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100dvh; margin: 0; padding: 0; overflow: hidden; font-family: 'Rubik', sans-serif; background-color: var(--bg-light); color: var(--text-main); }
+        body { display: flex; flex-direction: row; }
+
+        aside { width: var(--sidebar-width); background: var(--white); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 15px; z-index: 20; flex-shrink: 0; height: 100%; transition: transform 0.3s ease; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding-left: 5px; }
+        .brand { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        #exam-list-container { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 5px; background: #f8fafc; margin-bottom: 10px; }
+
+        main { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; overflow: hidden; width: 100%; }
+        .top-bar { background: var(--white); padding: 0 15px; height: 60px; min-height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); z-index: 10; }
+
+        @media (min-width: 769px) { .menu-toggle, .close-sidebar-btn, .sidebar-overlay { display: none !important; } }
+        @media (max-width: 768px) {
+            aside { position: fixed; right: -100%; top: 0; height: 100%; width: 85%; box-shadow: -5px 0 20px rgba(0,0,0,0.2); transition: right 0.3s ease; }
+            aside.open { right: 0; }
+            .menu-toggle { display: block; background: none; border: none; font-size: 1.4rem; color: var(--primary); cursor: pointer; margin-left: 10px; }
+            .close-sidebar-btn { display: block; background: none; border: none; font-size: 1.5rem; color: #666; cursor: pointer; }
+            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 15; }
+            .sidebar-overlay.open { display: block; }
+            .questions-count { display: none; }
+        }
+
+        .search-container { position: relative; flex: 1; max-width: 400px; }
+        .search-container input { width: 100%; padding: 10px 40px 10px 15px; border-radius: 50px; border: 1px solid var(--border); background: #f8fafc; font-size: 1rem; font-family: inherit;}
+        .search-container i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        
+        /* Grid */
+        .content-area-grid { flex: 1; overflow-y: auto; padding: 20px; display: grid; gap: 20px; align-content: start; }
+        @media (min-width: 769px) { .content-area-grid { grid-template-columns: repeat(auto-fill, minmax(600px, 1fr)); padding: 30px; } }
+        @media (max-width: 768px) { .content-area-grid { grid-template-columns: 1fr; padding: 10px; } }
+
+        .question-card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; flex-direction: column; position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; padding-left: 40px; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .header-left { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        
+        .id-badge { background: #e2e8f0; color: #475569; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; }
+        .source-label { font-size: 0.9rem; font-weight: 700; color: var(--primary); }
+        
+        .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+        .tag { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; white-space: nowrap; }
+        .tag.easy { background: var(--easy-bg); color: var(--easy-text); }
+        .tag.medium { background: var(--med-bg); color: var(--med-text); }
+        .tag.hard { background: var(--hard-bg); color: var(--hard-text); }
+        .tag.topic { background: var(--topic-bg); color: var(--topic-text); }
+
+        .card-share-btn { position: absolute; top: 20px; left: 20px; background: transparent; border: none; color: #cbd5e1; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; }
+        .card-share-btn:hover { color: var(--accent); }
+
+        .question-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 15px; direction: rtl; }
+        
+        /* Options */
+        .options-container { margin-top: 15px; }
+        .option-btn { display: block; width: 100%; text-align: right; padding: 12px 15px; margin-bottom: 8px; border: 2px solid var(--border); background: #f8fafc; border-radius: 8px; cursor: pointer; font-size: 1rem; font-family: inherit; transition: 0.2s; }
+        .option-btn:hover:not(:disabled) { border-color: var(--accent); }
+        .option-btn.selected { background: #f3e8ff; border-color: var(--accent); font-weight: 600; }
+        .option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #14532d; font-weight: bold; }
+        .option-btn.incorrect { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; opacity: 0.8; }
+        
+        .check-answer-btn { margin-top: 10px; width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: inherit; transition: 0.2s;}
+        .check-answer-btn:hover { background: var(--accent); }
+        .check-answer-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* Flashcards */
+        .content-area-flashcards { flex: 1; display: none; flex-direction: column; background: var(--bg-light); height: 100%; overflow: hidden; padding: 10px; }
+        .flashcard-wrapper { display: flex; flex-direction: column; width: 100%; max-width: 800px; margin: 0 auto; height: 100%; gap: 10px; min-height: 0; }
+        .flashcard-status { flex-shrink: 0; display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; padding: 0 5px; }
+        
+        .flip-card { flex: 1; position: relative; perspective: 1000px; min-height: 0; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card-inner.flipped { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; background-color: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); display: flex; flex-direction: column; padding: 25px; overflow-y: auto; }
+        .flip-card-back { transform: rotateY(180deg); align-items: center; justify-content: center; background-color: #f0fdf4; border: 2px solid #bbf7d0;}
+        
+        .flashcard-nav { flex-shrink: 0; height: 60px; display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .nav-btn { background: white; border: 1px solid var(--border); padding: 10px 25px; border-radius: 50px; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit;}
+        .nav-btn:disabled { opacity: 0.5; }
+        .fc-top-share { position: absolute; top: 20px; left: 20px; z-index: 5; }
+        .fc-share-icon { background: #f1f5f9; width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; color: var(--primary); display: flex; align-items: center; justify-content: center; }
+
+        .btn-return { background: white; border: 2px solid var(--primary); color: var(--primary); padding: 12px 30px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 30px; font-family: inherit;}
+
+        /* Filters & Buttons */
+        .filter-btn { display: flex; align-items: center; width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid transparent; background: transparent; border-radius: 8px; cursor: pointer; text-align: right; color: var(--text-main); font-size: 0.95rem; font-family: inherit; }
+        .filter-btn:hover { background-color: #f1f5f9; }
+        .filter-btn.active { background-color: var(--topic-bg); color: var(--primary); font-weight: bold; }
+        
+        .mode-switch-container { display: flex; gap: 5px; margin-bottom: 20px; }
+        .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-family: inherit;}
+        .mode-btn.active { background: var(--primary); color: white; }
+        .mode-btn:not(.active) { background: #f1f5f9; color: var(--text-muted); }
+        .filter-header { font-weight: bold; margin: 15px 0 8px; color: var(--text-muted); font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; }
+        .share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .share-btn-large { padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: white; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; font-family: inherit;}
+        
+        @media (max-width: 768px) {
+            .nav-btn span { display: none; }
+            .nav-btn { width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 50%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside id="mainSidebar">
+    <div class="brand">
+        <div><i class="fas fa-microchip"></i> <span>ספרתיות PRO</span></div>
+        <button onclick="toggleSidebar()" class="close-sidebar-btn"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="sidebar-content">
+        <a href="digital_main.html" class="filter-btn" style="color:var(--primary); font-weight:bold; margin-bottom:15px; border: 1px solid var(--border); text-decoration:none;">
+            <i class="fas fa-arrow-right" style="margin-left:8px;"></i> חזרה לתפריט
+        </a>
+
+        <div class="mode-switch-container">
+            <button class="mode-btn active" id="mode-list" onclick="setMode('list')"><i class="fas fa-list"></i> רשימה</button>
+            <button class="mode-btn" id="mode-flashcards" onclick="setMode('flashcards')"><i class="fas fa-clone"></i> כרטיסיות</button>
+        </div>
+
+        <div class="filter-group">
+            <div class="filter-header">תרגול לפי מבחנים <i class="fas fa-file-alt"></i></div>
+            <div id="exam-list-container"></div>
+        </div>
+
+        <div class="filter-group" id="topics-group">
+            </div>
+
+        <div class="filter-group" id="diff-group">
+            <div class="filter-header">רמת קושי</div>
+            <button class="filter-btn active" id="btn-all-diff" onclick="toggleDifficulty('all')">הכל</button>
+            <button class="filter-btn" id="btn-easy" onclick="toggleDifficulty('easy')">קל</button>
+            <button class="filter-btn" id="btn-medium" onclick="toggleDifficulty('medium')">בינוני</button>
+            <button class="filter-btn" id="btn-hard" onclick="toggleDifficulty('hard')">קשה</button>
+        </div>
+    </div>
+</aside>
+
+<main>
+    <div class="top-bar">
+        <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="חפש שאלה..." oninput="handleSearch()">
+            <i class="fas fa-search"></i>
+        </div>
+        <div class="action-buttons">
+            <span id="questionsCount" style="font-weight:bold; color:var(--text-muted);">...</span>
+        </div>
+    </div>
+
+    <div id="gridArea" class="content-area-grid"></div>
+
+    <div id="flashcardArea" class="content-area-flashcards">
+        <div class="flashcard-wrapper">
+            <div class="flashcard-status">
+                <span id="fc-progress"></span>
+                <span id="fc-difficulty" class="tag"></span>
+            </div>
+            
+            <div class="flip-card">
+                <div class="flip-card-inner" id="cardInner">
+                    <div class="flip-card-front" id="cardFront"></div>
+                    <div class="flip-card-back" id="cardBack"></div>
+                </div>
+            </div>
+
+            <div class="flashcard-nav">
+                <button class="nav-btn" onclick="nextCard(-1)" id="btn-prev"><i class="fas fa-arrow-right"></i> <span>הקודם</span></button>
+                <button class="nav-btn" onclick="nextCard(1)" id="btn-next"><span>הבא</span> <i class="fas fa-arrow-left"></i></button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="shareModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">שתף שאלה</h3>
+        <p style="color:#666; margin-bottom: 20px;">עזור לחברים שנתקעו</p>
+        <div class="share-options">
+            <button class="share-btn-large" onclick="copyLink()"><i class="far fa-copy" style="font-size:1.5rem;"></i> העתק קישור</button>
+            <button class="share-btn-large" onclick="shareWhatsapp()" style="color:var(--whatsapp); border-color:#dcfce7; background:#f0fdf4;"><i class="fab fa-whatsapp" style="font-size:1.5rem;"></i> WhatsApp</button>
+        </div>
+        <button onclick="closeShareModal()" style="margin-top:20px; border:none; background:none; text-decoration:underline; color:#888; cursor:pointer; font-family:inherit;">ביטול</button>
+    </div>
+</div>
+
+<script>
+    let questionsData = [];
+    let state = { 
+        viewMode: 'list', currentCardIndex: 0, filteredQuestions: [],
+        selectedTopics: [], selectedDifficulty: [], selectedExam: null,
+        search: '', answers: {}, checked: {}, currentShareId: null, isStandalone: false
+    };
+
+    window.addEventListener('load', () => {
+        // Fetch JSON file
+        fetch('digital_questions.json')
+            .then(response => response.json())
+            .then(data => {
+                questionsData = data;
+                initApp();
+            })
+            .catch(error => {
+                console.error("Error loading JSON:", error);
+                document.getElementById('gridArea').innerHTML = `
+                    <div style="text-align:center; padding:40px; color:var(--med-text);">
+                        <i class="fas fa-exclamation-circle" style="font-size:3rem; margin-bottom:15px;"></i><br>
+                        שגיאה בטעינת קובץ השאלות (digital_questions.json).<br>
+                        וודא שהקובץ קיים באותה תיקייה ומכיל JSON תקין.
+                    </div>`;
+            });
+    });
+
+    function initApp() {
+        generateExamList();
+        generateTopicFilters(); 
+        checkDeepLink();
+    }
+
+    function generateTopicFilters() {
+        const allTopics = new Set();
+        questionsData.forEach(q => { if(q.topic) q.topic.forEach(t => allTopics.add(t)); });
+        
+        const container = document.getElementById('topics-group');
+        container.innerHTML = '<div class="filter-header">נושא הלימוד</div>';
+
+        const allBtn = document.createElement('button');
+        allBtn.className = 'filter-btn active';
+        allBtn.id = 'btn-all-topics';
+        allBtn.innerText = 'הכל';
+        allBtn.onclick = () => toggleTopic('all');
+        container.appendChild(allBtn);
+
+        Array.from(allTopics).sort().forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.id = `btn-topic-${t.replace(/\s+/g, '-')}`;
+            btn.innerText = t;
+            btn.onclick = () => toggleTopic(t);
+            container.appendChild(btn);
+        });
+    }
+
+    function generateExamList() {
+        const exams = [...new Set(questionsData.map(q => q.source.split(' שאלה')[0].trim()))].sort();
+        const container = document.getElementById('exam-list-container');
+        container.innerHTML = '';
+        exams.forEach(exam => {
+            const btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.innerHTML = `<i class="far fa-file-alt" style="margin-left:8px;"></i> ${exam}`;
+            btn.onclick = () => filterByExam(exam, btn);
+            btn.id = `btn-exam-${exam.replace(/\s/g, '_')}`;
+            container.appendChild(btn);
+        });
+    }
+
+    function checkDeepLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const qId = urlParams.get('q');
+        if (qId) {
+            const index = questionsData.findIndex(q => q.id == qId);
+            if (index !== -1) {
+                state.isStandalone = true;
+                state.filteredQuestions = [questionsData[index]];
+                state.currentCardIndex = 0;
+                setMode('flashcards');
+                return;
+            }
+        }
+        runFilter();
+    }
+
+    function setMode(mode) {
+        state.viewMode = mode;
+        document.getElementById('mode-list').classList.toggle('active', mode === 'list');
+        document.getElementById('mode-flashcards').classList.toggle('active', mode === 'flashcards');
+        document.getElementById('gridArea').style.display = mode === 'list' ? 'grid' : 'none';
+        document.getElementById('flashcardArea').style.display = mode === 'flashcards' ? 'flex' : 'none';
+        if (mode === 'flashcards') { resetFlip(); renderFlashcard(); } else { renderGrid(); }
+        if(window.innerWidth <= 768) document.getElementById('mainSidebar').classList.remove('open');
+    }
+
+    function runFilter() {
+        if (state.isStandalone) return;
+        let temp = questionsData.filter(q => {
+            if(state.selectedExam) return q.source.includes(state.selectedExam);
+            const diff = state.selectedDifficulty.length === 0 || state.selectedDifficulty.includes(q.difficulty);
+            const srch = q.text.includes(state.search) || q.source.includes(state.search);
+            const topic = state.selectedTopics.length === 0 || (q.topic && q.topic.some(t => state.selectedTopics.includes(t)));
+            return diff && srch && topic;
+        });
+
+        state.filteredQuestions = temp;
+        document.getElementById('questionsCount').innerText = `${state.filteredQuestions.length} שאלות`;
+        state.currentCardIndex = 0;
+        resetFlip();
+        state.viewMode === 'list' ? renderGrid() : renderFlashcard();
+    }
+
+    // -- RENDERING --
+    function renderGrid() {
+        const container = document.getElementById('gridArea');
+        container.innerHTML = state.filteredQuestions.length === 0 
+            ? '<div style="text-align:center; padding:20px; color:#999;">לא נמצאו שאלות</div>' 
+            : '';
+        
+        state.filteredQuestions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.innerHTML = generateCardContent(q);
+            container.appendChild(card);
+        });
+        refreshMath();
+    }
+
+    function renderFlashcard() {
+        const q = state.filteredQuestions[state.currentCardIndex];
+        const front = document.getElementById('cardFront');
+        const back = document.getElementById('cardBack');
+        
+        document.querySelector('.flashcard-nav').style.display = state.isStandalone ? 'none' : 'flex';
+        document.getElementById('btn-prev').disabled = state.currentCardIndex === 0;
+        document.getElementById('btn-next').disabled = state.currentCardIndex >= state.filteredQuestions.length - 1;
+
+        if (!q) { front.innerHTML = 'אין שאלות'; return; }
+
+        document.getElementById('fc-progress').innerText = state.isStandalone ? 'שאלה בודדת' : `שאלה ${state.currentCardIndex + 1} / ${state.filteredQuestions.length}`;
+        
+        let tags = (q.topic||[]).map(t => `<span class="tag topic">${t}</span>`).join('');
+        let diff = `<span class="tag ${q.difficulty}">${translateDifficulty(q.difficulty)}</span>`;
+        
+        front.innerHTML = `
+            <div class="fc-top-share"><button class="fc-share-icon" onclick="openShareModal(${q.id})"><i class="fas fa-share-alt"></i></button></div>
+            <div class="card-header">
+                <div class="header-right"><span class="id-badge">#${q.id}</span><span class="source-label">${q.source}</span></div>
+                <div class="header-left"><div class="tags">${tags} ${diff}</div></div>
+            </div>
+            <div class="question-text">${q.text}</div>
+            ${generateOptionsHTML(q)}
+        `;
+
+        back.innerHTML = `
+            <i class="fas fa-check-circle" style="font-size: 4rem; color: #22c55e; margin-bottom: 20px;"></i>
+            <h2 style="margin:0; color: #14532d;">תשובה נכונה!</h2>
+            <div style="font-size: 1.2rem; margin-top: 15px; color: var(--text-main); font-weight: bold; text-align:center;">
+                ${q.options[q.correctOptionIndex]}
+            </div>
+            <button class="btn-return" onclick="resetFlip()">חזור לשאלה</button>
+        `;
+        refreshMath();
+    }
+
+    function generateCardContent(q) {
+        let tags = (q.topic||[]).map(t => `<span class="tag topic">${t}</span>`).join('');
+        let diff = `<span class="tag ${q.difficulty}">${translateDifficulty(q.difficulty)}</span>`;
+        
+        return `
+            <button class="card-share-btn" onclick="openShareModal(${q.id})"><i class="fas fa-share-alt"></i></button>
+            <div class="card-header">
+                <div class="header-right"><span class="id-badge">#${q.id}</span><span class="source-label">${q.source}</span></div>
+                <div class="header-left"><div class="tags">${tags} ${diff}</div></div>
+            </div>
+            <div class="question-text">${q.text}</div>
+            ${generateOptionsHTML(q)}
+        `;
+    }
+
+    function generateOptionsHTML(q) {
+        if(!q.options) return '';
+        const isChecked = state.checked[q.id];
+        const selectedIdx = state.answers[q.id];
+        
+        const btns = q.options.map((opt, i) => {
+            let cls = '';
+            if(selectedIdx === i) cls += 'selected ';
+            if(isChecked) {
+                if(i === q.correctOptionIndex) cls += 'correct ';
+                else if(selectedIdx === i) cls += 'incorrect ';
+            }
+            return `<button class="option-btn ${cls}" onclick="selectOption(${q.id}, ${i})" ${isChecked ? 'disabled' : ''}>${opt}</button>`;
+        }).join('');
+        
+        const checkBtn = !isChecked 
+            ? `<button class="check-answer-btn" onclick="checkAnswer(${q.id})" ${selectedIdx===undefined?'disabled':''}>בדוק תשובה</button>` 
+            : '';
+            
+        return `<div class="options-container">${btns}${checkBtn}</div>`;
+    }
+
+    // -- LOGIC & ACTIONS --
+    function selectOption(id, idx) { state.answers[id] = idx; state.viewMode==='list' ? renderGrid() : renderFlashcard(); }
+    function checkAnswer(id) { 
+        state.checked[id] = true; 
+        const q = state.filteredQuestions.find(x => x.id === id);
+        if(state.viewMode === 'flashcards' && state.answers[id] === q.correctOptionIndex) {
+            renderFlashcard();
+            setTimeout(() => document.getElementById('cardInner').classList.add('flipped'), 300);
+        } else {
+            state.viewMode==='list' ? renderGrid() : renderFlashcard(); 
+        }
+    }
+    
+    function filterByExam(exam, btn) {
+        state.selectedTopics = []; state.selectedDifficulty = []; state.search = ''; state.selectedExam = exam;
+        updateTopicButtonsUI(); updateDiffButtonsUI(); document.getElementById('searchInput').value = '';
+        document.querySelectorAll('#exam-list-container .filter-btn').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        if(window.innerWidth <= 768) toggleSidebar();
+        runFilter();
+    }
+
+    function toggleTopic(t) { 
+        state.selectedExam = null; document.querySelectorAll('#exam-list-container .filter-btn').forEach(b => b.classList.remove('active'));
+        if(t === 'all') state.selectedTopics = []; 
+        else {
+            const idx = state.selectedTopics.indexOf(t);
+            idx > -1 ? state.selectedTopics.splice(idx, 1) : state.selectedTopics.push(t);
+        }
+        updateTopicButtonsUI(); runFilter(); 
+    }
+
+    function updateTopicButtonsUI() {
+        document.querySelectorAll('#topics-group .filter-btn').forEach(b => b.classList.remove('active'));
+        if (state.selectedTopics.length === 0) document.getElementById('btn-all-topics').classList.add('active');
+        else state.selectedTopics.forEach(t => document.getElementById(`btn-topic-${t.replace(/\s+/g, '-')}`).classList.add('active'));
+    }
+
+    function toggleDifficulty(d) { 
+        if(d === 'all') state.selectedDifficulty = []; 
+        else { 
+            const idx = state.selectedDifficulty.indexOf(d); 
+            idx > -1 ? state.selectedDifficulty.splice(idx, 1) : state.selectedDifficulty.push(d);
+        }
+        updateDiffButtonsUI(); runFilter(); 
+    }
+
+    function updateDiffButtonsUI() { 
+        document.querySelectorAll('#diff-group .filter-btn').forEach(b => b.classList.remove('active'));
+        if (state.selectedDifficulty.length === 0) document.getElementById('btn-all-diff').classList.add('active');
+        else state.selectedDifficulty.forEach(d => document.getElementById(`btn-${d}`).classList.add('active'));
+    }
+
+    function translateDifficulty(d) { return d==='easy'?'קל':(d==='medium'?'בינוני':'קשה'); }
+    function refreshMath() { if(window.MathJax) MathJax.typesetPromise(); }
+    function toggleSidebar() { document.getElementById('mainSidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('open'); }
+    function handleSearch() { state.search = document.getElementById('searchInput').value; runFilter(); }
+    function openShareModal(id) { state.currentShareId=id; document.getElementById('shareModal').style.display='flex'; }
+    function closeShareModal() { document.getElementById('shareModal').style.display='none'; }
+    function copyLink() { navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?q=${state.currentShareId}`).then(()=>{alert('הועתק!'); closeShareModal();}); }
+    function shareWhatsapp() { window.open(`https://wa.me/?text=${encodeURIComponent('שאלה: ' + window.location.origin + window.location.pathname + '?q=' + state.currentShareId)}`, '_blank'); closeShareModal(); }
+    function toggleFlip() { document.getElementById('cardInner').classList.toggle('flipped'); }
+    function resetFlip() { document.getElementById('cardInner').classList.remove('flipped'); }
+    function nextCard(dir) { resetFlip(); setTimeout(() => { state.currentCardIndex += dir; renderFlashcard(); }, 300); }
+</script>
+</body>
+</html>

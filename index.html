@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>הנדסת חשמל - רזיאל</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase removed, using local API -->
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            
+            /* Subject Colors */
+            --math-color: #3b82f6;
+            --code-color: #10b981;
+            --phys-color: #f59e0b;
+            --digital-color: #8b5cf6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg-gradient); background-attachment: fixed; color: var(--text-main); min-height: 100vh; padding-bottom: 50px; }
+
+        /* --- Header Section --- */
+        header {
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(30, 64, 175, 0.8)), 
+                        url('https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover; background-position: center; color: white;
+            padding: 40px 20px 100px; text-align: center; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;
+        }
+
+        /* User Auth Bar */
+        .auth-bar {
+            display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto 20px;
+            background: rgba(255, 255, 255, 0.1); padding: 10px 20px; border-radius: 20px; backdrop-filter: blur(5px);
+        }
+        .auth-bar span { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .auth-buttons { display: flex; gap: 10px; }
+        .auth-btn, .settings-btn {
+            background: rgba(255, 255, 255, 0.2); color: white; border: none; padding: 8px 16px;
+            border-radius: 12px; cursor: pointer; font-weight: 600; font-family: inherit; transition: 0.3s;
+        }
+        .settings-btn { padding: 8px 12px; }
+        .auth-btn:hover, .settings-btn:hover { background: white; color: var(--primary); }
+
+        header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+        header p { font-size: 1.1rem; opacity: 0.9; font-weight: 300; }
+
+        /* --- Navigation Tabs --- */
+        .tabs-wrapper { max-width: 600px; margin: -40px auto 30px; padding: 0 20px; position: relative; z-index: 100; }
+        .tabs-container { background: white; display: flex; padding: 6px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .tab-btn { flex: 1; border: none; background: transparent; padding: 12px 5px; border-radius: 15px; font-weight: 600; color: var(--secondary); cursor: pointer; transition: all 0.3s; font-size: 0.95rem; }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 8px 15px rgba(37, 99, 235, 0.25); }
+
+        /* --- Content Layout --- */
+        .main-content { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+        .quick-tools { margin-bottom: 30px; }
+        .section-label { font-size: 0.9rem; font-weight: 700; color: var(--secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+        .year-section { display: none; animation: slideUp 0.5s ease-out forwards; }
+        .year-section.active { display: block; }
+
+        /* --- Grid & Cards --- */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+        .card { background: white; border-radius: 18px; padding: 18px; text-decoration: none; display: flex; align-items: center; gap: 15px; border: 1px solid #f1f5f9; transition: all 0.25s ease; position: relative; overflow: hidden; cursor: pointer; }
+        .card::before { content: ""; position: absolute; right: 0; top: 0; height: 100%; width: 4px; background: var(--accent); }
+        .card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 25px rgba(0,0,0,0.06); border-color: #cbd5e1; }
+        .card-icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; background: var(--bg-soft); color: var(--accent); flex-shrink: 0; }
+        .card-info h3 { font-size: 1.05rem; color: var(--text-main); margin-bottom: 3px; font-weight: 600; }
+        .card-info p { font-size: 0.85rem; color: var(--text-muted); }
+        .chevron-left { margin-right: auto; color: #cbd5e1; font-size: 0.8rem; transition: transform 0.2s; }
+        .card:hover .chevron-left { transform: translateX(-3px); color: var(--primary); }
+
+        /* Colors */
+        .math { --accent: var(--math-color); --bg-soft: #eff6ff; }
+        .code { --accent: var(--code-color); --bg-soft: #ecfdf5; }
+        .phys { --accent: var(--phys-color); --bg-soft: #fffbeb; }
+        .digital { --accent: var(--digital-color); --bg-soft: #f3e8ff; }
+        .stats { --accent: #ec4899; --bg-soft: #fce7f3; } 
+
+        /* Semester Accordion */
+        .semester-container { margin-bottom: 25px; background: var(--card-bg); border-radius: 24px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(255,255,255,0.6); }
+        .semester-header { padding: 20px 25px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; transition: background 0.2s; }
+        .semester-header:hover { background: rgba(37, 99, 235, 0.03); }
+        .semester-title { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.2rem; color: var(--primary-dark); }
+        .semester-title i { font-size: 1rem; background: #eff6ff; padding: 8px; border-radius: 10px; }
+        .toggle-icon { transition: transform 0.3s ease; color: var(--secondary); }
+        .semester-container.collapsed .toggle-icon { transform: rotate(180deg); }
+        .semester-content { padding: 0 20px 20px; max-height: 2000px; transition: max-height 0.4s ease, opacity 0.3s, padding 0.3s; overflow: hidden; }
+        .semester-container.collapsed .semester-content { max-height: 0; opacity: 0; padding-bottom: 0; }
+        .empty-state { text-align: center; padding: 40px; color: var(--secondary); font-style: italic; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95);
+            z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px);
+        }
+        .modal-box {
+            background: white; width: 90%; max-width: 400px; padding: 30px; border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; text-align: center;
+        }
+        .modal-close { position: absolute; top: 15px; left: 15px; cursor: pointer; color: var(--secondary); font-size: 1.2rem; }
+        .modal-title { margin-bottom: 20px; font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
+        .form-group { margin-bottom: 15px; text-align: right; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 1rem; font-family: inherit; }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .submit-btn:hover { background: var(--primary-dark); }
+        .error-msg { color: #ef4444; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        
+        #register-fields { display: none; }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="auth-bar">
+            <span id="user-greeting"><i class="fas fa-user-circle"></i> טוען...</span>
+            <div class="auth-buttons">
+                <button class="settings-btn" id="settings-main-btn" style="display:none;" onclick="openSettingsModal()"><i class="fas fa-cog"></i></button>
+                <button class="auth-btn" id="auth-main-btn" onclick="handleLogout()" style="display:none;">התנתק</button>
+            </div>
+        </div>
+        <h1>הנדסת חשמל</h1>
+        <p>פורטל למידה אישי של רזיאל זערור</p>
+    </header>
+
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal-box">
+            <div style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-user-graduate"></i></div>
+            <h2 class="modal-title" id="modal-title-text">התחברות למערכת</h2>
+            
+            <div class="form-group">
+                <label>תעודת זהות</label>
+                <input type="text" id="tz-input" class="form-control" placeholder="הזן ת.ז" autocomplete="off" onkeypress="if(event.key === 'Enter') handleAuth()">
+            </div>
+            
+            <div id="register-fields">
+                <div class="form-group">
+                    <label>שם מלא</label>
+                    <input type="text" id="name-input" class="form-control" placeholder="הזן שם" autocomplete="off" onkeypress="if(event.key === 'Enter') handleAuth()">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>שנה נוכחית</label>
+                        <select id="year-input" class="form-control">
+                            <option value="A">שנה א'</option>
+                            <option value="B">שנה ב'</option>
+                            <option value="C">שנה ג'</option>
+                            <option value="D">שנה ד'</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>סמסטר נוכחי</label>
+                        <select id="semester-input" class="form-control">
+                            <option value="1">סמסטר א'</option>
+                            <option value="2">סמסטר ב'</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-msg" id="auth-error"></div>
+            <button class="submit-btn" id="submit-auth-btn" onclick="handleAuth()">היכנס</button>
+            
+            <div style="text-align:center; margin-top: 15px;">
+                <button id="toggle-reg-btn" onclick="toggleRegister()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-family:inherit; font-size:0.9rem; display:none;">
+                    חזור אחורה
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box">
+            <i class="fas fa-times modal-close" onclick="closeSettingsModal()"></i>
+            <div style="font-size: 2.5rem; color: var(--secondary); margin-bottom: 10px;"><i class="fas fa-cog"></i></div>
+            <h2 class="modal-title">הגדרות חשבון</h2>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>שנה נוכחית</label>
+                    <select id="set-year-input" class="form-control">
+                        <option value="A">שנה א'</option>
+                        <option value="B">שנה ב'</option>
+                        <option value="C">שנה ג'</option>
+                        <option value="D">שנה ד'</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>סמסטר נוכחי</label>
+                    <select id="set-semester-input" class="form-control">
+                        <option value="1">סמסטר א'</option>
+                        <option value="2">סמסטר ב'</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="error-msg" id="settings-error"></div>
+            <button class="submit-btn" id="submit-settings-btn" onclick="saveSettings()">שמור שינויים</button>
+        </div>
+    </div>
+
+    <div class="tabs-wrapper">
+        <nav class="tabs-container">
+            <button class="tab-btn active" onclick="showYear('A', this)">שנה א'</button>
+            <button class="tab-btn" onclick="showYear('B', this)">שנה ב'</button>
+            <button class="tab-btn" onclick="showYear('C', this)">שנה ג'</button>
+            <button class="tab-btn" onclick="showYear('D', this)">שנה ד'</button>
+        </nav>
+    </div>
+
+    <main class="main-content">
+        <div class="quick-tools">
+            <div class="section-label"><i class="fas fa-tools"></i> אזור אישי וכלים</div>
+            <div class="grid">
+                
+                <div class="card stats" id="average-card" style="display: none;" onclick="location.href='grade_calc/grades_calc.html'">
+                    <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="card-info">
+                        <h3>ממוצע נוכחי</h3>
+                        <p id="avg-display-text" style="font-size: 1.2rem; font-weight: 700; color: #ec4899; margin-top:3px;">--</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">לחץ למעבר למחשבון</p>
+                    </div>
+                    <i class="fas fa-chevron-left chevron-left"></i>
+                </div>
+
+                <a href="drive.html" class="card math">
+                    <div class="card-icon"><i class="fas fa-folder-open"></i></div>
+                    <div class="card-info">
+                        <h3>דרייב קורסים</h3>
+                        <p>לזכרו של אופיר צרפתי ז"ל</p>
+                    </div>
+                    <i class="fas fa-chevron-left chevron-left"></i>
+                </a>
+
+            </div>
+        </div>
+
+        <div id="year-A" class="year-section active">
+            <div class="semester-container" id="sem-A-1">
+                <div class="semester-header" onclick="toggleSemester('sem-A-1')">
+                    <div class="semester-title"><i class="fas fa-calendar-alt"></i><span>סמסטר א'</span></div>
+                    <i class="fas fa-chevron-up toggle-icon"></i>
+                </div>
+                <div class="semester-content">
+                    <div class="grid">
+                        <a href="Year_1/Semester_A/Infi_1/infi1_main.html" class="card math"><div class="card-icon"><i class="fas fa-infinity"></i></div><div class="card-info"><h3>אינפי 1</h3><p></p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_A/Linear_Algebra/linear_main.html" class="card math"><div class="card-icon"><i class="fas fa-project-diagram"></i></div><div class="card-info"><h3>אלגברה לינארית</h3><p></p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_A/Intro_CS/c_main.html" class="card code"><div class="card-icon"><i class="fas fa-code"></i></div><div class="card-info"><h3>מבוא לתכנות</h3><p></p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_A/Physics_1/physics1_main.html" class="card phys"><div class="card-icon"><i class="fas fa-atom"></i></div><div class="card-info"><h3>פיזיקה 1</h3><p></p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_A/Digital_Systems/digital_main.html" class="card digital"><div class="card-icon"><i class="fas fa-microchip"></i></div><div class="card-info"><h3>מערכות ספרתיות</h3><p></p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="semester-container collapsed" id="sem-A-2">
+                <div class="semester-header" onclick="toggleSemester('sem-A-2')">
+                    <div class="semester-title"><i class="fas fa-calendar-check"></i><span>סמסטר ב'</span></div>
+                    <i class="fas fa-chevron-up toggle-icon"></i>
+                </div>
+                <div class="semester-content">
+                    <div class="grid">
+                        <a href="Year_1/Semester_B/Computer_Arch/arch_main.html" class="card digital"><div class="card-icon"><i class="fas fa-microchip"></i></div><div class="card-info"><h3>מבנה מחשבים</h3><p>ארכיטקטורה ומערכות</p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_B/Infi_2/infi2_main.html" class="card math"><div class="card-icon"><i class="fas fa-infinity"></i></div><div class="card-info"><h3>אינפי 2</h3><p>חשבון אינטגרלי מתקדם</p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_B/Physics_2/physics2_main.html" class="card phys"><div class="card-icon"><i class="fas fa-bolt"></i></div><div class="card-info"><h3>פיזיקה 2 - חשמל</h3><p>אלקטרוסטטיקה וחשמל</p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_B/Advanced_Analysis/analysis_main.html" class="card math"><div class="card-icon"><i class="fas fa-square-root-alt"></i></div><div class="card-info"><h3>אנליזה מתקדמת</h3><p>פונקציות מרוכבות ואנליזה</p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                        <a href="Year_1/Semester_B/ODE/ode_main.html" class="card math"><div class="card-icon"><i class="fas fa-wave-square"></i></div><div class="card-info"><h3>מד"ר</h3><p>משוואות דיפרנציאליות רגילות</p></div><i class="fas fa-chevron-left chevron-left"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="year-B" class="year-section">
+            <div class="semester-container collapsed" id="sem-B-1">
+                <div class="semester-header" onclick="toggleSemester('sem-B-1')">
+                    <div class="semester-title"><i class="fas fa-calendar-alt"></i><span>סמסטר א'</span></div>
+                    <i class="fas fa-chevron-up toggle-icon"></i>
+                </div>
+                <div class="semester-content"><div class="empty-state">המידע יעודכן בהמשך</div></div>
+            </div>
+            <div class="semester-container collapsed" id="sem-B-2">
+                <div class="semester-header" onclick="toggleSemester('sem-B-2')">
+                    <div class="semester-title"><i class="fas fa-calendar-check"></i><span>סמסטר ב'</span></div>
+                    <i class="fas fa-chevron-up toggle-icon"></i>
+                </div>
+                <div class="semester-content"><div class="empty-state">המידע יעודכן בהמשך</div></div>
+            </div>
+        </div>
+        
+        <div id="year-C" class="year-section"><div class="empty-state">בבנייה...</div></div>
+        <div id="year-D" class="year-section"><div class="empty-state">בבנייה...</div></div>
+    </main>
+
+    <script>
+        // UI Functions
+        function showYear(yearId, btn = null) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if(btn) {
+                btn.classList.add('active');
+            } else {
+                const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(`'${yearId}'`));
+                if(targetBtn) targetBtn.classList.add('active');
+            }
+            document.querySelectorAll('.year-section').forEach(s => s.classList.remove('active'));
+            const yearSec = document.getElementById('year-' + yearId);
+            if(yearSec) yearSec.classList.add('active');
+        }
+        
+        function toggleSemester(id) { 
+            const el = document.getElementById(id);
+            if(el) el.classList.toggle('collapsed'); 
+        }
+
+        // --- API Logic ---
+
+        let baseCourses = [];
+        let isRegisterMode = false;
+        let currentUserData = null;
+
+        // Initialize App
+        async function initApp() {
+            try {
+                const res = await fetch('grade_calc/courses.json?t=' + new Date().getTime());
+                baseCourses = await res.json();
+                
+                const tz = localStorage.getItem('student_tz');
+                if (tz) {
+                    await loadUserData(tz);
+                } else {
+                    openLoginModal();
+                }
+            } catch(e) { console.error("Error initializing:", e); }
+        }
+
+        async function loadUserData(tz) {
+            try {
+                const res = await fetch(`/api/students/${tz}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUserData = data;
+                    localStorage.setItem('student_tz', tz);
+                    
+                    document.getElementById('user-greeting').innerHTML = `<i class="fas fa-user-circle"></i> שלום, ${data.name}`;
+                    document.getElementById('auth-main-btn').style.display = 'inline-block';
+                    document.getElementById('settings-main-btn').style.display = 'inline-block';
+                    document.getElementById('login-modal').style.display = 'none';
+
+                    calculateAverage(data.grades);
+                    document.getElementById('average-card').style.display = 'flex';
+
+                    // Open User's default Year and Semester
+                    if(data.year) {
+                        showYear(data.year);
+                        if(data.semester) {
+                            // Collapse all semesters first
+                            document.querySelectorAll('.semester-container').forEach(c => c.classList.add('collapsed'));
+                            // Open specific one
+                            const semId = `sem-${data.year}-${data.semester}`;
+                            const semDiv = document.getElementById(semId);
+                            if(semDiv) semDiv.classList.remove('collapsed');
+                        }
+                    }
+
+                } else {
+                    handleLogout(); 
+                }
+            } catch(e) { console.error("Error loading user:", e); }
+        }
+
+        function calculateAverage(studentGrades) {
+            if(!studentGrades || baseCourses.length === 0) return;
+            let totalCredits = 0;
+            let wSum = 0;
+
+            baseCourses.forEach(course => {
+                const sg = studentGrades[course.id];
+                if (sg && sg.active) {
+                    const grade = Number(sg.grade) || 0;
+                    const credits = Number(course.credits) || 0;
+                    if(credits > 0) {
+                        totalCredits += credits;
+                        wSum += (grade * credits);
+                    }
+                }
+            });
+
+            const avg = totalCredits > 0 ? (wSum / totalCredits).toFixed(2) : "0.00";
+            document.getElementById('avg-display-text').innerText = avg;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('student_tz');
+            currentUserData = null;
+            document.getElementById('user-greeting').innerHTML = `<i class="fas fa-user-circle"></i> טוען...`;
+            document.getElementById('auth-main-btn').style.display = 'none';
+            document.getElementById('settings-main-btn').style.display = 'none';
+            document.getElementById('average-card').style.display = 'none';
+            openLoginModal();
+        }
+
+        // --- Modals Logic ---
+        function openLoginModal() { 
+            document.getElementById('login-modal').style.display = 'flex'; 
+            isRegisterMode = false;
+            updateModalUI();
+        }
+        
+        function toggleRegister() {
+            isRegisterMode = !isRegisterMode;
+            updateModalUI();
+            document.getElementById('auth-error').style.display = 'none';
+        }
+
+        function updateModalUI() {
+            document.getElementById('register-fields').style.display = isRegisterMode ? 'block' : 'none';
+            document.getElementById('toggle-reg-btn').style.display = isRegisterMode ? 'inline-block' : 'none';
+            document.getElementById('modal-title-text').innerText = isRegisterMode ? 'יצירת חשבון' : 'התחברות למערכת';
+            document.getElementById('submit-auth-btn').innerText = isRegisterMode ? 'צור חשבון והיכנס' : 'היכנס';
+        }
+
+        function showError(msg) {
+            const errDiv = document.getElementById('auth-error');
+            errDiv.innerText = msg;
+            errDiv.style.display = 'block';
+        }
+
+        async function handleAuth() {
+            const tz = document.getElementById('tz-input').value.trim();
+            if(tz.length < 5) return showError("אנא הזן תעודת זהות תקינה.");
+            
+            const btn = document.getElementById('submit-auth-btn');
+            btn.innerText = "טוען..."; btn.disabled = true;
+
+            try {
+                if(isRegisterMode) {
+                    const name = document.getElementById('name-input').value.trim();
+                    const year = document.getElementById('year-input').value;
+                    const semester = document.getElementById('semester-input').value;
+
+                    if(!name) { btn.disabled=false; btn.innerText="צור חשבון והיכנס"; return showError("אנא הזן שם."); }
+                    
+                    const newGrades = {};
+                    baseCourses.forEach(c => newGrades[c.id] = { grade: 0, active: false });
+                    
+                    await fetch(`/api/students/${tz}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            name: name, 
+                            year: year,
+                            semester: semester,
+                            grades: newGrades 
+                        })
+                    });
+                    await loadUserData(tz);
+                } else {
+                    const res = await fetch(`/api/students/${tz}`);
+                    if(res.ok) {
+                        await loadUserData(tz);
+                    } else {
+                        showError("משתמש לא קיים. אנא הרשם כדי להיכנס.");
+                        isRegisterMode = true;
+                        updateModalUI();
+                    }
+                }
+            } catch(e) {
+                showError("שגיאת תקשורת.");
+            }
+            btn.disabled = false;
+            btn.innerText = isRegisterMode ? "צור חשבון והיכנס" : "היכנס";
+        }
+
+        // --- Settings Logic ---
+        function openSettingsModal() {
+            if(currentUserData) {
+                document.getElementById('set-year-input').value = currentUserData.year || 'A';
+                document.getElementById('set-semester-input').value = currentUserData.semester || '1';
+            }
+            document.getElementById('settings-error').style.display = 'none';
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        async function saveSettings() {
+            const tz = localStorage.getItem('student_tz');
+            if(!tz) return;
+
+            const btn = document.getElementById('submit-settings-btn');
+            btn.innerText = "שומר..."; btn.disabled = true;
+
+            const y = document.getElementById('set-year-input').value;
+            const s = document.getElementById('set-semester-input').value;
+
+            try {
+                await fetch(`/api/students/${tz}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ year: y, semester: s })
+                });
+                await loadUserData(tz); // Reloads and updates UI automatically
+                closeSettingsModal();
+            } catch(e) {
+                document.getElementById('settings-error').innerText = "שגיאה בשמירת נתונים";
+                document.getElementById('settings-error').style.display = 'block';
+            }
+            btn.innerText = "שמור שינויים"; btn.disabled = false;
+        }
+
+        // Start
+        window.onload = initApp;
+    </script>
+</body>
+</html>
