@@ -6,6 +6,8 @@ services:
     container_name: study-portal-prod
     ports:
       - "3000:3000"
+    environment:
+      - EDIT_PASSWORD=${EDIT_PASSWORD}
     volumes:
       - portal_data:/app/data
       - studies_data:/app/studies
