@@ -22,12 +22,16 @@ db.serialize(() => {
         name TEXT,
         year TEXT,
         semester TEXT,
-        grades TEXT
+        grades TEXT,
+        blocked INTEGER DEFAULT 0
     )`, (err) => {
         if (err) {
             console.error("Error creating table:", err);
             return;
         }
+
+        // Add blocked column if it doesn't exist (migration)
+        db.run(`ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0`, () => {});
 
         db.run(`CREATE TABLE IF NOT EXISTS drive_permissions (
             path TEXT PRIMARY KEY,
@@ -72,6 +76,22 @@ db.serialize(() => {
     });
 });
 
+// --- Admin Session Store (in-memory) ---
+const adminSessions = {}; // sessionId -> { approved: bool, ts: timestamp }
+
+function generateSessionId() {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function getAdminTZList() {
+    const raw = process.env.ADMIN_TZ || '';
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function isAdminTZ(tz) {
+    return getAdminTZList().includes(tz);
+}
+
 // API Routes
 
 // GET user
@@ -83,6 +103,9 @@ app.get('/api/students/:tz', (req, res) => {
         }
         if (!row) {
             return res.status(404).json({ error: "Not found" });
+        }
+        if (row.blocked) {
+            return res.status(403).json({ error: "blocked", message: "החשבון שלך חסום. פנה למנהל המערכת." });
         }
         
         try {
@@ -149,11 +172,30 @@ app.patch('/api/students/:tz', (req, res) => {
     });
 });
 
-// GET users
+// GET users (admin: full info)
 app.get('/api/users', (req, res) => {
-    db.all("SELECT tz, name FROM students", [], (err, rows) => {
+    db.all("SELECT tz, name, year, semester, blocked FROM students", [], (err, rows) => {
         if (err) return res.status(500).json({ error: "Database error" });
         res.json(rows);
+    });
+});
+
+// PATCH block/unblock student
+app.patch('/api/students/:tz/block', (req, res) => {
+    const tz = req.params.tz;
+    const { blocked } = req.body;
+    db.run("UPDATE students SET blocked = ? WHERE tz = ?", [blocked ? 1 : 0, tz], function(err) {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json({ success: true });
+    });
+});
+
+// DELETE student
+app.delete('/api/students/:tz', (req, res) => {
+    const tz = req.params.tz;
+    db.run("DELETE FROM students WHERE tz = ?", [tz], function(err) {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json({ success: true });
     });
 });
 
@@ -430,6 +472,97 @@ app.post('/api/auth/edit-password', (req, res) => {
         return res.json({ success: true });
     }
     return res.status(401).json({ error: 'wrong_password' });
+});
+
+// Admin login – check password then send Telegram approval request
+app.post('/api/auth/admin-login', (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword || password !== adminPassword) {
+        return res.status(401).json({ error: 'wrong_password' });
+    }
+    const sessionId = generateSessionId();
+    adminSessions[sessionId] = { approved: false, ts: Date.now() };
+    // Clean old sessions
+    Object.keys(adminSessions).forEach(k => {
+        if (Date.now() - adminSessions[k].ts > 5 * 60 * 1000) delete adminSessions[k];
+    });
+    // Send Telegram approval request
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (token && chatId) {
+        const msg = encodeURIComponent(`\u26a0\ufe0f \u05d1\u05e7\u05e9\u05ea \u05db\u05e0\u05d9\u05e1\u05d4 \u05dc\u05e4\u05d0\u05e0\u05dc \u05d4\u05e0\u05d9\u05d4\u05d5\u05dc\n\u05d4\u05d0\u05dd \u05d0\u05ea\u05d4 \u05de\u05d0\u05e9\u05e8 \u05d0\u05ea \u05d4\u05db\u05e0\u05d9\u05e1\u05d4?`);
+        const keyboard = JSON.stringify({
+            inline_keyboard: [[
+                { text: '\u2705 \u05d0\u05e9\u05e8 \u05db\u05e0\u05d9\u05e1\u05d4', callback_data: `approve_admin_${sessionId}` },
+                { text: '\u274c \u05d3\u05d7\u05d4', callback_data: `deny_admin_${sessionId}` }
+            ]]
+        });
+        fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${msg}&reply_markup=${encodeURIComponent(keyboard)}`)
+            .catch(e => console.error('Telegram error:', e));
+    }
+    res.json({ sessionId });
+});
+
+// Admin status polling – check if Telegram approval was given
+app.get('/api/auth/admin-status/:sessionId', (req, res) => {
+    const session = adminSessions[req.params.sessionId];
+    if (!session) return res.status(404).json({ error: 'session_not_found' });
+    if (Date.now() - session.ts > 5 * 60 * 1000) {
+        delete adminSessions[req.params.sessionId];
+        return res.status(410).json({ error: 'session_expired' });
+    }
+    res.json({ approved: session.approved, denied: session.denied || false });
+});
+
+// Telegram callback handler for admin approval
+app.post('/api/telegram/callback', (req, res) => {
+    const update = req.body;
+    if (update.callback_query) {
+        const data = update.callback_query.data;
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (data.startsWith('approve_admin_')) {
+            const sessionId = data.replace('approve_admin_', '');
+            if (adminSessions[sessionId]) adminSessions[sessionId].approved = true;
+            if (token) {
+                fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${update.callback_query.id}&text=\u2705+\u05d0\u05d5\u05e9\u05e8!`).catch(() => {});
+            }
+        } else if (data.startsWith('deny_admin_')) {
+            const sessionId = data.replace('deny_admin_', '');
+            if (adminSessions[sessionId]) { adminSessions[sessionId].denied = true; }
+            if (token) {
+                fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${update.callback_query.id}&text=\u274c+\u05e0\u05d3\u05d7\u05d4`).catch(() => {});
+            }
+        }
+    }
+    res.json({ ok: true });
+});
+
+// Admin courses GET
+app.get('/api/admin/courses', (req, res) => {
+    const coursesPath = path.join(__dirname, 'grade_calc', 'courses.json');
+    try {
+        const data = fs.readFileSync(coursesPath, 'utf8');
+        res.json(JSON.parse(data));
+    } catch(e) {
+        res.status(500).json({ error: 'Failed to read courses' });
+    }
+});
+
+// Admin courses PUT
+app.put('/api/admin/courses', (req, res) => {
+    const coursesPath = path.join(__dirname, 'grade_calc', 'courses.json');
+    try {
+        fs.writeFileSync(coursesPath, JSON.stringify(req.body, null, 2), 'utf8');
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ error: 'Failed to save courses' });
+    }
+});
+
+// Admin check TZ
+app.get('/api/auth/is-admin/:tz', (req, res) => {
+    res.json({ isAdmin: isAdminTZ(req.params.tz) });
 });
 
 // Serve static files

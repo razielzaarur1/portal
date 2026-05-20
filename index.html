@@ -134,6 +134,9 @@
         <div class="auth-bar">
             <span id="user-greeting"><i class="fas fa-user-circle"></i> טוען...</span>
             <div class="auth-buttons">
+                <button class="auth-btn" id="admin-main-btn" onclick="location.href='admin.html'" style="display:none; background:rgba(245,158,11,0.3);">
+                    <i class="fas fa-shield-alt"></i> ניהול
+                </button>
                 <button class="settings-btn" id="settings-main-btn" style="display:none;" onclick="openSettingsModal()"><i class="fas fa-cog"></i></button>
                 <button class="auth-btn" id="auth-main-btn" onclick="handleLogout()" style="display:none;">התנתק</button>
             </div>
@@ -361,6 +364,17 @@
                     document.getElementById('settings-main-btn').style.display = 'inline-block';
                     document.getElementById('login-modal').style.display = 'none';
 
+                    // Check if admin
+                    try {
+                        const adminRes = await fetch(`/api/auth/is-admin/${tz}`);
+                        const adminData = await adminRes.json();
+                        if (adminData.isAdmin) {
+                            document.getElementById('admin-main-btn').style.display = 'inline-block';
+                        } else {
+                            document.getElementById('admin-main-btn').style.display = 'none';
+                        }
+                    } catch(e) {}
+
                     calculateAverage(data.grades);
                     document.getElementById('average-card').style.display = 'flex';
 
@@ -378,7 +392,15 @@
                     }
 
                 } else {
-                    handleLogout(); 
+                    const errData = await res.json().catch(() => ({}));
+                    if (errData.error === 'blocked') {
+                        // Show blocked message
+                        document.getElementById('login-modal').style.display = 'flex';
+                        showError(errData.message || 'החשבון שלך חסום.');
+                        localStorage.removeItem('student_tz');
+                    } else {
+                        handleLogout();
+                    }
                 }
             } catch(e) { console.error("Error loading user:", e); }
         }
@@ -409,6 +431,7 @@
             currentUserData = null;
             document.getElementById('user-greeting').innerHTML = `<i class="fas fa-user-circle"></i> טוען...`;
             document.getElementById('auth-main-btn').style.display = 'none';
+            document.getElementById('admin-main-btn').style.display = 'none';
             document.getElementById('settings-main-btn').style.display = 'none';
             document.getElementById('average-card').style.display = 'none';
             openLoginModal();

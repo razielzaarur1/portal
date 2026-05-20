@@ -8,6 +8,10 @@ services:
       - "3000:3000"
     environment:
       - EDIT_PASSWORD=${EDIT_PASSWORD}
+      - ADMIN_TZ=${ADMIN_TZ}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - portal_data:/app/data
       - studies_data:/app/studies

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פאנל ניהול | פורטל למידה</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* Login Screen */
+        #login-screen {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+        }
+        .login-card {
+            background: white; border-radius: 24px; padding: 40px;
+            width: 90%; max-width: 380px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-card .icon { font-size: 3rem; color: var(--primary); margin-bottom: 16px; }
+        .login-card h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+        .login-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+        .login-input {
+            width: 100%; padding: 14px; border: 2px solid var(--border);
+            border-radius: 12px; font-size: 1rem; font-family: inherit;
+            margin-bottom: 12px; text-align: center; transition: border-color 0.2s;
+        }
+        .login-input:focus { outline: none; border-color: var(--primary); }
+        .login-btn {
+            width: 100%; background: var(--primary); color: white;
+            border: none; padding: 14px; border-radius: 12px;
+            font-size: 1rem; font-weight: 700; cursor: pointer; transition: 0.2s;
+            font-family: inherit;
+        }
+        .login-btn:hover { background: var(--primary-dark); }
+        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .login-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
+        .waiting-msg {
+            background: #fef3c7; border: 1px solid #fbbf24; border-radius: 12px;
+            padding: 16px; margin-top: 12px; font-size: 0.9rem; color: #92400e;
+            display: none;
+        }
+        .waiting-msg i { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* Admin Panel */
+        #admin-panel { display: none; }
+
+        header {
+            background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            color: white; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 60px; position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        header h1 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        header nav { display: flex; gap: 6px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.15); color: white; border: none;
+            padding: 8px 14px; border-radius: 10px; cursor: pointer;
+            font-family: inherit; font-size: 0.85rem; font-weight: 500;
+            transition: 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.3); }
+        .logout-btn {
+            background: rgba(239,68,68,0.3); color: white; border: none;
+            padding: 8px 14px; border-radius: 10px; cursor: pointer;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; transition: 0.2s;
+        }
+        .logout-btn:hover { background: rgba(239,68,68,0.6); }
+
+        .panel-content { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Students Section */
+        .section-title {
+            font-size: 1.3rem; font-weight: 700; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px; color: var(--text);
+        }
+        .search-bar {
+            display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1; min-width: 200px; padding: 10px 14px;
+            border: 2px solid var(--border); border-radius: 10px;
+            font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s;
+        }
+        .search-input:focus { outline: none; border-color: var(--primary); }
+        .students-table {
+            background: white; border-radius: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden;
+        }
+        .table-header {
+            display: grid; grid-template-columns: 2fr 1.5fr 0.8fr 0.8fr 1.2fr;
+            padding: 12px 16px; background: #f8fafc;
+            font-size: 0.8rem; font-weight: 700; color: var(--muted);
+            border-bottom: 1px solid var(--border); text-transform: uppercase;
+        }
+        .student-row {
+            display: grid; grid-template-columns: 2fr 1.5fr 0.8fr 0.8fr 1.2fr;
+            padding: 14px 16px; border-bottom: 1px solid var(--border);
+            align-items: center; transition: background 0.15s;
+        }
+        .student-row:last-child { border-bottom: none; }
+        .student-row:hover { background: #f8fafc; }
+        .student-row.blocked-row { background: #fef2f2; }
+        .student-name { font-weight: 600; font-size: 0.95rem; }
+        .student-tz { font-size: 0.8rem; color: var(--muted); direction: ltr; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+        }
+        .badge-blocked { background: #fee2e2; color: #dc2626; }
+        .badge-active { background: #d1fae5; color: #059669; }
+        .row-actions { display: flex; gap: 6px; }
+        .action-btn {
+            padding: 6px 12px; border: none; border-radius: 8px;
+            font-size: 0.78rem; font-weight: 600; cursor: pointer;
+            font-family: inherit; transition: 0.2s;
+        }
+        .btn-block { background: #fee2e2; color: #dc2626; }
+        .btn-block:hover { background: #fecaca; }
+        .btn-unblock { background: #d1fae5; color: #059669; }
+        .btn-unblock:hover { background: #a7f3d0; }
+        .btn-delete { background: #f1f5f9; color: #64748b; }
+        .btn-delete:hover { background: #fee2e2; color: #dc2626; }
+        .stats-row {
+            display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .stat-card {
+            background: white; border-radius: 14px; padding: 16px 22px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); flex: 1; min-width: 130px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .stat-num { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+        .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: white; padding: 12px 24px;
+            border-radius: 12px; font-size: 0.9rem; font-weight: 500;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
+
+        @media (max-width: 640px) {
+            .table-header, .student-row { grid-template-columns: 1fr 1fr; }
+            .table-header :nth-child(n+3), .student-row :nth-child(n+3):not(:last-child) { display: none; }
+            .student-row :last-child { grid-column: 1 / -1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="icon"><i class="fas fa-shield-alt"></i></div>
+        <h1>פאנל ניהול</h1>
+        <p>כניסה מאובטחת דרך אימות טלגרם</p>
+        <input type="password" id="admin-password" class="login-input"
+               placeholder="סיסמת ניהול"
+               onkeydown="if(event.key==='Enter') attemptLogin()">
+        <button class="login-btn" id="login-btn" onclick="attemptLogin()">
+            <i class="fas fa-lock-open"></i> כניסה
+        </button>
+        <div class="login-error" id="login-error"></div>
+        <div class="waiting-msg" id="waiting-msg">
+            <i class="fas fa-paper-plane"></i>
+            נשלחה הודעת אישור לטלגרם שלך. לחץ ✅ אשר כניסה בטלגרם...
+        </div>
+        <a href="index.html" style="display:block; margin-top:20px; color:var(--muted); font-size:0.85rem; text-decoration:none;">
+            <i class="fas fa-arrow-right"></i> חזרה לאתר
+        </a>
+    </div>
+</div>
+
+<!-- Admin Panel -->
+<div id="admin-panel">
+    <header>
+        <h1><i class="fas fa-shield-alt"></i> פאנל ניהול</h1>
+        <nav>
+            <button class="nav-btn active" id="nav-students" onclick="showSection('students')">
+                <i class="fas fa-users"></i> סטודנטים
+            </button>
+            <button class="nav-btn" id="nav-drive" onclick="goToDrive()">
+                <i class="fas fa-folder-open"></i> דרייב
+            </button>
+            <button class="nav-btn" id="nav-grades" onclick="goToGrades()">
+                <i class="fas fa-calculator"></i> ציונים
+            </button>
+            <button class="nav-btn" onclick="goHome()">
+                <i class="fas fa-home"></i> ראשי
+            </button>
+        </nav>
+        <button class="logout-btn" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i> יציאה
+        </button>
+    </header>
+
+    <div class="panel-content">
+        <!-- Students Section -->
+        <div class="section active" id="section-students">
+            <div class="section-title">
+                <i class="fas fa-users" style="color:var(--primary)"></i>
+                ניהול סטודנטים
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-total">-</div>
+                    <div class="stat-label">סה"כ סטודנטים</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-blocked" style="color:var(--danger)">-</div>
+                    <div class="stat-label">חסומים</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-active" style="color:var(--success)">-</div>
+                    <div class="stat-label">פעילים</div>
+                </div>
+            </div>
+
+            <div class="search-bar">
+                <input type="text" id="student-search" class="search-input"
+                       placeholder="חיפוש לפי שם או ת.ז..."
+                       oninput="renderStudents()">
+            </div>
+
+            <div class="students-table">
+                <div class="table-header">
+                    <div>שם</div>
+                    <div>ת.ז</div>
+                    <div>שנה</div>
+                    <div>סמסטר</div>
+                    <div>פעולות</div>
+                </div>
+                <div id="students-list">
+                    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> טוען...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+    const YEAR_MAP = { A: "א'", B: "ב'", C: "ג'", D: "ד'" };
+    let allStudents = [];
+    let sessionId = null;
+    let pollInterval = null;
+    let loginTimeout = null;
+
+    // --- Auth ---
+    async function attemptLogin() {
+        const password = document.getElementById('admin-password').value;
+        if (!password) return;
+
+        const btn = document.getElementById('login-btn');
+        const errEl = document.getElementById('login-error');
+        const waitMsg = document.getElementById('waiting-msg');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> שולח...';
+        errEl.textContent = '';
+
+        try {
+            const res = await fetch('/api/auth/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errEl.textContent = 'סיסמה שגויה';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock-open"></i> כניסה';
+                return;
+            }
+
+            sessionId = data.sessionId;
+            waitMsg.style.display = 'block';
+            btn.innerHTML = '<i class="fas fa-clock"></i> ממתין לאישור...';
+
+            // Poll for Telegram approval
+            pollInterval = setInterval(checkApproval, 2000);
+            loginTimeout = setTimeout(() => {
+                clearInterval(pollInterval);
+                errEl.textContent = 'פג תוקף הבקשה. נסה שוב.';
+                waitMsg.style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock-open"></i> כניסה';
+            }, 5 * 60 * 1000);
+
+        } catch(e) {
+            errEl.textContent = 'שגיאת תקשורת';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock-open"></i> כניסה';
+        }
+    }
+
+    async function checkApproval() {
+        try {
+            const res = await fetch(`/api/auth/admin-status/${sessionId}`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                clearInterval(pollInterval);
+                clearTimeout(loginTimeout);
+                document.getElementById('login-error').textContent = 'הבקשה פגה. נסה שוב.';
+                document.getElementById('waiting-msg').style.display = 'none';
+                const btn = document.getElementById('login-btn');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock-open"></i> כניסה';
+                return;
+            }
+
+            if (data.denied) {
+                clearInterval(pollInterval);
+                clearTimeout(loginTimeout);
+                document.getElementById('login-error').textContent = 'הכניסה נדחתה בטלגרם.';
+                document.getElementById('waiting-msg').style.display = 'none';
+                const btn = document.getElementById('login-btn');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock-open"></i> כניסה';
+                return;
+            }
+
+            if (data.approved) {
+                clearInterval(pollInterval);
+                clearTimeout(loginTimeout);
+                sessionStorage.setItem('adminMode', 'true');
+                sessionStorage.setItem('adminSessionId', sessionId);
+                enterPanel();
+            }
+        } catch(e) { /* keep polling */ }
+    }
+
+    function enterPanel() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        loadStudents();
+    }
+
+    function handleLogout() {
+        sessionStorage.removeItem('adminMode');
+        sessionStorage.removeItem('adminSessionId');
+        window.location.href = 'index.html';
+    }
+
+    // --- Navigation ---
+    function showSection(name) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`section-${name}`).classList.add('active');
+        document.getElementById(`nav-${name}`).classList.add('active');
+    }
+
+    function goToDrive() {
+        sessionStorage.setItem('adminMode', 'true');
+        window.location.href = 'drive.html';
+    }
+
+    function goToGrades() {
+        sessionStorage.setItem('adminMode', 'true');
+        window.location.href = 'grade_calc/grades_calc.html';
+    }
+
+    function goHome() {
+        window.location.href = 'index.html';
+    }
+
+    // --- Students ---
+    async function loadStudents() {
+        try {
+            const res = await fetch('/api/users');
+            allStudents = await res.json();
+            updateStats();
+            renderStudents();
+        } catch(e) {
+            document.getElementById('students-list').innerHTML =
+                '<div class="empty-state">שגיאה בטעינת נתונים</div>';
+        }
+    }
+
+    function updateStats() {
+        const total = allStudents.length;
+        const blocked = allStudents.filter(s => s.blocked).length;
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-blocked').textContent = blocked;
+        document.getElementById('stat-active').textContent = total - blocked;
+    }
+
+    function renderStudents() {
+        const query = (document.getElementById('student-search').value || '').toLowerCase();
+        const filtered = allStudents.filter(s =>
+            s.name?.toLowerCase().includes(query) || s.tz?.includes(query)
+        );
+
+        if (filtered.length === 0) {
+            document.getElementById('students-list').innerHTML =
+                '<div class="empty-state"><i class="fas fa-search"></i> לא נמצאו תוצאות</div>';
+            return;
+        }
+
+        document.getElementById('students-list').innerHTML = filtered.map(s => `
+            <div class="student-row ${s.blocked ? 'blocked-row' : ''}" id="row-${s.tz}">
+                <div>
+                    <div class="student-name">${s.name || 'ללא שם'}</div>
+                    <span class="badge ${s.blocked ? 'badge-blocked' : 'badge-active'}">
+                        <i class="fas fa-${s.blocked ? 'ban' : 'check-circle'}"></i>
+                        ${s.blocked ? 'חסום' : 'פעיל'}
+                    </span>
+                </div>
+                <div class="student-tz">${s.tz}</div>
+                <div>שנה ${YEAR_MAP[s.year] || s.year || '-'}</div>
+                <div>סמסטר ${s.semester === '1' ? "א'" : s.semester === '2' ? "ב'" : '-'}</div>
+                <div class="row-actions">
+                    ${s.blocked
+                        ? `<button class="action-btn btn-unblock" onclick="toggleBlock('${s.tz}', false)">
+                               <i class="fas fa-unlock"></i> שחרר
+                           </button>`
+                        : `<button class="action-btn btn-block" onclick="toggleBlock('${s.tz}', true)">
+                               <i class="fas fa-ban"></i> חסום
+                           </button>`
+                    }
+                    <button class="action-btn btn-delete" onclick="deleteStudent('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function toggleBlock(tz, blocked) {
+        try {
+            await fetch(`/api/students/${tz}/block`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ blocked })
+            });
+            const student = allStudents.find(s => s.tz === tz);
+            if (student) student.blocked = blocked ? 1 : 0;
+            updateStats();
+            renderStudents();
+            showToast(blocked ? `✅ ${student?.name || tz} חסום בהצלחה` : `✅ ${student?.name || tz} שוחרר בהצלחה`);
+        } catch(e) {
+            showToast('❌ שגיאה בעדכון');
+        }
+    }
+
+    async function deleteStudent(tz, name) {
+        if (!confirm(`האם אתה בטוח שברצונך למחוק את ${name} (${tz})?\nפעולה זו אינה הפיכה.`)) return;
+        try {
+            await fetch(`/api/students/${tz}`, { method: 'DELETE' });
+            allStudents = allStudents.filter(s => s.tz !== tz);
+            updateStats();
+            renderStudents();
+            showToast(`🗑️ ${name} נמחק בהצלחה`);
+        } catch(e) {
+            showToast('❌ שגיאה במחיקה');
+        }
+    }
+
+    // --- Toast ---
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // --- Init ---
+    window.onload = () => {
+        // Check if already authenticated via session
+        if (sessionStorage.getItem('adminMode') === 'true') {
+            enterPanel();
+        }
+    };
+</script>
+</body>
+</html>
