@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
+const archiver = require('archiver');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -472,6 +473,83 @@ app.post('/api/auth/edit-password', (req, res) => {
         return res.json({ success: true });
     }
     return res.status(401).json({ error: 'wrong_password' });
+});
+
+app.get('/api/drive/download-zip', async (req, res) => {
+    try {
+        const reqPath = decodeURIComponent(req.query.path || '/');
+        const tz = req.query.tz || '';
+        const isAdmin = tz === '322368564';
+        
+        const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+        const resolvedPath = path.join(baseDir, reqPath);
+        
+        if (!resolvedPath.startsWith(path.resolve(baseDir))) {
+            return res.status(403).send("Access Denied");
+        }
+        
+        const stats = await fs.promises.stat(resolvedPath).catch(() => null);
+        if (!stats || !stats.isDirectory()) {
+            return res.status(404).send("Directory not found");
+        }
+        
+        const perms = await getPermissions();
+
+        function hasAccess(itemPath) {
+            if (isAdmin) return true;
+            let current = itemPath;
+            let permission = null;
+            while (current.length > 0) {
+                if (perms[current]) { permission = perms[current]; break; }
+                const lastSlash = current.lastIndexOf('/');
+                if (lastSlash <= 0) { if (current !== '/' && perms['/']) permission = perms['/']; break; }
+                current = current.substring(0, lastSlash);
+            }
+            if (!permission || permission.visibility === 'inherit') return true;
+            if (permission.visibility === 'public') return true;
+            if (permission.visibility === 'private') return false;
+            if (permission.visibility === 'restricted') return permission.users.includes(tz);
+            return true;
+        }
+
+        if (reqPath !== '/' && reqPath !== '' && !hasAccess(reqPath)) {
+            return res.status(403).send("Access Denied to this folder");
+        }
+
+        res.attachment(`${path.basename(resolvedPath) || 'download'}.zip`);
+        const archive = archiver('zip', { zlib: { level: 5 } });
+        
+        archive.on('error', function(err) {
+            console.error("Zip generation error:", err);
+            if (!res.headersSent) res.status(500).send({error: err.message});
+        });
+
+        archive.pipe(res);
+
+        async function addFolder(dirPath, zipPath) {
+            const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
+            for (const item of items) {
+                const itemFullPath = path.join(dirPath, item.name);
+                const itemZipPath = zipPath ? `${zipPath}/${item.name}` : item.name;
+                
+                const virtualPath = (reqPath === '/' || reqPath === '' ? '' : reqPath) + '/' + itemZipPath;
+                if (!hasAccess(virtualPath)) continue;
+
+                if (item.isDirectory()) {
+                    await addFolder(itemFullPath, itemZipPath);
+                } else {
+                    archive.file(itemFullPath, { name: itemZipPath });
+                }
+            }
+        }
+
+        await addFolder(resolvedPath, '');
+        archive.finalize();
+
+    } catch (err) {
+        console.error("Zip error:", err);
+        if (!res.headersSent) res.status(500).send("Error generating zip");
+    }
 });
 
 // Admin login – check password then send Telegram approval request

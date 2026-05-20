@@ -284,6 +284,12 @@
              }
           };
 
+          const handleDownloadFolderAsZip = () => {
+             const tz = localStorage.getItem('student_tz') || '';
+             const url = `/api/drive/download-zip?path=${encodeURIComponent(currentPath)}&tz=${tz}`;
+             window.open(url, '_blank');
+          };
+
           const submitEditPassword = async () => {
              try {
                 const res = await fetch('/api/auth/edit-password', {
@@ -394,6 +400,14 @@
                             {currentPath && <span className="text-slate-400 font-normal truncate" dir="ltr">{currentPath}</span>}
                           </div>
                        </div>
+                       <button
+                         onClick={handleDownloadFolderAsZip}
+                         className="flex items-center gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded-lg font-medium transition-colors text-sm"
+                         title="הורד תיקייה זו כקובץ ZIP"
+                       >
+                         <Download size={16} />
+                         <span>הורד תיקייה</span>
+                       </button>
                     </div>
 
                     <div className="divide-y divide-slate-100 min-h-[300px]">
@@ -570,6 +584,15 @@
                                 className="absolute inset-0 w-full h-full border-none bg-white z-0"
                                 title="מציג PDF"
                               />
+                              <a 
+                                href={getDownloadUrl(viewingFile)} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="absolute bottom-4 left-4 z-10 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm transition-colors"
+                              >
+                                <Eye size={16} />
+                                פתח בכרטיסייה חדשה
+                              </a>
                             </div>
                           );
                         }
