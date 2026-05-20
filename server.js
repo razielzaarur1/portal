@@ -419,6 +419,19 @@ app.get('/studies/*', async (req, res) => {
     }
 });
 
+// Edit password verification
+app.post('/api/auth/edit-password', (req, res) => {
+    const { password } = req.body;
+    const editPassword = process.env.EDIT_PASSWORD;
+    if (!editPassword) {
+        return res.status(500).json({ error: 'EDIT_PASSWORD not configured' });
+    }
+    if (password === editPassword) {
+        return res.json({ success: true });
+    }
+    return res.status(401).json({ error: 'wrong_password' });
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname)));
 
