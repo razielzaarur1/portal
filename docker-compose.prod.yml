@@ -33,5 +33,5 @@ volumes:
     driver: local
     driver_opts:
       type: cifs
-      o: "username=Raziel,password=Raz123!@#,vers=3.0,dir_mode=0777,file_mode=0777,nounix"
+      o: "username=${CIFS_USER},password=${CIFS_PASS},vers=3.0,dir_mode=0777,file_mode=0777,nounix"
       device: "//100.88.173.17/RazielFolder/לימודים רזיאל"
