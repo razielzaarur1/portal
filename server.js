@@ -199,6 +199,19 @@ const getPermissions = () => {
     });
 };
 
+const getCourseFolders = () => {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM course_folders", [], (err, rows) => {
+            if (err) return reject(err);
+            const mapping = {};
+            rows.forEach(r => {
+                mapping[r.folder_path] = r.course_id;
+            });
+            resolve(mapping);
+        });
+    });
+};
+
 // Course linking API
 app.post('/api/courses/link', (req, res) => {
     const { courseId, folderPath } = req.body;
@@ -237,6 +250,7 @@ app.get('/api/drive/list', async (req, res) => {
         const isAdmin = tz === '322368564';
 
         const perms = await getPermissions();
+        const courseLinks = await getCourseFolders();
 
         function hasAccess(itemPath) {
             if (isAdmin && editMode) return true;
@@ -337,7 +351,8 @@ app.get('/api/drive/list', async (req, res) => {
             const exactPerm = perms[item.path] || { visibility: 'inherit', users: [] };
             files.push({
                 ...item,
-                permission: isAdmin ? exactPerm : undefined
+                permission: isAdmin ? exactPerm : undefined,
+                courseId: courseLinks[item.path] || null
             });
         }
         

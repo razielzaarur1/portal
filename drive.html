@@ -97,6 +97,20 @@
             }
           }, [isAdmin]);
 
+          // Fetch and sort courses on load
+          useEffect(() => {
+            fetch('grade_calc/courses.json?t=' + new Date().getTime())
+               .then(res => res.json())
+               .then(data => {
+                   const sorted = [...data].sort((a, b) => {
+                       if (a.year !== b.year) return a.year - b.year;
+                       return a.semester.localeCompare(b.semester);
+                   });
+                   setCoursesList(sorted);
+               })
+               .catch(console.error);
+          }, []);
+
           const fetchLocalFiles = useCallback(async (pathToFetch = "/") => {
             setLoading(true);
             setError('');
@@ -258,14 +272,9 @@
              }
           };
 
-          const openCourseLinkModal = async (e, item) => {
+          const openCourseLinkModal = (e, item) => {
              e.stopPropagation();
-             try {
-                 const res = await fetch('grade_calc/courses.json?t=' + new Date().getTime());
-                 const data = await res.json();
-                 setCoursesList(data);
-                 setCourseLinkModal({ open: true, path: item.path });
-             } catch(e) { alert("שגיאה בטעינת רשימת הקורסים"); }
+             setCourseLinkModal({ open: true, path: item.path });
           };
 
           const saveCourseLink = async (courseId) => {
@@ -276,7 +285,7 @@
                    body: JSON.stringify({ courseId: courseId, folderPath: courseLinkModal.path })
                 });
                 setCourseLinkModal({ open: false, path: null });
-                alert("התיקייה שויכה לקורס בהצלחה!");
+                fetchLocalFiles(currentPath || "/");
              } catch(e) {
                 alert("שגיאה בשמירת שיוך קורס");
              }
@@ -374,6 +383,14 @@
                                          מותאם ({item.permission.visibility})
                                        </span>
                                     )}
+                                    {item.courseId && (() => {
+                                       const c = coursesList.find(c => c.id === item.courseId);
+                                       return c ? (
+                                         <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-normal">
+                                           קורס: {c.name}
+                                         </span>
+                                       ) : null;
+                                    })()}
                                   </span>
                                   <ChevronRight size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors rotate-180 ml-4 shrink-0" />
                                 </button>
