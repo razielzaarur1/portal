@@ -257,7 +257,7 @@
             }
 
             // זריקה אוטומטית החוצה לעמוד הראשי במידה והמשתמש לא מחובר או שהוא לא מנהל
-            if (!currentUser && !isAdmin && !showAdminLogin) {
+            if (!currentUser && !isAdmin) {
                 window.location.href = '../index.html';
                 return null;
             }
@@ -285,18 +285,7 @@
                         </div>
                     </header>
 
-                    {showAdminLogin && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => setShowAdminLogin(false)}>
-                            <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                                <h3 className="text-xl font-bold mb-4 text-center text-slate-800">{isFirstSetup ? "הגדרה ראשונית למנהל" : "כניסת מנהל מערכת"}</h3>
-                                <form onSubmit={handleAdminLogin} className="flex flex-col gap-4">
-                                    <input type="password" autoFocus placeholder="סיסמת כניסה" className="border border-slate-300 rounded-lg p-3 text-center outline-none focus:border-indigo-500 transition-all" value={inputPassword} onChange={e => setInputPassword(e.target.value)} />
-                                    {isFirstSetup && <div className="animate-fade-in space-y-2"><p className="text-xs text-slate-500 text-center">פעם ראשונה: הזן את הטוקן של GitHub</p><input type="password" placeholder="GitHub Token" className="border border-slate-300 rounded-lg p-3 w-full text-center outline-none focus:border-indigo-500 text-xs" value={inputToken} onChange={e => setInputToken(e.target.value)} /></div>}
-                                    <button type="submit" className="bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 shadow-lg">{isFirstSetup ? "שמור והתחבר" : "כניסה"}</button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
+
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"><div><div className="text-slate-500 text-sm font-medium mb-1">ממוצע משוקלל</div><div className={`text-4xl font-bold`} style={{color: getGradeColor(stats.average)}}>{stats.average.toFixed(2)}</div></div><div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-xl">📊</div></div>

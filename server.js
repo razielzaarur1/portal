@@ -515,28 +515,44 @@ app.get('/api/auth/admin-status/:sessionId', (req, res) => {
     res.json({ approved: session.approved, denied: session.denied || false });
 });
 
-// Telegram callback handler for admin approval
-app.post('/api/telegram/callback', (req, res) => {
-    const update = req.body;
-    if (update.callback_query) {
-        const data = update.callback_query.data;
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (data.startsWith('approve_admin_')) {
-            const sessionId = data.replace('approve_admin_', '');
-            if (adminSessions[sessionId]) adminSessions[sessionId].approved = true;
-            if (token) {
-                fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${update.callback_query.id}&text=\u2705+\u05d0\u05d5\u05e9\u05e8!`).catch(() => {});
-            }
-        } else if (data.startsWith('deny_admin_')) {
-            const sessionId = data.replace('deny_admin_', '');
-            if (adminSessions[sessionId]) { adminSessions[sessionId].denied = true; }
-            if (token) {
-                fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${update.callback_query.id}&text=\u274c+\u05e0\u05d3\u05d7\u05d4`).catch(() => {});
-            }
-        }
+// Basic Telegram polling for Admin login approval
+let lastUpdateId = 0;
+function pollTelegram() {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+        setTimeout(pollTelegram, 5000);
+        return;
     }
-    res.json({ ok: true });
-});
+    
+    fetch(`https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.ok && data.result.length > 0) {
+                for (const update of data.result) {
+                    lastUpdateId = update.update_id;
+                    if (update.callback_query) {
+                        const cb = update.callback_query;
+                        const cbData = cb.data;
+                        if (cbData.startsWith('approve_admin_')) {
+                            const sessionId = cbData.replace('approve_admin_', '');
+                            if (adminSessions[sessionId]) adminSessions[sessionId].approved = true;
+                            fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${cb.id}&text=\u2705+\u05d0\u05d5\u05e9\u05e8!`).catch(()=>{});
+                        } else if (cbData.startsWith('deny_admin_')) {
+                            const sessionId = cbData.replace('deny_admin_', '');
+                            if (adminSessions[sessionId]) adminSessions[sessionId].denied = true;
+                            fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${cb.id}&text=\u274c+\u05e0\u05d3\u05d7\u05d4`).catch(()=>{});
+                        }
+                    }
+                }
+            }
+        })
+        .catch(err => {}) // Ignore fetch errors in polling
+        .finally(() => {
+            setTimeout(pollTelegram, 2000);
+        });
+}
+// Start polling
+setTimeout(pollTelegram, 2000);
 
 // Admin courses GET
 app.get('/api/admin/courses', (req, res) => {
