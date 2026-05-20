@@ -3,16 +3,32 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: study-portal
-    ports:
-      - "3000:3000"
+    container_name: study-portal-prod
+    expose:
+      - "3000"
     volumes:
       - portal_data:/app/data
       - studies_data:/app/studies
     restart: unless-stopped
 
+  caddy:
+    image: caddy:latest
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from ${DOMAIN} --to app:3000
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
 volumes:
   portal_data: {}
+  caddy_data: {}
+  caddy_config: {}
   studies_data:
     driver: local
     driver_opts:
