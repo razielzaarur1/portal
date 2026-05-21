@@ -18,8 +18,21 @@ services:
     ports:
       - "10.0.0.46:80:80"
       - "10.0.0.46:443:443"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        cat <<'EOF' > /tmp/Caddyfile
+        razielzaarur.duckdns.org {
+            reverse_proxy app:3000
+        }
+        http://:80 {
+            @isPublicDomain header Host razielzaarur.duckdns.org
+            redir @isPublicDomain https://{host}{uri} permanent
+            reverse_proxy app:3000
+        }
+        EOF
+        caddy run --config /tmp/Caddyfile
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
