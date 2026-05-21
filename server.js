@@ -797,49 +797,62 @@ app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) 
         
         const proposalId = crypto.randomBytes(8).toString('hex');
         
-        // Save to DB
+        // Save to DB with 'scanning' status immediately
         db.run(
             "INSERT INTO proposals (id, tz, files_count, proposed_path, comments, status, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [proposalId, tz, files.length, proposed_path, comments, 'pending', Date.now()]
+            [proposalId, tz, files.length, proposed_path, comments, 'scanning', Date.now()]
         );
         
-        // Scan files
-        let hasVirus = false;
-        let virusName = '';
+        // Respond to client IMMEDIATELY so they can poll status
+        res.json({ success: true, proposalId });
         
-        for (const file of files) {
-            const scan = await runClamScan(file.path);
-            if (!scan.safe) {
-                hasVirus = true;
-                virusName = scan.virus;
-                break;
+        // Run background tasks (Scan + Notify)
+        (async () => {
+            try {
+                let hasVirus = false;
+                let virusName = '';
+                
+                for (const file of files) {
+                    const scan = await runClamScan(file.path);
+                    if (!scan.safe) {
+                        hasVirus = true;
+                        virusName = scan.virus;
+                        break;
+                    }
+                }
+                
+                if (hasVirus) {
+                    // Update DB
+                    db.run("UPDATE proposals SET status = 'virus' WHERE id = ?", [proposalId]);
+                    
+                    // Notify Admin
+                    sendTelegramMessage(
+                        `⚠️ סכנת וירוס!\nהסטודנט ${studentName} (${tz}) ניסה להעלות קבצים לנתיב ${proposed_path}.\nהסורק זיהה וירוס: ${virusName}\nהקבצים נמצאים כעת בהסגר.`,
+                        JSON.stringify({
+                            inline_keyboard: [[
+                                { text: '🗑️ השמד קבצים', callback_data: `destroy_prop_${proposalId}` },
+                                { text: '⚠️ המשך בכל זאת (מסוכן)', callback_data: `force_prop_${proposalId}` }
+                            ]]
+                        })
+                    );
+                    return;
+                }
+                
+                // Safe files - Update status and Notify Admin
+                db.run("UPDATE proposals SET status = 'pending' WHERE id = ?", [proposalId]);
+                await notifyAdminNewProposal(proposalId, studentName, tz, proposed_path, comments, files);
+            } catch (e) {
+                console.error("Error in background processing of proposal:", e);
+                db.run("UPDATE proposals SET status = 'error' WHERE id = ?", [proposalId]);
             }
-        }
-        
-        if (hasVirus) {
-            // Update DB
-            db.run("UPDATE proposals SET status = 'virus' WHERE id = ?", [proposalId]);
-            
-            // Notify Admin
-            sendTelegramMessage(
-                `⚠️ סכנת וירוס!
-הסטודנט ${studentName} (${tz}) ניסה להעלות קבצים לנתיב ${proposed_path}.
-הסורק זיהה וירוס: ${virusName}
-הקבצים נמצאים כעת בהסגר.`,
-                JSON.stringify({
-                    inline_keyboard: [[
-                        { text: '🗑️ השמד קבצים', callback_data: `destroy_prop_${proposalId}` },
-                        { text: '⚠️ המשך בכל זאת (מסוכן)', callback_data: `force_prop_${proposalId}` }
-                    ]]
-                })
-            );
-            return res.json({ success: true, warning: 'virus' });
-        }
-        
-        // Safe files - Notify Admin
-        await notifyAdminNewProposal(proposalId, studentName, tz, proposed_path, comments, files);
-        
-        res.json({ success: true });
+        })();
+    });
+});
+
+app.get('/api/proposals/:id/status', (req, res) => {
+    db.get("SELECT status FROM proposals WHERE id = ?", [req.params.id], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'Not found' });
+        res.json({ status: row.status });
     });
 });
 
