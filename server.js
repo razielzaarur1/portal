@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const archiver = require('archiver');
+const multer = require('multer');
+const unzipper = require('unzipper');
+const crypto = require('crypto');
+const { exec } = require('child_process');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -11,6 +15,11 @@ app.use(express.json({ limit: '10mb' }));
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
+}
+
+const quarantineDir = path.join(__dirname, 'data', 'quarantine');
+if (!fs.existsSync(quarantineDir)) {
+    fs.mkdirSync(quarantineDir);
 }
 
 const dbFile = path.join(dataDir, 'database.sqlite');
@@ -24,15 +33,17 @@ db.serialize(() => {
         year TEXT,
         semester TEXT,
         grades TEXT,
-        blocked INTEGER DEFAULT 0
+        blocked INTEGER DEFAULT 0,
+        chat_blocked INTEGER DEFAULT 0
     )`, (err) => {
         if (err) {
             console.error("Error creating table:", err);
             return;
         }
 
-        // Add blocked column if it doesn't exist (migration)
+        // Add columns if they don't exist (migration)
         db.run(`ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0`, () => {});
+        db.run(`ALTER TABLE students ADD COLUMN chat_blocked INTEGER DEFAULT 0`, () => {});
 
         db.run(`CREATE TABLE IF NOT EXISTS drive_permissions (
             path TEXT PRIMARY KEY,
@@ -43,6 +54,24 @@ db.serialize(() => {
         db.run(`CREATE TABLE IF NOT EXISTS course_folders (
             course_id INTEGER PRIMARY KEY,
             folder_path TEXT
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS proposals (
+            id TEXT PRIMARY KEY,
+            tz TEXT,
+            files_count INTEGER,
+            proposed_path TEXT,
+            comments TEXT,
+            status TEXT,
+            timestamp INTEGER
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tz TEXT,
+            message TEXT,
+            sender TEXT,
+            timestamp INTEGER
         )`);
 
         // Check if DB is empty to seed it
@@ -658,6 +687,285 @@ app.put('/api/admin/courses', (req, res) => {
 app.get('/api/auth/is-admin/:tz', (req, res) => {
     res.json({ isAdmin: isAdminTZ(req.params.tz) });
 });
+
+
+// ==========================================
+// CHAT & PROPOSALS API
+// ==========================================
+
+const upload = multer({ 
+    dest: quarantineDir,
+    limits: { fileSize: 40 * 1024 * 1024 } // 40MB
+});
+
+function runClamScan(filePath) {
+    return new Promise((resolve) => {
+        // Run clamscan. 0 = OK, 1 = Virus, 2 = Error
+        exec(`clamscan "${filePath}"`, (error, stdout, stderr) => {
+            if (error && error.code === 1) {
+                // Virus found
+                const match = stdout.match(/: (.*) FOUND/);
+                const virusName = match ? match[1] : 'Unknown Virus';
+                resolve({ safe: false, virus: virusName });
+            } else if (error && error.code === 2) {
+                // Error running clamscan
+                resolve({ safe: true }); // Assume safe if scanner fails or is missing, or we can handle it differently.
+            } else {
+                resolve({ safe: true });
+            }
+        });
+    });
+}
+
+const userFolderTimers = {};
+const userFolderCounts = {};
+
+// Clean counts every 5 mins
+setInterval(() => {
+    const now = Date.now();
+    for (const tz in userFolderCounts) {
+        userFolderCounts[tz] = userFolderCounts[tz].filter(t => now - t < 5 * 60 * 1000);
+        if (userFolderCounts[tz].length === 0) delete userFolderCounts[tz];
+    }
+}, 60 * 1000);
+
+app.post('/api/drive/propose-folder', async (req, res) => {
+    const { tz, path: folderPath } = req.body;
+    if (!tz) return res.status(400).json({ error: 'Missing tz' });
+    
+    if (!userFolderCounts[tz]) userFolderCounts[tz] = [];
+    userFolderCounts[tz].push(Date.now());
+    
+    if (userFolderCounts[tz].length > 3) {
+        // Spam!
+        const folders = userFolderCounts[tz].length;
+        sendTelegramMessage(
+            `⚠️ התראת ספאם!
+הסטודנט בעל ת.ז ${tz} ניסה ליצור יותר מ-3 תיקיות (${folders} פעמים) ב-5 דקות האחרונות.`,
+            JSON.stringify({
+                inline_keyboard: [[
+                    { text: '🚫 חסום סטודנט', callback_data: `confirm_block_${tz}` },
+                    { text: '👁️ התעלם', callback_data: 'ignore_spam' }
+                ]]
+            })
+        );
+        return res.status(429).json({ error: 'spam_protection', message: 'יצרת יותר מדי תיקיות. אנא המתן מספר דקות.' });
+    }
+    
+    // Set 5 min timer
+    if (userFolderTimers[`${tz}_${folderPath}`]) clearTimeout(userFolderTimers[`${tz}_${folderPath}`]);
+    
+    userFolderTimers[`${tz}_${folderPath}`] = setTimeout(() => {
+        sendTelegramMessage(`⚠️ התראה: הסטודנט ${tz} ניסה ליצור תיקייה ריקה (${folderPath}) ולא העלה שום קובץ תוך 5 דקות.`);
+        delete userFolderTimers[`${tz}_${folderPath}`];
+    }, 5 * 60 * 1000);
+    
+    res.json({ success: true });
+});
+
+app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) => {
+    const { tz, proposed_path, comments } = req.body;
+    const files = req.files;
+    
+    if (!tz || !files || files.length === 0) {
+        return res.status(400).json({ error: 'Missing files or data' });
+    }
+    
+    // Clear the empty folder timer if it exists for this path
+    if (userFolderTimers[`${tz}_${proposed_path}`]) {
+        clearTimeout(userFolderTimers[`${tz}_${proposed_path}`]);
+        delete userFolderTimers[`${tz}_${proposed_path}`];
+    }
+    
+    db.get("SELECT name FROM students WHERE tz = ?", [tz], async (err, student) => {
+        const studentName = student ? student.name : 'לא ידוע';
+        
+        const proposalId = crypto.randomBytes(8).toString('hex');
+        
+        // Save to DB
+        db.run(
+            "INSERT INTO proposals (id, tz, files_count, proposed_path, comments, status, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [proposalId, tz, files.length, proposed_path, comments, 'pending', Date.now()]
+        );
+        
+        // Scan files
+        let hasVirus = false;
+        let virusName = '';
+        
+        for (const file of files) {
+            const scan = await runClamScan(file.path);
+            if (!scan.safe) {
+                hasVirus = true;
+                virusName = scan.virus;
+                break;
+            }
+        }
+        
+        if (hasVirus) {
+            // Update DB
+            db.run("UPDATE proposals SET status = 'virus' WHERE id = ?", [proposalId]);
+            
+            // Notify Admin
+            sendTelegramMessage(
+                `⚠️ סכנת וירוס!
+הסטודנט ${studentName} (${tz}) ניסה להעלות קבצים לנתיב ${proposed_path}.
+הסורק זיהה וירוס: ${virusName}
+הקבצים נמצאים כעת בהסגר.`,
+                JSON.stringify({
+                    inline_keyboard: [[
+                        { text: '🗑️ השמד קבצים', callback_data: `destroy_prop_${proposalId}` },
+                        { text: '⚠️ המשך בכל זאת (מסוכן)', callback_data: `force_prop_${proposalId}` }
+                    ]]
+                })
+            );
+            return res.json({ success: true, warning: 'virus' });
+        }
+        
+        // Safe files - Notify Admin
+        await notifyAdminNewProposal(proposalId, studentName, tz, proposed_path, comments, files);
+        
+        res.json({ success: true });
+    });
+});
+
+async function notifyAdminNewProposal(proposalId, studentName, tz, proposed_path, comments, files) {
+    let msg = `📄 הצעת קבצים חדשה!
+
+👤 סטודנט: ${studentName} (${tz})
+📁 יעד מוצע: ${proposed_path}
+💬 הערות: ${comments || 'אין'}
+📋 מספר קבצים: ${files.length}`;
+    
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+    
+    const FormData = require('form-data');
+    
+    // Attempt to send files
+    let sentFiles = false;
+    for (const file of files) {
+        if (file.size < 49 * 1024 * 1024) { // Telegram limit is ~50MB
+            try {
+                const form = new FormData();
+                form.append('chat_id', chatId);
+                form.append('document', fs.createReadStream(file.path), { filename: file.originalname });
+                if (!sentFiles) {
+                    form.append('caption', msg);
+                    sentFiles = true;
+                }
+                await require('axios').post(`https://api.telegram.org/bot${token}/sendDocument`, form, {
+                    headers: form.getHeaders()
+                });
+            } catch(e) {
+                console.error("Error sending document", e.message);
+            }
+        }
+    }
+    
+    // If we didn't send caption (files too big or error), send it as text
+    if (!sentFiles) {
+        await require('axios').post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chatId,
+            text: msg + '\\n(לא ניתן לשלוח את הקבצים - כנראה חורגים מגודל 50MB)'
+        });
+    }
+    
+    // Send action buttons
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: '✅ אישור', callback_data: `appr_prop_${proposalId}` },
+                { text: '❌ דחייה', callback_data: `rej_prop_${proposalId}` }
+            ],
+            [
+                { text: '📂 שנה נתיב (אינטראקטיבי)', callback_data: `nav_prop_${proposalId}_/` },
+            ],
+            [
+                { text: '🚫 חסום סטודנט', callback_data: `confirm_block_${tz}` }
+            ]
+        ]
+    };
+    
+    await require('axios').post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text: 'בחר פעולה:',
+        reply_markup: keyboard
+    }).catch(()=>{});
+}
+
+function sendTelegramMessage(text, reply_markup = null) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+    
+    const body = { chat_id: chatId, text };
+    if (reply_markup) body.reply_markup = reply_markup;
+    
+    require('axios').post(`https://api.telegram.org/bot${token}/sendMessage`, body).catch(()=>{});
+}
+
+app.get('/api/students/:tz/notifications', (req, res) => {
+    db.all("SELECT * FROM proposals WHERE tz = ? AND status IN ('approved', 'rejected')", [req.params.tz], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'DB Error' });
+        res.json(rows);
+        // Mark as read (delete from DB after notifying)
+        db.run("DELETE FROM proposals WHERE tz = ? AND status IN ('approved', 'rejected')", [req.params.tz]);
+    });
+});
+
+// Chat Endpoints
+app.get('/api/chat/:tz', (req, res) => {
+    db.all("SELECT * FROM chat_messages WHERE tz = ? ORDER BY timestamp ASC", [req.params.tz], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'DB error' });
+        res.json(rows);
+    });
+});
+
+app.post('/api/chat/:tz', (req, res) => {
+    const tz = req.params.tz;
+    const { message, sender } = req.body; // sender: 'student' or 'admin'
+    
+    db.get("SELECT name, chat_blocked FROM students WHERE tz = ?", [tz], (err, student) => {
+        if (!student) return res.status(404).json({ error: 'Student not found' });
+        if (student.chat_blocked && sender === 'student') {
+            return res.status(403).json({ error: 'Chat blocked' });
+        }
+        
+        db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, ?, ?)", [tz, message, sender, Date.now()]);
+        
+        if (sender === 'student') {
+            // Fetch last 5 messages
+            db.all("SELECT * FROM chat_messages WHERE tz = ? ORDER BY timestamp DESC LIMIT 5", [tz], (err, rows) => {
+                const history = rows.reverse().map(r => `[${r.sender === 'student' ? 'סטודנט' : 'מנהל'}]: ${r.message}`).join('\n');
+                
+                sendTelegramMessage(
+                    `💬 הודעה חדשה מסטודנט!
+👤 שם: ${student.name} (${tz})
+
+היסטוריה אחרונה:
+${history}`,
+                    JSON.stringify({
+                        inline_keyboard: [[
+                            { text: '💬 הגב', callback_data: `reply_chat_${tz}` },
+                            { text: '🚫 חסום צ\'אט', callback_data: `block_chat_${tz}` }
+                        ]]
+                    })
+                );
+            });
+        }
+        
+        res.json({ success: true });
+    });
+});
+
+app.post('/api/students/:tz/block-chat', (req, res) => {
+    db.run("UPDATE students SET chat_blocked = ? WHERE tz = ?", [req.body.blocked ? 1 : 0, req.params.tz]);
+    res.json({ success: true });
+});
+
+// Telegram Polling Update (to be added)
+// ==========================================
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
