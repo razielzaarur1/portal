@@ -1,3 +1,14 @@
-{$DOMAIN} {
+# Public domain with automatic HTTPS
+razielzaarur.duckdns.org {
+    reverse_proxy app:3000
+}
+
+# HTTP fallback (Tailscale, Localhost, IP address)
+http://:80 {
+    # Redirect public domain to HTTPS
+    @isPublicDomain header Host razielzaarur.duckdns.org
+    redir @isPublicDomain https://{host}{uri} permanent
+
+    # All other HTTP traffic (Tailscale, localhost) goes to the app
     reverse_proxy app:3000
 }
