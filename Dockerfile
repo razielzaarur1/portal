@@ -7,10 +7,6 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 
-# Install ClamAV and update virus definitions
-RUN apk add --no-cache clamav clamav-daemon
-RUN freshclam || true
-
 # Copy application files
 COPY . .
 

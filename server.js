@@ -698,23 +698,38 @@ const upload = multer({
     limits: { fileSize: 40 * 1024 * 1024 } // 40MB
 });
 
-function runClamScan(filePath) {
-    return new Promise((resolve) => {
-        // Run clamscan. 0 = OK, 1 = Virus, 2 = Error
-        exec(`clamscan "${filePath}"`, (error, stdout, stderr) => {
-            if (error && error.code === 1) {
-                // Virus found
-                const match = stdout.match(/: (.*) FOUND/);
-                const virusName = match ? match[1] : 'Unknown Virus';
-                resolve({ safe: false, virus: virusName });
-            } else if (error && error.code === 2) {
-                // Error running clamscan
-                resolve({ safe: true }); // Assume safe if scanner fails or is missing, or we can handle it differently.
-            } else {
-                resolve({ safe: true });
-            }
-        });
-    });
+const NodeClam = require('clamscan');
+let clamscanScanner = null;
+new NodeClam().init({
+    clamdscan: {
+        host: 'clamav', // The service name in docker-compose
+        port: 3310,
+        local_fallback: false,
+        timeout: 60000
+    }
+}).then(clam => {
+    clamscanScanner = clam;
+    console.log("ClamAV connected successfully via TCP.");
+}).catch(err => {
+    console.error("ClamAV initialization error (will skip scans):", err.message);
+});
+
+async function runClamScan(filePath) {
+    if (!clamscanScanner) {
+        console.warn("ClamAV scanner not available, assuming safe for now.");
+        return { safe: true }; // Fallback if clamav container is unreachable
+    }
+    try {
+        const rs = fs.createReadStream(filePath);
+        const { isInfected, viruses } = await clamscanScanner.scanStream(rs);
+        if (isInfected) {
+            return { safe: false, virus: viruses.join(', ') || 'Unknown Virus' };
+        }
+        return { safe: true };
+    } catch (err) {
+        console.error("ClamAV Scan Error:", err.message);
+        return { safe: true }; // Assume safe on error
+    }
 }
 
 const userFolderTimers = {};

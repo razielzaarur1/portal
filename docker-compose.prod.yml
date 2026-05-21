@@ -38,6 +38,13 @@ services:
     depends_on:
       - app
 
+  clamav:
+    image: clamav/clamav:latest
+    container_name: clamav-daemon
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+
 volumes:
   portal_data: {}
   caddy_data: {}
