@@ -25,6 +25,9 @@ if (!fs.existsSync(quarantineDir)) {
 const dbFile = path.join(dataDir, 'database.sqlite');
 const db = new sqlite3.Database(dbFile);
 
+// Enable WAL mode for better concurrency and no deadlocks
+db.run("PRAGMA journal_mode = WAL;");
+
 // Initialize DB schema
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS students (

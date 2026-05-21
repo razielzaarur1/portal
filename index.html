@@ -535,12 +535,26 @@
             const s = document.getElementById('set-semester-input').value;
 
             try {
-                await fetch(`/api/students/${tz}`, {
+                const response = await fetch(`/api/students/${tz}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ year: y, semester: s })
                 });
-                await loadUserData(tz); // Reloads and updates UI automatically
+                
+                if (response.ok) {
+                    if (currentUserData) {
+                        currentUserData.year = y;
+                        currentUserData.semester = s;
+                        
+                        showYear(y);
+                        document.querySelectorAll('.semester-container').forEach(c => c.classList.add('collapsed'));
+                        const semId = `sem-${y}-${s}`;
+                        const semDiv = document.getElementById(semId);
+                        if(semDiv) semDiv.classList.remove('collapsed');
+                    } else {
+                        await loadUserData(tz); 
+                    }
+                }
                 closeSettingsModal();
             } catch(e) {
                 document.getElementById('settings-error').innerText = "שגיאה בשמירת נתונים";
