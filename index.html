@@ -230,10 +230,34 @@
         </nav>
     </div>
 
+    <div class="modal-overlay" id="chat-modal">
+        <div class="modal-box" style="max-width: 500px; width: 90%; height: 80vh; display: flex; flex-direction: column;">
+            <i class="fas fa-times modal-close" onclick="closeChatModal()"></i>
+            <div style="font-size: 2rem; color: var(--primary); margin-bottom: 5px; text-align: center;"><i class="fas fa-comment-dots"></i></div>
+            <h2 class="modal-title" style="margin-bottom: 10px;">פניות והערות</h2>
+            <div id="chat-messages" style="flex: 1; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                <!-- Messages go here -->
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" class="form-control" placeholder="הקלד הודעה..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" style="background: var(--primary); color: white; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; transition: 0.2s;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
     <main class="main-content">
         <div class="quick-tools">
             <div class="section-label"><i class="fas fa-tools"></i> אזור אישי וכלים</div>
             <div class="grid">
+                
+                <div class="card code" id="chat-card" style="display: none;" onclick="openChatModal()">
+                    <div class="card-icon"><i class="fas fa-comment-dots"></i></div>
+                    <div class="card-info">
+                        <h3>פניות והערות</h3>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">צור קשר עם מנהל המערכת</p>
+                    </div>
+                    <i class="fas fa-chevron-left chevron-left"></i>
+                </div>
                 
                 <div class="card stats" id="average-card" style="display: none;" onclick="location.href='grade_calc/grades_calc.html'">
                     <div class="card-icon"><i class="fas fa-chart-line"></i></div>
@@ -371,8 +395,10 @@
                         const adminData = await adminRes.json();
                         if (adminData.isAdmin) {
                             document.getElementById('admin-main-btn').style.display = 'inline-block';
+                            document.getElementById('chat-card').style.display = 'none';
                         } else {
                             document.getElementById('admin-main-btn').style.display = 'none';
+                            document.getElementById('chat-card').style.display = 'flex';
                         }
                     } catch(e) {}
 
@@ -561,6 +587,80 @@
                 document.getElementById('settings-error').style.display = 'block';
             }
             btn.innerText = "שמור שינויים"; btn.disabled = false;
+        }
+
+        // --- Chat Modal Logic ---
+        function openChatModal() {
+            document.getElementById('chat-modal').style.display = 'flex';
+            loadChatHistory();
+        }
+
+        function closeChatModal() {
+            document.getElementById('chat-modal').style.display = 'none';
+        }
+
+        async function loadChatHistory() {
+            const tz = localStorage.getItem('student_tz');
+            if(!tz) return;
+            const container = document.getElementById('chat-messages');
+            try {
+                const res = await fetch(`/api/chat/${tz}`);
+                const msgs = await res.json();
+                container.innerHTML = '';
+                if(msgs.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; color: #94a3b8; margin-top: 20px;">אין הודעות קודמות. כתוב הודעה למנהל המערכת.</div>';
+                } else {
+                    msgs.forEach(m => {
+                        const isStudent = m.sender === 'student';
+                        const div = document.createElement('div');
+                        div.style.padding = '10px 15px';
+                        div.style.borderRadius = '12px';
+                        div.style.maxWidth = '80%';
+                        div.style.wordBreak = 'break-word';
+                        if (isStudent) {
+                            div.style.alignSelf = 'flex-start';
+                            div.style.background = 'var(--primary)';
+                            div.style.color = 'white';
+                            div.style.borderBottomRightRadius = '2px';
+                        } else {
+                            div.style.alignSelf = 'flex-end';
+                            div.style.background = '#e2e8f0';
+                            div.style.color = '#1e293b';
+                            div.style.borderBottomLeftRadius = '2px';
+                        }
+                        div.innerText = m.message;
+                        container.appendChild(div);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch(e) {}
+        }
+
+        async function sendChatMessage() {
+            const tz = localStorage.getItem('student_tz');
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!tz || !text) return;
+            
+            input.disabled = true;
+            try {
+                const res = await fetch(`/api/chat/${tz}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: text, sender: 'student' })
+                });
+                if(!res.ok) {
+                    const err = await res.json().catch(()=>({}));
+                    alert(err.error === 'Chat blocked' ? 'אפשרות הצ\\'אט נחסמה על ידי המנהל.' : 'שגיאה בשליחת הודעה');
+                } else {
+                    input.value = '';
+                    await loadChatHistory();
+                }
+            } catch(e) {
+                alert('שגיאת רשת');
+            }
+            input.disabled = false;
+            input.focus();
         }
 
         // Start

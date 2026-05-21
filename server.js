@@ -625,8 +625,158 @@ app.get('/api/auth/admin-status/:sessionId', (req, res) => {
     res.json({ approved: session.approved, denied: session.denied || false });
 });
 
-// Basic Telegram polling for Admin login approval
+// --- Advanced Telegram Polling ---
 let lastUpdateId = 0;
+const telegramState = {}; // tz -> { action: 'reply_student', tz }
+
+function handleTelegramMessage(msg, token) {
+    if (!msg.text) return;
+    const text = msg.text;
+    const chatId = msg.chat.id;
+    
+    // Command: /pending
+    if (text === '/pending') {
+        db.all("SELECT * FROM proposals WHERE status = 'pending'", (err, rows) => {
+            if (err || !rows || rows.length === 0) {
+                return sendTelegramMessage('אין כרגע הצעות ממתינות.');
+            }
+            let response = '📋 הצעות ממתינות:\n\n';
+            rows.forEach(r => {
+                response += `- סטודנט: ${r.tz}\n  נתיב מוצע: ${r.proposed_path}\n  מספר קבצים: ${r.files_count}\n\n`;
+            });
+            sendTelegramMessage(response);
+        });
+        return;
+    }
+    
+    // Check state for this chatId
+    if (telegramState[chatId] && telegramState[chatId].action === 'reply_student') {
+        const targetTz = telegramState[chatId].tz;
+        db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, ?, ?)", [targetTz, text, 'admin', Date.now()]);
+        delete telegramState[chatId];
+        sendTelegramMessage('✅ הודעתך נשלחה לסטודנט.');
+        return;
+    }
+}
+
+function handleTelegramCallback(cb, token) {
+    const cbData = cb.data;
+    const chatId = cb.message.chat.id;
+    const msgId = cb.message.message_id;
+    
+    const answer = (text) => {
+        require('axios').post(`https://api.telegram.org/bot${token}/answerCallbackQuery`, { callback_query_id: cb.id, text }).catch(()=>{});
+    };
+    const updateButtons = (keyboard) => {
+        require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+            chat_id: chatId, message_id: msgId, reply_markup: keyboard ? { inline_keyboard: keyboard } : null
+        }).catch(()=>{});
+    };
+
+    if (cbData.startsWith('approve_admin_')) {
+        const sessionId = cbData.replace('approve_admin_', '');
+        if (adminSessions[sessionId]) adminSessions[sessionId].approved = true;
+        answer('✅ אושר!');
+        updateButtons([]);
+    } else if (cbData.startsWith('deny_admin_')) {
+        const sessionId = cbData.replace('deny_admin_', '');
+        if (adminSessions[sessionId]) adminSessions[sessionId].denied = true;
+        answer('❌ נדחה');
+        updateButtons([]);
+    }
+    
+    // Spam Ignore
+    else if (cbData === 'ignore_spam') {
+        answer('התעלמת');
+        updateButtons([]);
+    }
+    
+    // Block Confirm
+    else if (cbData.startsWith('confirm_block_')) {
+        const tz = cbData.replace('confirm_block_', '');
+        updateButtons([
+            [{ text: '⚠️ אתה בטוח שברצונך לחסום?', callback_data: 'none' }],
+            [{ text: 'כן, חסום', callback_data: `do_block_${tz}` }, { text: 'ביטול', callback_data: 'cancel_block' }]
+        ]);
+        answer();
+    }
+    else if (cbData === 'cancel_block') {
+        answer('בוטל');
+        updateButtons([]);
+    }
+    else if (cbData.startsWith('do_block_')) {
+        const tz = cbData.replace('do_block_', '');
+        db.run("UPDATE students SET blocked = 1 WHERE tz = ?", [tz]);
+        answer('✅ הסטודנט נחסם!');
+        updateButtons([]);
+        sendTelegramMessage(`הסטודנט ${tz} נחסם בהצלחה.`);
+    }
+    
+    // Virus options
+    else if (cbData.startsWith('destroy_prop_')) {
+        const pid = cbData.replace('destroy_prop_', '');
+        db.run("UPDATE proposals SET status = 'destroyed' WHERE id = ?", [pid]);
+        answer('🗑️ הושמד');
+        updateButtons([]);
+    }
+    else if (cbData.startsWith('force_prop_')) {
+        const pid = cbData.replace('force_prop_', '');
+        // Just move status back to pending and show standard approve buttons
+        db.run("UPDATE proposals SET status = 'pending' WHERE id = ?", [pid]);
+        answer('הוחזר למצב ממתין');
+        updateButtons([
+            [
+                { text: '✅ אישור', callback_data: `appr_prop_${pid}` },
+                { text: '❌ דחייה', callback_data: `rej_prop_${pid}` }
+            ]
+        ]);
+    }
+    
+    // Chat reply
+    else if (cbData.startsWith('reply_chat_')) {
+        const tz = cbData.replace('reply_chat_', '');
+        telegramState[chatId] = { action: 'reply_student', tz };
+        sendTelegramMessage('הקלד את הודעת התגובה שלך כעת:');
+        answer();
+    }
+    else if (cbData.startsWith('block_chat_')) {
+        const tz = cbData.replace('block_chat_', '');
+        db.run("UPDATE students SET chat_blocked = 1 WHERE tz = ?", [tz]);
+        answer('✅ הצ\'אט נחסם לסטודנט');
+    }
+    
+    // Approve / Reject proposal
+    else if (cbData.startsWith('rej_prop_')) {
+        const pid = cbData.replace('rej_prop_', '');
+        db.run("UPDATE proposals SET status = 'rejected' WHERE id = ?", [pid]);
+        answer('❌ נדחה');
+        updateButtons([]);
+    }
+    else if (cbData.startsWith('appr_prop_')) {
+        const pid = cbData.replace('appr_prop_', '');
+        
+        db.get("SELECT * FROM proposals WHERE id = ?", [pid], async (err, proposal) => {
+            if (err || !proposal) return answer('הצעה לא נמצאה');
+            
+            db.run("UPDATE proposals SET status = 'approved' WHERE id = ?", [pid]);
+            answer('✅ אושר!');
+            updateButtons([]);
+            
+            // Move files from quarantine to destination
+            const fs = require('fs');
+            const destPath = path.join(__dirname, 'studies', proposal.proposed_path);
+            
+            if (!fs.existsSync(destPath)) {
+                fs.mkdirSync(destPath, { recursive: true });
+            }
+        });
+    }
+    // Interactive Nav for Proposal
+    else if (cbData.startsWith('nav_prop_')) {
+        answer('פונקציית שינוי נתיב עדיין בבנייה.');
+    }
+}
+
 function pollTelegram() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
@@ -634,29 +784,21 @@ function pollTelegram() {
         return;
     }
     
-    fetch(`https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`)
-        .then(res => res.json())
-        .then(data => {
+    require('axios').get(`https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`)
+        .then(res => {
+            const data = res.data;
             if (data.ok && data.result.length > 0) {
                 for (const update of data.result) {
                     lastUpdateId = update.update_id;
                     if (update.callback_query) {
-                        const cb = update.callback_query;
-                        const cbData = cb.data;
-                        if (cbData.startsWith('approve_admin_')) {
-                            const sessionId = cbData.replace('approve_admin_', '');
-                            if (adminSessions[sessionId]) adminSessions[sessionId].approved = true;
-                            fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${cb.id}&text=\u2705+\u05d0\u05d5\u05e9\u05e8!`).catch(()=>{});
-                        } else if (cbData.startsWith('deny_admin_')) {
-                            const sessionId = cbData.replace('deny_admin_', '');
-                            if (adminSessions[sessionId]) adminSessions[sessionId].denied = true;
-                            fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery?callback_query_id=${cb.id}&text=\u274c+\u05e0\u05d3\u05d7\u05d4`).catch(()=>{});
-                        }
+                        handleTelegramCallback(update.callback_query, token);
+                    } else if (update.message) {
+                        handleTelegramMessage(update.message, token);
                     }
                 }
             }
         })
-        .catch(err => {}) // Ignore fetch errors in polling
+        .catch(err => {})
         .finally(() => {
             setTimeout(pollTelegram, 2000);
         });
@@ -754,12 +896,12 @@ app.post('/api/drive/propose-folder', async (req, res) => {
     if (!userFolderCounts[tz]) userFolderCounts[tz] = [];
     userFolderCounts[tz].push(Date.now());
     
-    if (userFolderCounts[tz].length > 3) {
+    if (userFolderCounts[tz].length > 10) {
         // Spam!
         const folders = userFolderCounts[tz].length;
         sendTelegramMessage(
             `⚠️ התראת ספאם!
-הסטודנט בעל ת.ז ${tz} ניסה ליצור יותר מ-3 תיקיות (${folders} פעמים) ב-5 דקות האחרונות.`,
+הסטודנט בעל ת.ז ${tz} ניסה ליצור יותר מ-10 תיקיות (${folders} פעמים) ב-5 דקות האחרונות.`,
             JSON.stringify({
                 inline_keyboard: [[
                     { text: '🚫 חסום סטודנט', callback_data: `confirm_block_${tz}` },
@@ -773,10 +915,13 @@ app.post('/api/drive/propose-folder', async (req, res) => {
     // Set 5 min timer
     if (userFolderTimers[`${tz}_${folderPath}`]) clearTimeout(userFolderTimers[`${tz}_${folderPath}`]);
     
-    userFolderTimers[`${tz}_${folderPath}`] = setTimeout(() => {
-        sendTelegramMessage(`⚠️ התראה: הסטודנט ${tz} ניסה ליצור תיקייה ריקה (${folderPath}) ולא העלה שום קובץ תוך 5 דקות.`);
-        delete userFolderTimers[`${tz}_${folderPath}`];
-    }, 5 * 60 * 1000);
+    db.get("SELECT name FROM students WHERE tz = ?", [tz], (err, row) => {
+        const studentName = row ? row.name : 'לא ידוע';
+        userFolderTimers[`${tz}_${folderPath}`] = setTimeout(() => {
+            sendTelegramMessage(`⚠️ התראה: הסטודנט ${studentName} (${tz}) ניסה ליצור תיקייה ריקה (${folderPath}) ולא העלה שום קובץ תוך 5 דקות.`);
+            delete userFolderTimers[`${tz}_${folderPath}`];
+        }, 5 * 60 * 1000);
+    });
     
     res.json({ success: true });
 });

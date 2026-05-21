@@ -163,11 +163,11 @@
                   const res = await fetch('/api/drive/propose-folder', {
                       method: 'POST',
                       headers: {'Content-Type': 'application/json'},
-                      body: JSON.stringify({ tz, path: currentPath + '/' + name })
+                      body: JSON.stringify({ tz, path: currentPath === '/' ? `/${name}` : `${currentPath}/${name}` })
                   });
+                  const data = await res.json().catch(()=>({}));
                   if (!res.ok) {
-                      const err = await res.json();
-                      return alert(err.message || 'שגיאה ביצירת תיקייה');
+                      return alert(data.message || 'שגיאה ביצירת תיקייה');
                   }
                   
                   // Add to virtual UI
@@ -435,15 +435,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                     </a>
                   </div>
                   <div className="flex items-center gap-4">
-                    {/* Chat / Proposals Header Button for Students */}
-                    {!isAdminMode && (
-                      <button 
-                        onClick={() => setChatModalOpen(true)}
-                        className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium mr-4"
-                      >
-                        <i className="fas fa-comment-dots"></i> הצעות / הערות
-                      </button>
-                    )}
+                    {/* Chat / Proposals Header Button for Students (Moved to index.html) */}
 
                     {isAdmin && (
                       <div className="flex items-center gap-4">
