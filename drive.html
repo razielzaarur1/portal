@@ -90,7 +90,6 @@
           const [proposalFiles, setProposalFiles] = useState([]);
           const [proposalComments, setProposalComments] = useState('');
           const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'scanning', 'pending', 'approved', 'rejected', 'virus'
-          const [isWaitingForUpload, setIsWaitingForUpload] = useState(false);
           
           // Proposal Path creation (Virtual)
           const [virtualFolders, setVirtualFolders] = useState([]);
@@ -149,7 +148,6 @@
                  setProposeModalOpen(false);
                  setProposalFiles([]);
                  setProposalComments('');
-                 setIsWaitingForUpload(true);
              } catch (e) {
                  alert(e.message);
              } finally {
@@ -261,46 +259,20 @@ const [previewLoading, setPreviewLoading] = useState(false);
             }
           }, [tz, editMode, courseIdParam]);
 
+          const currentPathRef = useRef(currentPath);
+          useEffect(() => { currentPathRef.current = currentPath; }, [currentPath]);
+
           useEffect(() => {
             fetchLocalFiles(currentPath || "/", true);
             
-            if (!isWaitingForUpload) return;
-            
-            let attempts = 0;
-            const interval = setInterval(async () => {
-                attempts++;
-                if (attempts > 150) { // Stop after 5 minutes of polling (150 * 2s)
-                    setIsWaitingForUpload(false);
-                    clearInterval(interval);
-                    return;
+            const handleMessage = (event) => {
+                if (event.data && event.data.type === 'refresh_files') {
+                    fetchLocalFiles(currentPathRef.current || "/", false);
                 }
-                
-                try {
-                    let actualPath = currentPath || "/";
-                    if (courseIdParam && actualPath === "/") {
-                        const linkRes = await fetch(`/api/courses/link/${courseIdParam}`);
-                        const linkData = await linkRes.json();
-                        if (linkData.folderPath) actualPath = linkData.folderPath;
-                    }
-                    
-                    const response = await fetch(`/api/drive/list?path=${encodeURIComponent(actualPath)}&tz=${tz}&editMode=${editMode}`);
-                    const data = await response.json();
-                    
-                    if (response.ok && data.files) {
-                        setFiles(prevFiles => {
-                            if (data.files.length > prevFiles.length) {
-                                setIsWaitingForUpload(false);
-                            }
-                            return data.files;
-                        });
-                    }
-                } catch(e) {}
-            }, 2000); // Fast polling every 2 seconds
-            
-            return () => {
-                if (interval) clearInterval(interval);
             };
-          }, [fetchLocalFiles, currentPath, isWaitingForUpload, tz, editMode, courseIdParam]);
+            window.addEventListener('message', handleMessage);
+            return () => window.removeEventListener('message', handleMessage);
+          }, [fetchLocalFiles]);
 
           const handleFolderClick = (folderData) => {
             setPathHistory([...pathHistory, currentPath]);

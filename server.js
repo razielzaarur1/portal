@@ -127,6 +127,32 @@ function isAdminTZ(tz) {
     return getAdminTZList().includes(tz);
 }
 
+// Server-Sent Events (SSE) Setup
+const sseClients = {};
+
+app.get('/api/events/:tz', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    
+    const tz = req.params.tz;
+    if (!sseClients[tz]) sseClients[tz] = [];
+    sseClients[tz].push(res);
+    
+    req.on('close', () => {
+        sseClients[tz] = sseClients[tz].filter(client => client !== res);
+    });
+});
+
+function notifyClient(tz, eventType, payload = {}) {
+    if (sseClients[tz]) {
+        sseClients[tz].forEach(client => {
+            client.write(`data: ${JSON.stringify({ type: eventType, ...payload })}\n\n`);
+        });
+    }
+}
+
 // API Routes
 
 // GET user
@@ -657,6 +683,7 @@ function handleTelegramMessage(msg, token) {
         db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, ?, ?)", [targetTz, text, 'admin', Date.now()]);
         delete telegramState[chatId];
         sendTelegramMessage('✅ הודעתך נשלחה לסטודנט.');
+        notifyClient(targetTz, 'new_chat_message');
         return;
     }
 }
@@ -765,6 +792,7 @@ function handleTelegramCallback(cb, token) {
             if (row) {
                 db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
                     [row.tz, `הצעתך להעלאת קבצים לנתיב ${row.proposed_path} נדחתה על ידי מנהל המערכת.`, Date.now()]);
+                notifyClient(row.tz, 'new_chat_message');
             }
         });
         db.run("UPDATE proposals SET status = 'rejected' WHERE id = ?", [pid]);
@@ -803,6 +831,11 @@ function handleTelegramCallback(cb, token) {
                     });
                 } catch(e) { console.error("Error moving files", e); }
             }
+            
+            db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
+                    [proposal.tz, `הצעתך להעלאת קבצים לנתיב ${proposal.proposed_path} אושרה! הקבצים הועברו בהצלחה.`, Date.now()]);
+            notifyClient(proposal.tz, 'new_chat_message');
+            notifyClient(proposal.tz, 'file_approved');
         });
     }
     // VirusTotal Online Scan

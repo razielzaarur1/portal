@@ -376,6 +376,28 @@
             } catch(e) {}
         }
 
+        function connectSSE(tz) {
+            const evtSource = new EventSource(`/api/events/${tz}`);
+            evtSource.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'new_chat_message' || data.type === 'file_approved') {
+                        checkUnreadMessages();
+                        const chatModal = document.getElementById('chat-modal');
+                        if (chatModal && chatModal.style.display === 'flex') {
+                            loadChatHistory();
+                        }
+                    }
+                    if (data.type === 'file_approved') {
+                        const iframe = document.getElementById('content-frame');
+                        if (iframe && iframe.contentWindow) {
+                            iframe.contentWindow.postMessage({ type: 'refresh_files' }, '*');
+                        }
+                    }
+                } catch(err) {}
+            };
+        }
+
         // --- API Logic ---
 
         let baseCourses = [];
@@ -393,6 +415,7 @@
                 if (tz) {
                     await loadUserData(tz);
                     checkUnreadMessages();
+                    connectSSE(tz);
                 } else {
                     openLoginModal();
                 }
