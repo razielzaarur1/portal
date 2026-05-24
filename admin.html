@@ -464,19 +464,31 @@
                     <div class="student-name">${s.name || 'ללא שם'}</div>
                     <span class="badge ${s.blocked ? 'badge-blocked' : 'badge-active'}">
                         <i class="fas fa-${s.blocked ? 'ban' : 'check-circle'}"></i>
-                        ${s.blocked ? 'חסום' : 'פעיל'}
+                        ${s.blocked ? 'חסום מערכת' : 'פעיל מערכת'}
+                    </span>
+                    <span class="badge ${s.chat_blocked ? 'badge-blocked' : 'badge-active'}" style="margin-right: 5px;">
+                        <i class="fas fa-${s.chat_blocked ? 'comment-slash' : 'comment'}"></i>
+                        ${s.chat_blocked ? 'צ\'אט חסום' : 'צ\'אט פעיל'}
                     </span>
                 </div>
                 <div class="student-tz">${s.tz}</div>
                 <div>שנה ${YEAR_MAP[s.year] || s.year || '-'}</div>
                 <div>סמסטר ${s.semester === '1' ? "א'" : s.semester === '2' ? "ב'" : '-'}</div>
-                <div class="row-actions">
+                <div class="row-actions" style="display:flex; gap:5px; flex-wrap:wrap;">
                     ${s.blocked
                         ? `<button class="action-btn btn-unblock" onclick="toggleBlock('${s.tz}', false)">
-                               <i class="fas fa-unlock"></i> שחרר
+                               <i class="fas fa-unlock"></i> שחרר מערכת
                            </button>`
                         : `<button class="action-btn btn-block" onclick="toggleBlock('${s.tz}', true)">
-                               <i class="fas fa-ban"></i> חסום
+                               <i class="fas fa-ban"></i> חסום מערכת
+                           </button>`
+                    }
+                    ${s.chat_blocked
+                        ? `<button class="action-btn btn-unblock" onclick="toggleChatBlock('${s.tz}', false)">
+                               <i class="fas fa-comment"></i> שחרר צ'אט
+                           </button>`
+                        : `<button class="action-btn btn-block" onclick="toggleChatBlock('${s.tz}', true)">
+                               <i class="fas fa-comment-slash"></i> חסום צ'אט
                            </button>`
                     }
                     <button class="action-btn btn-delete" onclick="deleteStudent('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')">
@@ -488,6 +500,7 @@
     }
 
     async function toggleBlock(tz, blocked) {
+        if (!confirm(blocked ? `לחסום את ${tz}?` : `לשחרר את ${tz}?`)) return;
         try {
             await fetch(`/api/students/${tz}/block`, {
                 method: 'PATCH',
@@ -500,7 +513,24 @@
             renderStudents();
             showToast(blocked ? `✅ ${student?.name || tz} חסום בהצלחה` : `✅ ${student?.name || tz} שוחרר בהצלחה`);
         } catch(e) {
-            showToast('❌ שגיאה בעדכון');
+            alert('שגיאה: ' + e.message);
+        }
+    }
+
+    async function toggleChatBlock(tz, blocked) {
+        if (!confirm(blocked ? `לחסום את הצ'אט ל-${tz}?` : `לשחרר את חסימת הצ'אט מ-${tz}?`)) return;
+        try {
+            await fetch(`/api/students/${tz}/block-chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ blocked })
+            });
+            const student = allStudents.find(s => s.tz === tz);
+            if (student) student.chat_blocked = blocked ? 1 : 0;
+            renderStudents();
+            showToast(blocked ? `✅ צ'אט נחסם` : `✅ צ'אט שוחרר`);
+        } catch(e) {
+            alert('שגיאה: ' + e.message);
         }
     }
 

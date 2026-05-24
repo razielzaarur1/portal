@@ -209,7 +209,7 @@ app.patch('/api/students/:tz', (req, res) => {
 
 // GET users (admin: full info)
 app.get('/api/users', (req, res) => {
-    db.all("SELECT tz, name, year, semester, blocked FROM students", [], (err, rows) => {
+    db.all("SELECT tz, name, year, semester, blocked, chat_blocked FROM students", [], (err, rows) => {
         if (err) return res.status(500).json({ error: "Database error" });
         res.json(rows);
     });
@@ -745,6 +745,17 @@ function handleTelegramCallback(cb, token) {
         const tz = cbData.replace('block_chat_', '');
         db.run("UPDATE students SET chat_blocked = 1 WHERE tz = ?", [tz]);
         answer('✅ הצ\'אט נחסם לסטודנט');
+        updateButtons([
+            [{ text: '💬 השב', callback_data: `reply_chat_${tz}` }, { text: '✅ שחרר צ\'אט', callback_data: `unblock_chat_${tz}` }]
+        ]);
+    }
+    else if (cbData.startsWith('unblock_chat_')) {
+        const tz = cbData.replace('unblock_chat_', '');
+        db.run("UPDATE students SET chat_blocked = 0 WHERE tz = ?", [tz]);
+        answer('✅ חסימת הצ\'אט שוחררה');
+        updateButtons([
+            [{ text: '💬 השב', callback_data: `reply_chat_${tz}` }, { text: '🚫 חסום צ\'אט', callback_data: `block_chat_${tz}` }]
+        ]);
     }
     
     // Approve / Reject proposal
@@ -826,7 +837,35 @@ function handleTelegramCallback(cb, token) {
                 });
                 
                 const analysisId = uploadRes.data.data.id;
-                sendTelegramMessage(`הקובץ ${file.originalname} נשלח ל-VirusTotal (מזהה: ${analysisId}). היכנס לאתר שלהם לתוצאות.`);
+                sendTelegramMessage(`הקובץ ${file.originalname} נשלח ל-VirusTotal (מזהה: ${analysisId}). ממתין לתוצאות הסריקה... ⏳`);
+                
+                let attempts = 0;
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    try {
+                        const res = await axios.get(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
+                            headers: { 'x-apikey': vtKey }
+                        });
+                        const status = res.data.data.attributes.status;
+                        if (status === 'completed') {
+                            clearInterval(pollInterval);
+                            const stats = res.data.data.attributes.stats;
+                            const msg = `✅ סריקת וירוסים הושלמה לקובץ: ${file.originalname}\n\n` +
+                                        `🦠 זדוני (Malicious): ${stats.malicious}\n` +
+                                        `⚠️ חשוד (Suspicious): ${stats.suspicious}\n` +
+                                        `✅ בטוח (Harmless): ${stats.harmless}\n` +
+                                        `❓ לא מזוהה (Undetected): ${stats.undetected}`;
+                            sendTelegramMessage(msg);
+                        } else if (attempts >= 24) { // timeout after 2 minutes
+                            clearInterval(pollInterval);
+                            sendTelegramMessage(`⚠️ סריקת וירוסים לקובץ ${file.originalname} לקחה יותר מדי זמן (מזהה: ${analysisId}). נא לבדוק בממשק VirusTotal.`);
+                        }
+                    } catch(e) {
+                        clearInterval(pollInterval);
+                        console.error("VT Poll Error:", e.response?.data || e.message);
+                        sendTelegramMessage(`שגיאה בבדיקת תוצאות VirusTotal עבור ${file.originalname}`);
+                    }
+                }, 5000);
                 
             } catch(e) {
                 console.error("VT Error:", e.response?.data || e.message);

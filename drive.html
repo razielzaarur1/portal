@@ -217,9 +217,11 @@ const [previewLoading, setPreviewLoading] = useState(false);
                .catch(console.error);
           }, []);
 
-          const fetchLocalFiles = useCallback(async (pathToFetch = "/") => {
-            setLoading(true);
-            setError('');
+          const fetchLocalFiles = useCallback(async (pathToFetch = "/", showLoading = true) => {
+            if (showLoading) {
+                setLoading(true);
+                setError('');
+            }
 
             try {
               let actualPath = pathToFetch;
@@ -253,13 +255,17 @@ const [previewLoading, setPreviewLoading] = useState(false);
                  setFiles([]);
               }
             } finally {
-              setLoading(false);
+              if (showLoading) setLoading(false);
             }
           }, [tz, editMode, courseIdParam]);
 
           useEffect(() => {
-            fetchLocalFiles(currentPath || "/");
-          }, [fetchLocalFiles]);
+            fetchLocalFiles(currentPath || "/", true);
+            const interval = setInterval(() => {
+                fetchLocalFiles(currentPath || "/", false);
+            }, 3000);
+            return () => clearInterval(interval);
+          }, [fetchLocalFiles, currentPath]);
 
           const handleFolderClick = (folderData) => {
             setPathHistory([...pathHistory, currentPath]);
