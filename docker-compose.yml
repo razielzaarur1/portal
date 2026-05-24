@@ -12,6 +12,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - VT_API_KEY=${VT_API_KEY}
     volumes:
       - portal_data:/app/data
       - studies_data:/app/studies

@@ -750,6 +750,12 @@ function handleTelegramCallback(cb, token) {
     // Approve / Reject proposal
     else if (cbData.startsWith('rej_prop_')) {
         const pid = cbData.replace('rej_prop_', '');
+        db.get("SELECT tz, proposed_path FROM proposals WHERE id = ?", [pid], (err, row) => {
+            if (row) {
+                db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
+                    [row.tz, `הצעתך להעלאת קבצים לנתיב ${row.proposed_path} נדחתה על ידי מנהל המערכת.`, Date.now()]);
+            }
+        });
         db.run("UPDATE proposals SET status = 'rejected' WHERE id = ?", [pid]);
         answer('❌ נדחה');
         updateButtons([]);
@@ -830,7 +836,105 @@ function handleTelegramCallback(cb, token) {
     }
     // Interactive Nav for Proposal
     else if (cbData.startsWith('nav_prop_')) {
-        answer('פונקציית שינוי נתיב עדיין בבנייה.');
+        const pid = cbData.replace('nav_prop_', '');
+        if(!global.navMaps) global.navMaps = {};
+        const mapId = require('crypto').randomBytes(4).toString('hex');
+        global.navMaps[mapId] = { pid, currentPath: '/' };
+        answer('פותח ניווט...');
+        sendNavKeyboard(chatId, null, mapId);
+    }
+    else if (cbData.startsWith('nav_up_')) {
+        const mapId = cbData.replace('nav_up_', '');
+        if(global.navMaps && global.navMaps[mapId]) {
+            const map = global.navMaps[mapId];
+            if(map.currentPath !== '/') {
+                map.currentPath = require('path').dirname(map.currentPath).replace(/\\/g, '/');
+                if(!map.currentPath.startsWith('/')) map.currentPath = '/' + map.currentPath;
+            }
+            sendNavKeyboard(chatId, msgId, mapId);
+        }
+        answer();
+    }
+    else if (cbData.startsWith('nav_in_')) {
+        const parts = cbData.split('_');
+        const mapId = parts[2];
+        const idx = parseInt(parts[3]);
+        if(global.navMaps && global.navMaps[mapId]) {
+            const map = global.navMaps[mapId];
+            if(map.dirs && map.dirs[idx]) {
+                map.currentPath = map.currentPath === '/' ? '/' + map.dirs[idx] : map.currentPath + '/' + map.dirs[idx];
+                sendNavKeyboard(chatId, msgId, mapId);
+            }
+        }
+        answer();
+    }
+    else if (cbData.startsWith('nav_cancel_')) {
+        const mapId = cbData.replace('nav_cancel_', '');
+        if(global.navMaps) delete global.navMaps[mapId];
+        require('axios').post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/deleteMessage`, {
+            chat_id: chatId, message_id: msgId
+        }).catch(()=>{});
+        answer('ניווט בוטל');
+    }
+    else if (cbData.startsWith('nav_sel_')) {
+        const mapId = cbData.replace('nav_sel_', '');
+        if(global.navMaps && global.navMaps[mapId]) {
+            const map = global.navMaps[mapId];
+            db.run("UPDATE proposals SET proposed_path = ? WHERE id = ?", [map.currentPath, map.pid]);
+            require('axios').post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/deleteMessage`, {
+                chat_id: chatId, message_id: msgId
+            }).catch(()=>{});
+            answer(`✅ נתיב עודכן ל: ${map.currentPath}`);
+            sendTelegramMessage(`הנתיב עבור ההצעה עודכן ל- ${map.currentPath}\n(כעת תוכל לאשר אותה בהודעה המקורית)`);
+            delete global.navMaps[mapId];
+        } else {
+            answer('שגיאה: ניווט פג תוקף');
+        }
+    }
+}
+
+function sendNavKeyboard(chatId, messageId, mapId) {
+    const map = global.navMaps[mapId];
+    if(!map) return;
+    
+    const fs = require('fs');
+    const path = require('path');
+    const baseDir = path.join(__dirname, 'studies');
+    const fullPath = path.join(baseDir, map.currentPath);
+    
+    let dirs = [];
+    try {
+        dirs = fs.readdirSync(fullPath, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+    } catch(e) {}
+    
+    map.dirs = dirs;
+    const inline_keyboard = [];
+    if (map.currentPath !== '/' && map.currentPath !== '') {
+        inline_keyboard.push([{ text: '🔙 חזור אחורה', callback_data: `nav_up_${mapId}` }]);
+    }
+    
+    dirs.forEach((d, idx) => {
+        inline_keyboard.push([{ text: `📁 ${d}`, callback_data: `nav_in_${mapId}_${idx}` }]);
+    });
+    
+    inline_keyboard.push([{ text: `📥 בחר נתיב: ${map.currentPath}`, callback_data: `nav_sel_${mapId}` }]);
+    inline_keyboard.push([{ text: '❌ סגור', callback_data: `nav_cancel_${mapId}` }]);
+    
+    const payload = {
+        chat_id: chatId,
+        text: `**ניווט בתיקיות השרת**\nנתיב נוכחי: ${map.currentPath}`,
+        reply_markup: JSON.stringify({ inline_keyboard })
+    };
+    
+    const axios = require('axios');
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (messageId) {
+        payload.message_id = messageId;
+        axios.post(`https://api.telegram.org/bot${token}/editMessageText`, payload).catch(()=>{});
+    } else {
+        axios.post(`https://api.telegram.org/bot${token}/sendMessage`, payload).catch(()=>{});
     }
 }
 
@@ -1132,8 +1236,19 @@ app.get('/api/students/:tz/notifications', (req, res) => {
 // Chat Endpoints
 app.get('/api/chat/:tz', (req, res) => {
     db.all("SELECT * FROM chat_messages WHERE tz = ? ORDER BY timestamp ASC", [req.params.tz], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'DB error' });
-        res.json(rows);
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/chat/:tz/unread', (req, res) => {
+    const tz = req.params.tz;
+    const lastRead = parseInt(req.query.lastRead) || 0;
+    
+    db.get("SELECT COUNT(*) as unread FROM chat_messages WHERE tz = ? AND sender = 'admin' AND timestamp > ?", 
+        [tz, lastRead], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ unread: row ? row.unread : 0 });
     });
 });
 

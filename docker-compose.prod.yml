@@ -6,6 +6,8 @@ services:
     container_name: study-portal-prod
     expose:
       - "3000"
+    environment:
+      - VT_API_KEY=${VT_API_KEY}
     volumes:
       - portal_data:/app/data
       - studies_data:/app/studies

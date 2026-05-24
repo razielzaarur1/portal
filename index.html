@@ -252,8 +252,11 @@
                 
                 <div class="card code" id="chat-card" style="display: none;" onclick="openChatModal()">
                     <div class="card-icon"><i class="fas fa-comment-dots"></i></div>
-                    <div class="card-info">
-                        <h3>פניות והערות</h3>
+                    <div class="card-info" style="position: relative;">
+                        <h3 style="display: flex; align-items: center; gap: 8px;">
+                            פניות והערות
+                            <span id="chat-badge" style="display: none; background: #ef4444; color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; font-weight: bold;">0</span>
+                        </h3>
                         <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">צור קשר עם מנהל המערכת</p>
                     </div>
                     <i class="fas fa-chevron-left chevron-left"></i>
@@ -354,6 +357,25 @@
             if(el) el.classList.toggle('collapsed'); 
         }
 
+        async function checkUnreadMessages() {
+            const tz = localStorage.getItem('student_tz');
+            if(!tz) return;
+            const lastRead = localStorage.getItem('chat_last_read') || 0;
+            try {
+                const res = await fetch(`/api/chat/${tz}/unread?lastRead=${lastRead}`);
+                const data = await res.json();
+                const badge = document.getElementById('chat-badge');
+                if (badge) {
+                    if (data.unread > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = data.unread;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            } catch(e) {}
+        }
+
         // --- API Logic ---
 
         let baseCourses = [];
@@ -370,6 +392,7 @@
                 const tz = localStorage.getItem('student_tz');
                 if (tz) {
                     await loadUserData(tz);
+                    checkUnreadMessages();
                 } else {
                     openLoginModal();
                 }
@@ -590,14 +613,29 @@
         }
 
         // --- Chat Modal Logic ---
+        let chatPollInterval = null;
+
         function openChatModal() {
             document.getElementById('chat-modal').style.display = 'flex';
             loadChatHistory();
+            chatPollInterval = setInterval(loadChatHistory, 3000);
+            
+            // Mark as read
+            localStorage.setItem('chat_last_read', Date.now());
+            const badge = document.getElementById('chat-badge');
+            if(badge) badge.style.display = 'none';
         }
 
         function closeChatModal() {
             document.getElementById('chat-modal').style.display = 'none';
+            if (chatPollInterval) {
+                clearInterval(chatPollInterval);
+                chatPollInterval = null;
+            }
+            localStorage.setItem('chat_last_read', Date.now());
         }
+
+
 
         async function loadChatHistory() {
             const tz = localStorage.getItem('student_tz');

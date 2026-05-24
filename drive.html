@@ -235,13 +235,18 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
               const response = await fetch(`/api/drive/list?path=${encodeURIComponent(actualPath)}&tz=${tz}&editMode=${editMode}`);
               const data = await response.json();
+              
+              setCurrentPath(actualPath === "/" ? "" : actualPath);
 
               if (!response.ok) {
+                if(data.error === 'Not found' || response.status === 404) {
+                    setFiles([]);
+                    return;
+                }
                 throw new Error(data.error || 'שגיאה בטעינת קבצים מהשרת המקומי');
               }
 
               setFiles(data.files || []);
-              setCurrentPath(actualPath === "/" ? "" : actualPath);
             } catch (err) {
               setError(err.message);
               if (err.message && err.message.includes('Access denied')) {
