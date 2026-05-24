@@ -1041,7 +1041,11 @@ setTimeout(pollTelegram, 2000);
 
 // Admin courses GET
 app.get('/api/admin/courses', (req, res) => {
-    const coursesPath = path.join(__dirname, 'grade_calc', 'courses.json');
+    const coursesPath = path.join(__dirname, 'data', 'courses.json');
+    if (!fs.existsSync(coursesPath)) {
+        const defaultPath = path.join(__dirname, 'grade_calc', 'courses.json');
+        if (fs.existsSync(defaultPath)) fs.copyFileSync(defaultPath, coursesPath);
+    }
     try {
         const data = fs.readFileSync(coursesPath, 'utf8');
         res.json(JSON.parse(data));
@@ -1052,12 +1056,26 @@ app.get('/api/admin/courses', (req, res) => {
 
 // Admin courses PUT
 app.put('/api/admin/courses', (req, res) => {
-    const coursesPath = path.join(__dirname, 'grade_calc', 'courses.json');
+    const coursesPath = path.join(__dirname, 'data', 'courses.json');
     try {
         fs.writeFileSync(coursesPath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch(e) {
         res.status(500).json({ error: 'Failed to save courses' });
+    }
+});
+
+// Serve courses to frontend
+app.get('/api/courses', (req, res) => {
+    const coursesPath = path.join(__dirname, 'data', 'courses.json');
+    if (!fs.existsSync(coursesPath)) {
+        const defaultPath = path.join(__dirname, 'grade_calc', 'courses.json');
+        if (fs.existsSync(defaultPath)) fs.copyFileSync(defaultPath, coursesPath);
+    }
+    if (fs.existsSync(coursesPath)) {
+        res.sendFile(coursesPath);
+    } else {
+        res.json([]);
     }
 });
 

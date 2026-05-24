@@ -205,7 +205,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           // Fetch and sort courses on load
           useEffect(() => {
-            fetch('grade_calc/courses.json?t=' + new Date().getTime())
+            fetch('/api/courses?t=' + new Date().getTime())
                .then(res => res.json())
                .then(data => {
                    const sorted = [...data].sort((a, b) => {
@@ -265,14 +265,21 @@ const [previewLoading, setPreviewLoading] = useState(false);
           useEffect(() => {
             fetchLocalFiles(currentPath || "/", true);
             
-            const handleMessage = (event) => {
-                if (event.data && event.data.type === 'refresh_files') {
-                    fetchLocalFiles(currentPathRef.current || "/", false);
-                }
+            if (!tz) return;
+            const eventSource = new EventSource(`/api/events/${tz}`);
+            eventSource.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'file_approved') {
+                        fetchLocalFiles(currentPathRef.current || "/", false);
+                    }
+                } catch(err) {}
             };
-            window.addEventListener('message', handleMessage);
-            return () => window.removeEventListener('message', handleMessage);
-          }, [fetchLocalFiles]);
+            
+            return () => {
+                eventSource.close();
+            };
+          }, [fetchLocalFiles, tz]);
 
           const handleFolderClick = (folderData) => {
             setPathHistory([...pathHistory, currentPath]);

@@ -135,7 +135,7 @@
             <span id="user-greeting"><i class="fas fa-user-circle"></i> טוען...</span>
             <div class="auth-buttons">
                 <button class="auth-btn" id="admin-main-btn" onclick="location.href='admin.html'" style="display:none; background:rgba(245,158,11,0.3);">
-                    <i class="fas fa-shield-alt"></i> ניהול
+                    <i class="fas fa-shield-alt"></i> ניהול <span style="font-size: 0.75rem; opacity: 0.8; margin-right: 4px;">v1.01</span>
                 </button>
                 <button class="settings-btn" id="settings-main-btn" style="display:none;" onclick="openSettingsModal()"><i class="fas fa-cog"></i></button>
                 <button class="auth-btn" id="auth-main-btn" onclick="handleLogout()" style="display:none;">התנתק</button>
@@ -389,10 +389,7 @@
                         }
                     }
                     if (data.type === 'file_approved') {
-                        const iframe = document.getElementById('content-frame');
-                        if (iframe && iframe.contentWindow) {
-                            iframe.contentWindow.postMessage({ type: 'refresh_files' }, '*');
-                        }
+                        // drive.html will handle its own SSE
                     }
                 } catch(err) {}
             };
@@ -407,7 +404,7 @@
         // Initialize App
         async function initApp() {
             try {
-                const res = await fetch('grade_calc/courses.json?t=' + new Date().getTime());
+                const res = await fetch('/api/courses?t=' + new Date().getTime());
                 baseCourses = await res.json();
                 
                 sessionStorage.removeItem('adminMode');

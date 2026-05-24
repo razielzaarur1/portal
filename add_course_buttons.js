@@ -2,7 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 // 1. Read courses.json to get name -> id
-const coursesData = JSON.parse(fs.readFileSync(path.join(__dirname, 'grade_calc', 'courses.json'), 'utf8'));
+const dataCoursesPath = path.join(__dirname, 'data', 'courses.json');
+const defaultCoursesPath = path.join(__dirname, 'grade_calc', 'courses.json');
+const activePath = fs.existsSync(dataCoursesPath) ? dataCoursesPath : defaultCoursesPath;
+const coursesData = JSON.parse(fs.readFileSync(activePath, 'utf8'));
 const nameToIdMap = {};
 coursesData.forEach(c => {
     nameToIdMap[c.name.trim()] = c.id;
