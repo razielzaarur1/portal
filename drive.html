@@ -90,6 +90,7 @@
           const [proposalFiles, setProposalFiles] = useState([]);
           const [proposalComments, setProposalComments] = useState('');
           const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'scanning', 'pending', 'approved', 'rejected', 'virus'
+          const [isWaitingForUpload, setIsWaitingForUpload] = useState(false);
           
           // Proposal Path creation (Virtual)
           const [virtualFolders, setVirtualFolders] = useState([]);
@@ -148,6 +149,7 @@
                  setProposeModalOpen(false);
                  setProposalFiles([]);
                  setProposalComments('');
+                 setIsWaitingForUpload(true);
              } catch (e) {
                  alert(e.message);
              } finally {
@@ -261,11 +263,40 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           useEffect(() => {
             fetchLocalFiles(currentPath || "/", true);
-            const interval = setInterval(() => {
-                fetchLocalFiles(currentPath || "/", false);
-            }, 3000);
-            return () => clearInterval(interval);
-          }, [fetchLocalFiles, currentPath]);
+            
+            if (!isWaitingForUpload) return;
+            
+            let interval;
+            const timeout = setTimeout(() => {
+                interval = setInterval(async () => {
+                    try {
+                        let actualPath = currentPath || "/";
+                        if (courseIdParam && actualPath === "/") {
+                            const linkRes = await fetch(`/api/courses/link/${courseIdParam}`);
+                            const linkData = await linkRes.json();
+                            if (linkData.folderPath) actualPath = linkData.folderPath;
+                        }
+                        
+                        const response = await fetch(`/api/drive/list?path=${encodeURIComponent(actualPath)}&tz=${tz}&editMode=${editMode}`);
+                        const data = await response.json();
+                        
+                        if (response.ok && data.files) {
+                            setFiles(prevFiles => {
+                                if (data.files.length > prevFiles.length) {
+                                    setIsWaitingForUpload(false);
+                                }
+                                return data.files;
+                            });
+                        }
+                    } catch(e) {}
+                }, 5000);
+            }, 10000);
+            
+            return () => {
+                clearTimeout(timeout);
+                if (interval) clearInterval(interval);
+            };
+          }, [fetchLocalFiles, currentPath, isWaitingForUpload, tz, editMode, courseIdParam]);
 
           const handleFolderClick = (folderData) => {
             setPathHistory([...pathHistory, currentPath]);
