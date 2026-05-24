@@ -651,7 +651,7 @@
                 });
                 if(!res.ok) {
                     const err = await res.json().catch(()=>({}));
-                    alert(err.error === 'Chat blocked' ? 'אפשרות הצ\\'אט נחסמה על ידי המנהל.' : 'שגיאה בשליחת הודעה');
+                    alert(err.error === 'Chat blocked' ? "אפשרות הצ'אט נחסמה על ידי המנהל." : "שגיאה בשליחת הודעה");
                 } else {
                     input.value = '';
                     await loadChatHistory();

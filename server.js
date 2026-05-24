@@ -77,6 +77,8 @@ db.serialize(() => {
             timestamp INTEGER
         )`);
 
+        db.run(`ALTER TABLE proposals ADD COLUMN files_json TEXT`, (err) => { /* ignore */ });
+
         // Check if DB is empty to seed it
         db.get("SELECT COUNT(*) as count FROM students", (err, row) => {
             if (row && row.count === 0) {
@@ -764,10 +766,65 @@ function handleTelegramCallback(cb, token) {
             
             // Move files from quarantine to destination
             const fs = require('fs');
+            const path = require('path');
             const destPath = path.join(__dirname, 'studies', proposal.proposed_path);
             
             if (!fs.existsSync(destPath)) {
                 fs.mkdirSync(destPath, { recursive: true });
+            }
+            
+            if (proposal.files_json) {
+                try {
+                    const files = JSON.parse(proposal.files_json);
+                    files.forEach(f => {
+                        const source = f.path;
+                        const target = path.join(destPath, f.originalname);
+                        if (fs.existsSync(source)) {
+                            fs.copyFileSync(source, target);
+                            fs.unlinkSync(source);
+                        }
+                    });
+                } catch(e) { console.error("Error moving files", e); }
+            }
+        });
+    }
+    // VirusTotal Online Scan
+    else if (cbData.startsWith('vt_scan_')) {
+        const pid = cbData.replace('vt_scan_', '');
+        const vtKey = process.env.VT_API_KEY;
+        if (!vtKey) {
+            answer('שגיאה: חסר מפתח מפתח VT_API_KEY בקובץ .env');
+            return;
+        }
+        answer('מתחיל סריקה אונליין...');
+        sendTelegramMessage('מעלה קבצים לסריקה ב-VirusTotal... אנא המתן לתשובה.');
+        
+        // Background scan
+        db.get("SELECT files_json FROM proposals WHERE id = ?", [pid], async (err, proposal) => {
+            if (!proposal || !proposal.files_json) return;
+            const files = JSON.parse(proposal.files_json);
+            if(files.length === 0) return;
+            
+            try {
+                const FormData = require('form-data');
+                const axios = require('axios');
+                const fs = require('fs');
+                
+                // Scan only the first file for simplicity to avoid rate limits (4/min)
+                const file = files[0];
+                const form = new FormData();
+                form.append('file', fs.createReadStream(file.path));
+                
+                const uploadRes = await axios.post('https://www.virustotal.com/api/v3/files', form, {
+                    headers: { ...form.getHeaders(), 'x-apikey': vtKey }
+                });
+                
+                const analysisId = uploadRes.data.data.id;
+                sendTelegramMessage(`הקובץ ${file.originalname} נשלח ל-VirusTotal (מזהה: ${analysisId}). היכנס לאתר שלהם לתוצאות.`);
+                
+            } catch(e) {
+                console.error("VT Error:", e.response?.data || e.message);
+                sendTelegramMessage(`שגיאה בסריקה מול VirusTotal: ${e.message}`);
             }
         });
     }
@@ -843,38 +900,14 @@ const upload = multer({
     limits: { fileSize: 40 * 1024 * 1024 } // 40MB
 });
 
-const NodeClam = require('clamscan');
-let clamscanScanner = null;
-new NodeClam().init({
-    clamdscan: {
-        host: 'clamav', // The service name in docker-compose
-        port: 3310,
-        local_fallback: false,
-        timeout: 60000
-    }
-}).then(clam => {
-    clamscanScanner = clam;
-    console.log("ClamAV connected successfully via TCP.");
-}).catch(err => {
-    console.error("ClamAV initialization error (will skip scans):", err.message);
-});
+const FORBIDDEN_EXTENSIONS = ['.exe', '.bat', '.cmd', '.vbs', '.js', '.sh', '.bin', '.com', '.msi', '.scr'];
 
-async function runClamScan(filePath) {
-    if (!clamscanScanner) {
-        console.warn("ClamAV scanner not available, assuming safe for now.");
-        return { safe: true }; // Fallback if clamav container is unreachable
+async function runQuickScan(filePath, originalName) {
+    const ext = require('path').extname(originalName).toLowerCase();
+    if (FORBIDDEN_EXTENSIONS.includes(ext)) {
+        return { safe: false, virus: 'Blocked File Extension (' + ext + ')' };
     }
-    try {
-        const rs = fs.createReadStream(filePath);
-        const { isInfected, viruses } = await clamscanScanner.scanStream(rs);
-        if (isInfected) {
-            return { safe: false, virus: viruses.join(', ') || 'Unknown Virus' };
-        }
-        return { safe: true };
-    } catch (err) {
-        console.error("ClamAV Scan Error:", err.message);
-        return { safe: true }; // Assume safe on error
-    }
+    return { safe: true };
 }
 
 const userFolderTimers = {};
@@ -946,10 +979,14 @@ app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) 
         const proposalId = crypto.randomBytes(8).toString('hex');
         
         // Save to DB with 'scanning' status immediately
-        db.run(
-            "INSERT INTO proposals (id, tz, files_count, proposed_path, comments, status, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [proposalId, tz, files.length, proposed_path, comments, 'scanning', Date.now()]
-        );
+        const insertQuery = "INSERT INTO proposals (id, tz, files_count, proposed_path, comments, status, timestamp" + 
+            (files.length > 0 ? ", files_json" : "") + ") VALUES (?, ?, ?, ?, ?, ?, ?" + 
+            (files.length > 0 ? ", ?" : "") + ")";
+        
+        const insertParams = [proposalId, tz, files.length, proposed_path, comments, 'scanning', Date.now()];
+        if (files.length > 0) insertParams.push(JSON.stringify(files));
+            
+        db.run(insertQuery, insertParams);
         
         // Respond to client IMMEDIATELY so they can poll status
         res.json({ success: true, proposalId });
@@ -961,7 +998,7 @@ app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) 
                 let virusName = '';
                 
                 for (const file of files) {
-                    const scan = await runClamScan(file.path);
+                    const scan = await runQuickScan(file.path, file.originalname);
                     if (!scan.safe) {
                         hasVirus = true;
                         virusName = scan.virus;
@@ -975,11 +1012,10 @@ app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) 
                     
                     // Notify Admin
                     sendTelegramMessage(
-                        `⚠️ סכנת וירוס!\nהסטודנט ${studentName} (${tz}) ניסה להעלות קבצים לנתיב ${proposed_path}.\nהסורק זיהה וירוס: ${virusName}\nהקבצים נמצאים כעת בהסגר.`,
+                        `⚠️ חסימת מערכת!\nהסטודנט ${studentName} (${tz}) ניסה להעלות קובץ עם סיומת מסוכנת לנתיב ${proposed_path}.\nסיבה: ${virusName}`,
                         JSON.stringify({
                             inline_keyboard: [[
-                                { text: '🗑️ השמד קבצים', callback_data: `destroy_prop_${proposalId}` },
-                                { text: '⚠️ המשך בכל זאת (מסוכן)', callback_data: `force_prop_${proposalId}` }
+                                { text: '🗑️ השמד קבצים', callback_data: `destroy_prop_${proposalId}` }
                             ]]
                         })
                     );
@@ -1053,6 +1089,9 @@ async function notifyAdminNewProposal(proposalId, studentName, tz, proposed_path
             [
                 { text: '✅ אישור', callback_data: `appr_prop_${proposalId}` },
                 { text: '❌ דחייה', callback_data: `rej_prop_${proposalId}` }
+            ],
+            [
+                { text: '🔍 סרוק וירוס (VirusTotal)', callback_data: `vt_scan_${proposalId}` },
             ],
             [
                 { text: '📂 שנה נתיב (אינטראקטיבי)', callback_data: `nav_prop_${proposalId}_/` },
