@@ -832,6 +832,9 @@ function handleTelegramCallback(cb, token) {
                 } catch(e) { console.error("Error moving files", e); }
             }
             
+            // CLEAR DIRECTORY CACHE so the new files show up instantly for the student
+            dirCacheMap = {};
+            
             db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
                     [proposal.tz, `הצעתך להעלאת קבצים לנתיב ${proposal.proposed_path} אושרה! הקבצים הועברו בהצלחה.`, Date.now()]);
             notifyClient(proposal.tz, 'new_chat_message');
