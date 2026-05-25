@@ -1193,6 +1193,11 @@ app.get('/api/admin/stats', (req, res) => {
     });
 });
 
+const upload = multer({ 
+    dest: quarantineDir,
+    limits: { fileSize: 40 * 1024 * 1024 } // 40MB
+});
+
 // ==========================================
 // SHARE TARGET API (PWA)
 // ==========================================
@@ -1229,10 +1234,6 @@ app.get('/api/shared-files/:token', (req, res) => {
 // CHAT & PROPOSALS API
 // ==========================================
 
-const upload = multer({ 
-    dest: quarantineDir,
-    limits: { fileSize: 40 * 1024 * 1024 } // 40MB
-});
 
 const FORBIDDEN_EXTENSIONS = ['.exe', '.bat', '.cmd', '.vbs', '.js', '.sh', '.bin', '.com', '.msi', '.scr'];
 
