@@ -4,13 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>מערכת קבצים | פורטל למידה</title>
+    <title>דרייב קורסים - פורטל לימודים</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.error(err));
+            });
+        }
+    </script>
     
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -130,9 +139,13 @@
              formData.append('tz', tz);
              formData.append('proposed_path', currentPath);
              formData.append('comments', proposalComments);
-             Array.from(proposalFiles).forEach(file => {
-                 formData.append('files', file);
-             });
+             if (sharedFilesToken) {
+                 formData.append('shareToken', sharedFilesToken);
+             } else {
+                 Array.from(proposalFiles).forEach(file => {
+                     formData.append('files', file);
+                 });
+             }
              
              try {
                  setLoading(true);
@@ -148,6 +161,7 @@
                  setProposeModalOpen(false);
                  setProposalFiles([]);
                  setProposalComments('');
+                 setSharedFilesToken(null);
              } catch (e) {
                  alert(e.message);
              } finally {
@@ -185,6 +199,23 @@ const [previewLoading, setPreviewLoading] = useState(false);
           const [courseLinkModal, setCourseLinkModal] = useState({ open: false, path: null });
           const [coursesList, setCoursesList] = useState([]);
           const [passwordModal, setPasswordModal] = useState({ open: false, inputVal: '', error: '' });
+          const [sharedFilesToken, setSharedFilesToken] = useState(null);
+
+          // Handle PWA Share Target
+          useEffect(() => {
+              const urlParams = new URLSearchParams(window.location.search);
+              const st = urlParams.get('shareToken');
+              if (st) {
+                  setSharedFilesToken(st);
+                  setProposeModalOpen(true);
+                  fetch('/api/shared-files/' + st).then(r=>r.json()).then(data => {
+                      if (data.files) {
+                          setProposalFiles(data.files.map(f => ({ name: f.originalname, size: f.size, isShared: true })));
+                      }
+                  });
+                  window.history.replaceState({}, document.title, window.location.pathname);
+              }
+          }, []);
 
           // Check admin status from server
           useEffect(() => {
@@ -261,6 +292,14 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const currentPathRef = useRef(currentPath);
           useEffect(() => { currentPathRef.current = currentPath; }, [currentPath]);
+
+          useEffect(() => {
+            fetch('/api/track', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tz: tz, path: 'drive:' + (currentPath || '/') })
+            }).catch(e => console.error(e));
+          }, [currentPath, tz]);
 
           useEffect(() => {
             fetchLocalFiles(currentPath || "/", true);
@@ -502,8 +541,8 @@ const [previewLoading, setPreviewLoading] = useState(false);
                           )}
                           <div className="font-semibold text-slate-700 flex items-center gap-2 text-lg">
                             <Folder size={20} className="text-blue-500" />
-                            תיקיית לימודים רזיאל
-                            {currentPath && <span className="text-slate-400 font-normal truncate" dir="ltr">{currentPath}</span>}
+                            תיקיית הלימודים
+                            {currentPath && <span className="text-slate-400 font-normal break-all whitespace-normal" dir="ltr">{currentPath}</span>}
                           </div>
                        </div>
                        
@@ -610,6 +649,11 @@ const [previewLoading, setPreviewLoading] = useState(false);
                                     </span>
                                     <span className="text-xs text-slate-400 mt-1">
                                       {(item.size / 1024 / 1024).toFixed(2)} MB
+                                      {isAdmin && editMode && item.metadata && (
+                                          <span className="mr-2 text-blue-500 font-medium bg-blue-50 px-2 py-0.5 rounded">
+                                            <i className="fas fa-user-edit ml-1"></i> הועלה ע"י: {item.metadata.uploader_name}
+                                          </span>
+                                      )}
                                     </span>
                                   </div>
                                   
@@ -670,7 +714,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                   <div className="bg-white rounded-t-xl p-4 flex justify-between items-center shadow-sm max-w-6xl w-full mx-auto">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="shrink-0">{getFileIcon(viewingFile.name)}</div>
-                      <h3 className="font-bold text-slate-800 text-lg truncate" dir="auto">
+                      <h3 className="font-bold text-slate-800 text-lg break-words whitespace-normal" dir="auto">
                         {viewingFile.name}
                       </h3>
                     </div>
@@ -720,7 +764,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                           return (
                             <div className="relative w-full h-full bg-slate-200">
                               <iframe 
-                                src={blobUrl} 
+                                src={/Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) ? 'pdf-viewer.html?file=' + encodeURIComponent(blobUrl) : blobUrl} 
                                 className="absolute inset-0 w-full h-full border-none bg-white z-0"
                                 title="מציג PDF"
                               />
@@ -849,7 +893,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                           </button>
                        </div>
                        
-                       <p className="text-sm text-slate-500 mb-4 truncate" dir="ltr">{permModal.item.path}</p>
+                       <p className="text-sm text-slate-500 mb-4 break-all whitespace-normal" dir="ltr">{permModal.item.path}</p>
                        
                        <div className="space-y-3 mb-6">
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -933,7 +977,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                              <X size={20} />
                           </button>
                        </div>
-                       <p className="text-sm text-slate-500 mb-4 truncate" dir="ltr">{courseLinkModal.path}</p>
+                       <p className="text-sm text-slate-500 mb-4 break-all whitespace-normal" dir="ltr">{courseLinkModal.path}</p>
                        <div className="flex-1 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2 mb-4">
                            {coursesList.map(c => (
                                <button 

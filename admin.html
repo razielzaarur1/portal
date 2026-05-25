@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>פאנל ניהול | פורטל למידה</title>
+    <title>ניהול - פורטל לימודים</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -165,9 +167,11 @@
         .toast.show { opacity: 1; }
 
         @media (max-width: 640px) {
-            .table-header, .student-row { grid-template-columns: 1fr 1fr; }
-            .table-header :nth-child(n+3), .student-row :nth-child(n+3):not(:last-child) { display: none; }
-            .student-row :last-child { grid-column: 1 / -1; }
+            header h1 { font-size: 1.2rem; }
+            .nav-btn { padding: 8px 12px; font-size: 0.85rem; }
+            .stat-card { min-width: 45%; }
+            #students-list-container { overflow-x: auto; width: 100%; padding-bottom: 10px; }
+            .table-header, .student-row { min-width: 600px; }
         }
     </style>
 </head>
@@ -202,10 +206,13 @@
         <h1><i class="fas fa-shield-alt"></i> פאנל ניהול</h1>
         <nav>
             <button class="nav-btn active" id="nav-students" onclick="showSection('students')">
-                <button class="nav-btn" id="nav-chats" onclick="showSection('chats'); loadChats();">
+                <i class="fas fa-users"></i> סטודנטים
+            </button>
+            <button class="nav-btn" id="nav-chats" onclick="showSection('chats'); loadChats();">
                 <i class="fas fa-comments"></i> צ'אטים
             </button>
-                <i class="fas fa-users"></i> סטודנטים
+            <button class="nav-btn" id="nav-stats" onclick="showSection('stats'); loadStats();">
+                <i class="fas fa-chart-line"></i> סטטיסטיקות
             </button>
             <button class="nav-btn" id="nav-drive" onclick="goToDrive()">
                 <i class="fas fa-folder-open"></i> דרייב
@@ -251,19 +258,44 @@
                        oninput="renderStudents()">
             </div>
 
-            <div class="students-table">
-                <div class="table-header">
-                    <div>שם</div>
-                    <div>ת.ז</div>
-                    <div>שנה</div>
-                    <div>סמסטר</div>
-                    <div>פעולות</div>
-                </div>
-                <div id="students-list">
-                    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> טוען...</div>
+            <div id="students-list-container">
+                <div class="students-table">
+                    <div class="table-header">
+                        <div>שם</div>
+                        <div>ת.ז</div>
+                        <div>שנה</div>
+                        <div>סמסטר</div>
+                        <div>פעולות</div>
+                    </div>
+                    <div id="students-list">
+                        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> טוען...</div>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="section" id="section-stats">
+            <div class="section-title">
+                <i class="fas fa-chart-line" style="color:var(--primary)"></i>
+                סטטיסטיקות מערכת
+            </div>
+            
+            <div id="stats-container" style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="stat-card">
+                    <h3><i class="fas fa-fire"></i> הדפים הנצפים ביותר (Top 10)</h3>
+                    <div id="stats-popular-pages" style="margin-top: 10px;">טוען...</div>
                 </div>
+                <div class="stat-card">
+                    <h3><i class="fas fa-user-clock"></i> הסטודנטים הפעילים ביותר</h3>
+                    <div id="stats-active-students" style="margin-top: 10px;">טוען...</div>
+                </div>
+                <div class="stat-card">
+                    <h3><i class="fas fa-upload"></i> מעלי הקבצים המובילים</h3>
+                    <div id="stats-top-uploaders" style="margin-top: 10px;">טוען...</div>
+                </div>
+            </div>
+        </div>
 
         <!-- Chats Section -->
         <div class="section" id="section-chats">
@@ -392,12 +424,14 @@
     }
 
     function enterPanel() {
+        localStorage.setItem('adminToken', 'true');
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
         loadStudents();
     }
 
     function handleLogout() {
+        localStorage.removeItem('adminToken');
         sessionStorage.removeItem('adminMode');
         sessionStorage.removeItem('adminSessionId');
         window.location.href = 'index.html';
@@ -426,6 +460,25 @@
     }
 
     // --- Students ---
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/admin/stats');
+            const data = await res.json();
+            
+            document.getElementById('stats-popular-pages').innerHTML = 
+                data.popularPages.length ? data.popularPages.map(p => `<div><strong style="color:var(--primary);">${p.views} צפיות:</strong> ${p.path}</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
+                
+            document.getElementById('stats-active-students').innerHTML = 
+                data.activeStudents.length ? data.activeStudents.map(s => `<div><strong style="color:var(--success);">${s.views} צפיות:</strong> ${s.name} (${s.tz})</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
+                
+            document.getElementById('stats-top-uploaders').innerHTML = 
+                data.topUploaders.length ? data.topUploaders.map(u => `<div><strong style="color:var(--primary);">${u.uploads} קבצים:</strong> ${u.name} (${u.tz})</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
+                
+        } catch(e) {
+            console.error('Error loading stats', e);
+        }
+    }
+
     async function loadStudents() {
         try {
             const res = await fetch('/api/users');
@@ -624,6 +677,17 @@
             enterPanel();
         }
     };
+
+    // Auto-login if token exists
+    window.addEventListener('DOMContentLoaded', () => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.error(err));
+        }
+
+        if (localStorage.getItem('adminToken') === 'true') {
+            enterPanel();
+        }
+    });
 </script>
 </body>
 </html>

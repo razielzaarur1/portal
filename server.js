@@ -47,6 +47,25 @@ db.serialize(() => {
         // Add columns if they don't exist (migration)
         db.run(`ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0`, () => {});
         db.run(`ALTER TABLE students ADD COLUMN chat_blocked INTEGER DEFAULT 0`, () => {});
+    
+        db.run(`CREATE TABLE IF NOT EXISTS page_views (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tz TEXT,
+            path TEXT,
+            timestamp INTEGER
+        )`);
+    
+        db.run(`CREATE TABLE IF NOT EXISTS file_metadata (
+            path TEXT PRIMARY KEY,
+            uploader_tz TEXT,
+            uploader_name TEXT,
+            timestamp INTEGER
+        )`);
+        
+        // Add joined_at if not exists
+        db.run(`ALTER TABLE students ADD COLUMN joined_at INTEGER DEFAULT 0`, (err) => {
+            // Ignore error if column exists
+        });
 
         db.run(`CREATE TABLE IF NOT EXISTS drive_permissions (
             path TEXT PRIMARY KEY,
@@ -88,15 +107,9 @@ db.serialize(() => {
                     if (fs.existsSync(backupPath)) {
                         const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
                         
-                        const stmt = db.prepare("INSERT INTO students (tz, name, year, semester, grades) VALUES (?, ?, ?, ?, ?)");
+                        const stmt = db.prepare("INSERT INTO students (tz, name, year, semester, grades, joined_at) VALUES (?, ?, ?, ?, ?, ?)");
                         backupData.forEach(student => {
-                            stmt.run(
-                                student.tz,
-                                student.name || '',
-                                student.year || 'A',
-                                student.semester || '1',
-                                JSON.stringify(student.grades || {})
-                            );
+                            stmt.run(student.tz, student.name || '', student.year || 'A', student.semester || '1', JSON.stringify(student.grades || {}), Date.now());
                         });
                         stmt.finalize();
                         console.log("Seeding completed.");
@@ -189,15 +202,15 @@ app.post('/api/students/:tz', (req, res) => {
     
     const gradesStr = grades ? JSON.stringify(grades) : '{}';
 
-    const sql = `INSERT INTO students (tz, name, year, semester, grades) 
-                 VALUES (?, ?, ?, ?, ?) 
+    const sql = `INSERT INTO students (tz, name, year, semester, grades, joined_at) 
+                 VALUES (?, ?, ?, ?, ?, ?) 
                  ON CONFLICT(tz) DO UPDATE SET 
                     name=excluded.name, 
                     year=excluded.year, 
                     semester=excluded.semester, 
                     grades=excluded.grades`;
     
-    db.run(sql, [tz, name || '', year || 'A', semester || '1', gradesStr], function(err) {
+    db.run(sql, [tz, name || '', year || 'A', semester || '1', gradesStr, Date.now()], function(err) {
         if (err) {
             console.error("Update error:", err);
             return res.status(500).json({ error: "Database error" });
@@ -447,6 +460,18 @@ app.get('/api/drive/list', async (req, res) => {
             dirCacheMap[normalizedPath] = { lastUpdate: now, items: rawItems };
         }
 
+        let metadataMap = {};
+        if (isAdmin) {
+            try {
+                const metadataRows = await new Promise((resolve, reject) => {
+                    db.all("SELECT * FROM file_metadata WHERE path LIKE ?", [`${normalizedPath === '/' ? '' : normalizedPath}/%`], (err, rows) => {
+                        if (err) reject(err); else resolve(rows || []);
+                    });
+                });
+                metadataRows.forEach(r => metadataMap[r.path] = { uploader_tz: r.uploader_tz, uploader_name: r.uploader_name });
+            } catch(e) {}
+        }
+
         const files = [];
         for (const item of rawItems) {
             if (!hasAccess(item.path)) continue;
@@ -455,6 +480,7 @@ app.get('/api/drive/list', async (req, res) => {
             files.push({
                 ...item,
                 permission: isAdmin ? exactPerm : undefined,
+                metadata: isAdmin ? metadataMap[item.path] : undefined,
                 courseId: courseLinks[item.path] || null
             });
         }
@@ -676,6 +702,33 @@ function handleTelegramMessage(msg, token) {
         });
         return;
     }
+
+    // Command: /stats
+    if (text === '/stats') {
+        const statsFile = require('path').join(__dirname, 'data', 'stats_config.json');
+        let lastCheck = 0;
+        if (require('fs').existsSync(statsFile)) {
+            try {
+                lastCheck = JSON.parse(require('fs').readFileSync(statsFile, 'utf8')).lastCheck || 0;
+            } catch(e){}
+        }
+        
+        db.get("SELECT COUNT(*) as newCount FROM students WHERE joined_at > ?", [lastCheck], (err, row1) => {
+            db.get("SELECT COUNT(*) as totalCount FROM students", [], (err, row2) => {
+                const newCount = row1 ? row1.newCount : 0;
+                const totalCount = row2 ? row2.totalCount : 0;
+                let msg = `📊 סטטיסטיקות הרשמה:\n\n`;
+                msg += `סה"כ סטודנטים רשומים: ${totalCount}\n`;
+                msg += `סטודנטים חדשים מאז הבדיקה האחרונה: ${newCount} 🆕\n`;
+                
+                try {
+                    require('fs').writeFileSync(statsFile, JSON.stringify({ lastCheck: Date.now() }));
+                } catch(e){}
+                sendTelegramMessage(msg);
+            });
+        });
+        return;
+    }
     
     // Check state for this chatId
     if (telegramState[chatId] && telegramState[chatId].action === 'reply_student') {
@@ -818,26 +871,35 @@ function handleTelegramCallback(cb, token) {
                 fs.mkdirSync(destPath, { recursive: true });
             }
             
-            if (proposal.files_json) {
-                try {
-                    const files = JSON.parse(proposal.files_json);
-                    files.forEach(f => {
-                        const source = f.path;
-                        const target = path.join(destPath, f.originalname);
-                        if (fs.existsSync(source)) {
-                            fs.copyFileSync(source, target);
-                            fs.unlinkSync(source);
-                        }
-                    });
-                } catch(e) { console.error("Error moving files", e); }
-            }
-            
-            // CLEAR DIRECTORY CACHE so the new files show up instantly for the student
-            dirCacheMap = {};
-            
-            db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
-                    [proposal.tz, `הצעתך להעלאת קבצים לנתיב ${proposal.proposed_path} אושרה! הקבצים הועברו בהצלחה.`, Date.now()]);
-            notifyClient(proposal.tz, 'new_chat_message');
+            db.get("SELECT name FROM students WHERE tz = ?", [proposal.tz], (err, student) => {
+                const uploaderName = student ? student.name : 'לא ידוע';
+                const now = Date.now();
+                
+                if (proposal.files_json) {
+                    try {
+                        const files = JSON.parse(proposal.files_json);
+                        files.forEach(f => {
+                            const source = f.path;
+                            const target = path.join(destPath, f.originalname);
+                            if (fs.existsSync(source)) {
+                                fs.copyFileSync(source, target);
+                                fs.unlinkSync(source);
+                                
+                                const relPath = ("/" + proposal.proposed_path + "/" + f.originalname).replace(/\/+/g, '/');
+                                db.run("INSERT OR REPLACE INTO file_metadata (path, uploader_tz, uploader_name, timestamp) VALUES (?, ?, ?, ?)",
+                                    [relPath, proposal.tz, uploaderName, now]);
+                            }
+                        });
+                    } catch(e) { console.error("Error moving files", e); }
+                }
+                
+                // CLEAR DIRECTORY CACHE so the new files show up instantly for the student
+                dirCacheMap = {};
+                
+                db.run("INSERT INTO chat_messages (tz, message, sender, timestamp) VALUES (?, ?, 'admin', ?)", 
+                        [proposal.tz, `הצעתך להעלאת קבצים לנתיב ${proposal.proposed_path} אושרה! הקבצים הועברו בהצלחה.`, Date.now()]);
+                notifyClient(proposal.tz, 'new_chat_message');
+            });
             notifyClient(proposal.tz, 'file_approved');
         });
     }
@@ -1089,6 +1151,81 @@ app.get('/api/auth/is-admin/:tz', (req, res) => {
 
 
 // ==========================================
+// STATISTICS & TRACKING API
+// ==========================================
+
+app.post('/api/track', express.json(), (req, res) => {
+    const { tz, path } = req.body;
+    if (!tz || !path) return res.json({ success: false });
+    
+    db.run("INSERT INTO page_views (tz, path, timestamp) VALUES (?, ?, ?)", [tz, path, Date.now()], (err) => {
+        res.json({ success: !err });
+    });
+});
+
+app.get('/api/admin/stats', (req, res) => {
+    // Only return data, admin UI checks auth
+    db.all(`SELECT path, COUNT(*) as views FROM page_views GROUP BY path ORDER BY views DESC LIMIT 10`, [], (err, popularPages) => {
+        db.all(`SELECT tz, COUNT(*) as views FROM page_views WHERE tz != '322368564' GROUP BY tz ORDER BY views DESC LIMIT 5`, [], (err, activeStudents) => {
+            db.all(`SELECT uploader_tz as tz, uploader_name as name, COUNT(*) as uploads FROM file_metadata WHERE uploader_tz != '322368564' GROUP BY uploader_tz ORDER BY uploads DESC LIMIT 5`, [], (err, topUploaders) => {
+                
+                // Get real names for active students
+                const stats = { popularPages: popularPages || [], activeStudents: [], topUploaders: topUploaders || [] };
+                
+                if (!activeStudents || activeStudents.length === 0) {
+                    return res.json(stats);
+                }
+                
+                db.all(`SELECT tz, name FROM students`, [], (err, students) => {
+                    const studentMap = {};
+                    (students || []).forEach(s => studentMap[s.tz] = s.name);
+                    
+                    stats.activeStudents = activeStudents.map(s => ({
+                        tz: s.tz,
+                        name: studentMap[s.tz] || 'לא ידוע',
+                        views: s.views
+                    }));
+                    
+                    res.json(stats);
+                });
+            });
+        });
+    });
+});
+
+// ==========================================
+// SHARE TARGET API (PWA)
+// ==========================================
+
+global.sharedFilesCache = {};
+
+app.post('/api/share-target', upload.array('shared_files', 20), (req, res) => {
+    const shareToken = require('crypto').randomBytes(8).toString('hex');
+    
+    if (req.files && req.files.length > 0) {
+        global.sharedFilesCache[shareToken] = req.files.map(f => ({
+            path: f.path,
+            originalname: Buffer.from(f.originalname, 'latin1').toString('utf8'), // Fix encoding just in case
+            size: f.size
+        }));
+    } else {
+        global.sharedFilesCache[shareToken] = [];
+    }
+    
+    res.redirect('/drive.html?shareToken=' + shareToken);
+});
+
+app.get('/api/shared-files/:token', (req, res) => {
+    const token = req.params.token;
+    if (global.sharedFilesCache[token]) {
+        res.json({ files: global.sharedFilesCache[token] });
+        // Don't delete immediately, let the client consume it
+    } else {
+        res.json({ files: [] });
+    }
+});
+
+// ==========================================
 // CHAT & PROPOSALS API
 // ==========================================
 
@@ -1157,8 +1294,13 @@ app.post('/api/drive/propose-folder', async (req, res) => {
 });
 
 app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) => {
-    const { tz, proposed_path, comments } = req.body;
-    const files = req.files;
+    const { tz, proposed_path, comments, shareToken } = req.body;
+    let files = req.files || [];
+    
+    if (shareToken && global.sharedFilesCache && global.sharedFilesCache[shareToken]) {
+        files = global.sharedFilesCache[shareToken];
+        delete global.sharedFilesCache[shareToken]; // Consume
+    }
     
     if (!tz || !files || files.length === 0) {
         return res.status(400).json({ error: 'Missing files or data' });
