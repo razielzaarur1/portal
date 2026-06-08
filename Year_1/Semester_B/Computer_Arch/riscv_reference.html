@@ -462,6 +462,250 @@
                 </div>
             </section>
 
+            <!-- ================= MULTIPLICATION & DIVISION ================= -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-orange-50 border-b border-orange-100 p-4">
+                    <h2 class="text-xl font-bold text-orange-800 flex items-center gap-2"><i class="fas fa-times"></i> כפל וחילוק (Multiplication & Division)</h2>
+                    <p class="text-orange-700 text-sm mt-2">פקודות אלו מטפלות בפעולות מתמטיות מורכבות יותר, והן דורשות תשומת לב מיוחדת להבדל בין מספרים עם סימן (Signed) ללא סימן (Unsigned) וגודל האוגרים.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="p-4 font-semibold whitespace-nowrap w-24">פקודה</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-48">תחביר מלא</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-40 text-left" dir="ltr">Meaning</th>
+                                <th class="p-4 font-semibold">תיאור הפעולה / נוסחה</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">mul</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mul rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Multiply</span></td>
+                                <td class="p-4 text-slate-600">כפל של שני אוגרים. הפקודה שומרת את 32 הביטים התחתונים של תוצאת הכפל ב-<span class="font-code text-sm text-orange-700">rd</span>.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">mulh</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mulh rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Multiply High</span></td>
+                                <td class="p-4 text-slate-600">כפל של מספרים עם סימן ושמירת 32 הביטים העליונים של התוצאה (החצי העליון של 64 ביט).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">mulhu</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mulhu rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Multiply High Unsigned</span></td>
+                                <td class="p-4 text-slate-600">כפל של מספרים ללא סימן (חיוביים בלבד) ושמירת 32 הביטים העליונים של התוצאה.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">mulhsu</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mulhsu rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Multiply High Signed-Unsigned</span></td>
+                                <td class="p-4 text-slate-600">אופרנד ראשון נחשב כמספר עם סימן והשני ללא סימן. שומר את 32 הביטים העליונים.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">div</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">div rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Divide</span></td>
+                                <td class="p-4 text-slate-600">חילוק של מספרים עם סימן למציאת המנה (Quotient).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">divu</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">divu rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Divide Unsigned</span></td>
+                                <td class="p-4 text-slate-600">חילוק של מספרים ללא סימן.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">rem</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">rem rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Remainder</span></td>
+                                <td class="p-4 text-slate-600">מציאת שארית החילוק של מספרים עם סימן.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-orange-600">remu</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">remu rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Remainder Unsigned</span></td>
+                                <td class="p-4 text-slate-600">מציאת שארית החילוק של מספרים ללא סימן.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= PSEUDOINSTRUCTIONS ================= -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-100 border-b border-slate-200 p-4">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-magic"></i> פקודות מדומות נוחות (Pseudoinstructions)</h2>
+                    <p class="text-slate-600 text-sm mt-2">אלו אינן פקודות "אמיתיות" שקיימות בחומרת המעבד, אלא קיצורי דרך למתכנתים. האסמבלר (Assembler) מתרגם אותן אוטומטית לפקודות RISC-V רגילות שברשימה שלך.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="p-4 font-semibold whitespace-nowrap w-24">פקודה</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-48">תחביר מלא</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-40 text-left" dir="ltr">Meaning</th>
+                                <th class="p-4 font-semibold">תיאור הפעולה / נוסחה</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">j</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">j label</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Jump</span></td>
+                                <td class="p-4 text-slate-600">קפיצה ללא תנאי לתווית (מתורגם בפועל ל- <span class="font-code text-sm text-slate-700">jal zero, label</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">jr</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">jr rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Jump Register</span></td>
+                                <td class="p-4 text-slate-600">קפיצה לכתובת השמורה באוגר (מתורגם ל- <span class="font-code text-sm text-slate-700">jalr zero, rs, 0</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">ret</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">ret</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Return</span></td>
+                                <td class="p-4 text-slate-600">חזרה מפונקציה למקום ממנו קראו לה (מתורגם ל- <span class="font-code text-sm text-slate-700">jalr zero, ra, 0</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">call</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">call label</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Call</span></td>
+                                <td class="p-4 text-slate-600">קריאה לפונקציה מרוחקת (מתורגם לשילוב של <span class="font-code text-sm text-slate-700">auipc</span> ו- <span class="font-code text-sm text-slate-700">jalr</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">mv</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mv rd, rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Move</span></td>
+                                <td class="p-4 text-slate-600">העתקת ערך מאוגר לאוגר (מתורגם ל- <span class="font-code text-sm text-slate-700">addi rd, rs, 0</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">li</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">li rd, imm</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Load Immediate</span></td>
+                                <td class="p-4 text-slate-600">טעינת מספר קבוע גדול לאוגר (מתורגם לשילוב של <span class="font-code text-sm text-slate-700">lui</span> ו- <span class="font-code text-sm text-slate-700">addi</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">nop</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">nop</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">No Operation</span></td>
+                                <td class="p-4 text-slate-600">אי-עשייה, המעבד פשוט ממתין מחזור שעון (מתורגם ל- <span class="font-code text-sm text-slate-700">addi zero, zero, 0</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">not</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">not rd, rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Not Logical</span></td>
+                                <td class="p-4 text-slate-600">היפוך כל הביטים של האוגר (מתורגם ל- <span class="font-code text-sm text-slate-700">xori rd, rs, -1</span>).</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-slate-700">bgez</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">bgez rs, label</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Branch &gt;= 0</span></td>
+                                <td class="p-4 text-slate-600">קפיצה אם האוגר גדול או שווה לאפס (מתורגם ל- <span class="font-code text-sm text-slate-700">bge rs, zero, label</span>).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= FLOATING POINT ================= -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-cyan-50 border-b border-cyan-100 p-4">
+                    <h2 class="text-xl font-bold text-cyan-800 flex items-center gap-2"><i class="fas fa-wave-square"></i> נקודה צפה (Floating-Point Instructions)</h2>
+                    <p class="text-cyan-700 text-sm mt-2">כאשר המעבד תומך בהרחבות מתמטיות למספרים עשרוניים, מתווספות פקודות שמסתיימות ב- <span class="font-code text-sm text-cyan-800">.s</span> (עבור 32-bit), <span class="font-code text-sm text-cyan-800">.d</span> (עבור 64-bit) או <span class="font-code text-sm text-cyan-800">.q</span> (עבור 128-bit) המשתמשות בסט אוגרים נפרד (<span class="font-code text-sm text-cyan-800">f0</span> עד <span class="font-code text-sm text-cyan-800">f31</span>).</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="p-4 font-semibold whitespace-nowrap w-24">פקודה</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-48">תחביר מלא</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-40 text-left" dir="ltr">Meaning</th>
+                                <th class="p-4 font-semibold">תיאור הפעולה / נוסחה</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-cyan-600">flw / fsw</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">flw ft1, imm(rs1)</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Float Load/Store</span></td>
+                                <td class="p-4 text-slate-600">קריאה או כתיבה של מספר עשרוני מהזיכרון/לזיכרון.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-cyan-600">fadd.s / fsub.s</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">fadd.s rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Float Add / Sub</span></td>
+                                <td class="p-4 text-slate-600">חיבור או חיסור של מספרים עשרוניים בנקודה צפה.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-cyan-600">fdiv.s / fsqrt.s</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">fdiv.s rd, rs1, rs2</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Float Div / Sqrt</span></td>
+                                <td class="p-4 text-slate-600">חילוק או שורש ריבועי למספרים עשרוניים.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-cyan-600">fmadd.s</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">fmadd.s rd, r1, r2, r3</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Fused Multiply-Add</span></td>
+                                <td class="p-4 text-slate-600">ביצוע חיבור וכפל יחד באותה פקודה (נפוץ מאוד בעיבוד אותות): <span class="font-code text-sm text-cyan-700">rd = (r1 * r2) + r3</span>.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-cyan-600">fcvt.s.w</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">fcvt.s.w rd, rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Float Convert</span></td>
+                                <td class="p-4 text-slate-600">המרה של מספר שלם רגיל (מסט האוגרים הרגיל) למספר עשרוני עליו ניתן לעשות חישובים מתקדמים.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= EXCEPTIONS & CSRS ================= -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-red-50 border-b border-red-100 p-4">
+                    <h2 class="text-xl font-bold text-red-800 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> מערכת ופסיקות (Exceptions & CSRs)</h2>
+                    <p class="text-red-700 text-sm mt-2">פקודות הרשאה אלו (Privileged Instructions) מטפלות בשגיאות, התראות חומרה ומצבי מערכת על ידי גישה לאוגרי סטטוס מיוחדים (Control and Status Registers).</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
+                                <th class="p-4 font-semibold whitespace-nowrap w-24">פקודה</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-48">תחביר מלא</th>
+                                <th class="p-4 font-semibold whitespace-nowrap w-40 text-left" dir="ltr">Meaning</th>
+                                <th class="p-4 font-semibold">תיאור הפעולה / נוסחה</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-red-600">csrr</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">csrr rd, csr</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">CSR Read</span></td>
+                                <td class="p-4 text-slate-600">קריאת הערך השמור באוגר מערכת (לדוגמה <span class="font-code text-sm text-red-700">mcause</span>) לאוגר רגיל לבדיקה.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-red-600">csrw</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">csrw csr, rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">CSR Write</span></td>
+                                <td class="p-4 text-slate-600">שינוי וכתיבה של ערך מאוגר רגיל אל תוך אוגר מערכת.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-red-600">csrrw</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">csrrw rd, csr, rs</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">CSR Read &amp; Write</span></td>
+                                <td class="p-4 text-slate-600">החלפה: קריאה מאוגר המערכת ל-<span class="font-code text-sm text-red-700">rd</span>, ובמקביל כתיבת הערך מ-<span class="font-code text-sm text-red-700">rs</span> לתוכו.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-4"><span class="font-code font-bold text-red-600">mret</span></td>
+                                <td class="p-4"><span class="font-code text-slate-700 bg-slate-100 px-2 py-1 rounded">mret</span></td>
+                                <td class="p-4 text-left" dir="ltr"><span class="font-code text-sm text-slate-500">Machine Return</span></td>
+                                <td class="p-4 text-slate-600">פקודה המסמנת סיום טיפול בפסיקה וחזרה לתוכנית הרגילה (לכתובת השמורה באוגר <span class="font-code text-sm text-red-700">mepc</span>).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
         </div>
     </div>
 
