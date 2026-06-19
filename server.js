@@ -1298,6 +1298,13 @@ app.post('/api/drive/propose-file', upload.array('files', 20), async (req, res) 
     const { tz, proposed_path, comments, shareToken } = req.body;
     let files = req.files || [];
     
+    // Fix multer latin1 encoding for Hebrew filenames
+    files.forEach(f => {
+        if (f.originalname) {
+            f.originalname = Buffer.from(f.originalname, 'latin1').toString('utf8');
+        }
+    });
+    
     if (shareToken && global.sharedFilesCache && global.sharedFilesCache[shareToken]) {
         files = global.sharedFilesCache[shareToken];
         delete global.sharedFilesCache[shareToken]; // Consume
