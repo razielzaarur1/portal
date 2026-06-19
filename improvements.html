@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>שיפורים שימושיים - הנדסת חשמל</title>
+    <meta name="theme-color" content="#3b82f6">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --code-color: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg-gradient); background-attachment: fixed; color: var(--text-main); min-height: 100vh; padding-bottom: 50px; }
+
+        header {
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(30, 64, 175, 0.8)), 
+                        url('https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover; background-position: center; color: white;
+            padding: 40px 20px; text-align: center; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;
+            margin-bottom: 40px;
+        }
+
+        .back-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.2); color: white; border: none; padding: 8px 16px;
+            border-radius: 12px; cursor: pointer; font-weight: 600; text-decoration: none;
+            display: flex; align-items: center; gap: 8px; transition: 0.3s;
+        }
+        .back-btn:hover { background: white; color: var(--primary); }
+
+        header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+        header p { font-size: 1.1rem; opacity: 0.9; font-weight: 300; }
+
+        .main-content { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+        .section-label { font-size: 1.2rem; font-weight: 700; color: var(--secondary); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+        .card { 
+            background: white; border-radius: 18px; padding: 20px; text-decoration: none; 
+            display: flex; align-items: flex-start; gap: 15px; border: 1px solid #f1f5f9; 
+            transition: all 0.25s ease; position: relative; overflow: hidden; cursor: pointer; 
+        }
+        .card::before { content: ""; position: absolute; right: 0; top: 0; height: 100%; width: 4px; background: var(--accent); }
+        .card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 25px rgba(0,0,0,0.06); border-color: #cbd5e1; }
+        .card-icon { 
+            width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; 
+            justify-content: center; font-size: 1.5rem; background: var(--bg-soft); color: var(--accent); flex-shrink: 0; 
+        }
+        .card-info { flex: 1; }
+        .card-info h3 { font-size: 1.1rem; color: var(--text-main); margin-bottom: 6px; font-weight: 600; line-height: 1.3; }
+        .card-info p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+        .download-icon { color: #cbd5e1; font-size: 1.2rem; transition: transform 0.2s; align-self: center; margin-right: 10px; }
+        .card:hover .download-icon { transform: translateY(3px); color: var(--primary); }
+
+        .code { --accent: var(--code-color); --bg-soft: #ecfdf5; }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="back-btn"><i class="fas fa-chevron-right"></i> חזור</a>
+        <h1>שיפורים שימושיים</h1>
+        <p>כלים ותוספים לשיפור חוויית הלמידה</p>
+    </header>
+
+    <main class="main-content">
+        <div class="section-label"><i class="fas fa-plug"></i> תוספים זמינים להורדה</div>
+        <div class="grid">
+            <a href="MoodleDownloader_Setup.exe" class="card code" download>
+                <div class="card-icon"><i class="fab fa-chrome"></i></div>
+                <div class="card-info">
+                    <h3>תוסף לכרום לשיפור המודל של האוניברסיטה</h3>
+                    <p>תוסף לכרום שמשפר את המודל ללא חלונות קופצים לקבצים ואפשרות הורדה מהירה של קבצים</p>
+                </div>
+                <i class="fas fa-download download-icon"></i>
+            </a>
+        </div>
+    </main>
+
+</body>
+</html>
