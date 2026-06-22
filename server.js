@@ -105,16 +105,6 @@ db.serialize(() => {
 
         db.run(`ALTER TABLE proposals ADD COLUMN files_json TEXT`, (err) => { /* ignore */ });
 
-        db.run(`ALTER TABLE chat_messages ADD COLUMN is_read INTEGER DEFAULT 0`, (err) => { /* ignore */ });
-
-        db.run(`CREATE TABLE IF NOT EXISTS login_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tz TEXT,
-            ip TEXT,
-            device TEXT,
-            timestamp INTEGER
-        )`);
-
         // Check if DB is empty to seed it
         db.get("SELECT COUNT(*) as count FROM students", (err, row) => {
             if (row && row.count === 0) {
@@ -232,14 +222,6 @@ app.post('/api/students/:tz', (req, res) => {
             console.error("Update error:", err);
             return res.status(500).json({ error: "Database error" });
         }
-        
-        // Log history
-        const ip = req.ip || req.connection.remoteAddress;
-        const device = req.get('User-Agent') || 'Unknown';
-        db.run(`INSERT INTO login_history (tz, ip, device, timestamp) VALUES (?, ?, ?, ?)`, [tz, ip, device, Date.now()], (err) => {
-            if (err) console.error("Error logging history:", err);
-        });
-
         res.json({ success: true });
     });
 });
@@ -1751,72 +1733,6 @@ ${history}`,
 app.post('/api/students/:tz/block-chat', (req, res) => {
     db.run("UPDATE students SET chat_blocked = ? WHERE tz = ?", [req.body.blocked ? 1 : 0, req.params.tz]);
     res.json({ success: true });
-});
-
-// Admin Stats
-app.get('/api/admin/stats', (req, res) => {
-    const todayStart = new Date().setHours(0, 0, 0, 0);
-    const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
-    
-    let stats = {
-        activeToday: 0,
-        activeWeek: 0,
-        newToday: 0,
-        newWeek: 0,
-        inactive: 0,
-        bySemester: {}
-    };
-
-    db.get(`SELECT COUNT(DISTINCT tz) as count FROM login_history WHERE timestamp > ?`, [todayStart], (err, row) => {
-        if (row) stats.activeToday = row.count;
-        
-        db.get(`SELECT COUNT(DISTINCT tz) as count FROM login_history WHERE timestamp > ?`, [weekStart], (err, row) => {
-            if (row) stats.activeWeek = row.count;
-            
-            db.get(`SELECT COUNT(*) as count FROM students WHERE joined_at > ?`, [todayStart], (err, row) => {
-                if (row) stats.newToday = row.count;
-                
-                db.get(`SELECT COUNT(*) as count FROM students WHERE joined_at > ?`, [weekStart], (err, row) => {
-                    if (row) stats.newWeek = row.count;
-                    
-                    // Inactive for 30 days
-                    const thirtyDaysAgo = todayStart - 30 * 24 * 60 * 60 * 1000;
-                    db.get(`SELECT COUNT(*) as count FROM students WHERE tz NOT IN (SELECT tz FROM login_history WHERE timestamp > ?)`, [thirtyDaysAgo], (err, row) => {
-                        if (row) stats.inactive = row.count;
-                        
-                        db.all(`SELECT semester, COUNT(*) as count FROM students GROUP BY semester`, [], (err, rows) => {
-                            if (rows) {
-                                rows.forEach(r => {
-                                    stats.bySemester[r.semester] = r.count;
-                                });
-                            }
-                            res.json(stats);
-                        });
-                    });
-                });
-            });
-        });
-    });
-});
-
-app.get('/api/admin/student/:tz/history', (req, res) => {
-    db.all("SELECT ip, device, timestamp FROM login_history WHERE tz = ? ORDER BY timestamp DESC LIMIT 50", [req.params.tz], (err, rows) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        res.json(rows);
-    });
-});
-
-app.get('/api/admin/chat/unread', (req, res) => {
-    db.all("SELECT DISTINCT tz FROM chat_messages WHERE sender = 'user' AND is_read = 0", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        res.json(rows.map(r => r.tz));
-    });
-});
-
-app.post('/api/admin/chat/:tz/read', (req, res) => {
-    db.run("UPDATE chat_messages SET is_read = 1 WHERE tz = ? AND sender = 'user'", [req.params.tz], function(err) {
-        res.json({ success: true });
-    });
 });
 
 // Telegram Polling Update (to be added)
