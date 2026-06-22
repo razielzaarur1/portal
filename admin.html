@@ -445,6 +445,19 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- History Modal -->
+<div id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:90%; max-width:600px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div style="padding:20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:16px 16px 0 0;">
+            <h2 style="margin:0; font-size:1.2rem; color:var(--text);"><i class="fas fa-history" style="color:var(--primary);"></i> היסטוריית התחברות - <span id="history-modal-name"></span></h2>
+            <button onclick="document.getElementById('history-modal').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted);">&times;</button>
+        </div>
+        <div id="history-modal-content" style="padding:20px; overflow-y:auto; flex:1;">
+            טוען נתונים...
+        </div>
+    </div>
+</div>
+
 <script>
     const YEAR_MAP = { A: "א'", B: "ב'", C: "ג'", D: "ד'" };
     let allStudents = [];
@@ -579,10 +592,14 @@
         const container = document.getElementById('adv-stats-container');
         container.innerHTML = '<div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען סטטיסטיקות...</div>';
 
-        let d;
+        let d, customStats;
         try {
-            const res = await fetch('/api/admin/advanced-stats');
-            d = await res.json();
+            const [res1, res2] = await Promise.all([
+                fetch('/api/admin/advanced-stats'),
+                fetch('/api/admin/stats')
+            ]);
+            d = await res1.json();
+            customStats = await res2.json();
         } catch(e) {
             container.innerHTML = '<div class="adv-loading" style="color:var(--danger)">שגיאה בטעינת נתונים ❌</div>';
             return;
@@ -667,7 +684,41 @@
         );
 
         // ---- RENDER FINAL HTML ----
-        container.innerHTML = `<div class="adv-stats-grid">
+        const bySemHtml = Object.entries(customStats.bySemester).map(([sem, count]) => `<div><span style="display:inline-block; width:10px; height:10px; background:var(--primary); border-radius:50%; margin-left:5px;"></span>סמסטר ${sem === '1' ? "א'" : sem === '2' ? "ב'" : sem}: <strong>${count}</strong></div>`).join('');
+
+        container.innerHTML = `
+            <div style="background:white; border-radius:16px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.06); margin-bottom:20px;">
+                <h3 style="margin-bottom:15px; color:var(--primary); font-size:1.1rem;"><i class="fas fa-chart-pie"></i> נתונים לפי בקשת מנהל</h3>
+                <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:120px; background:#f1f5f9; padding:15px; border-radius:12px; text-align:center;">
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--primary);">${customStats.activeToday}</div>
+                        <div style="font-size:0.85rem; color:var(--muted);">פעילים היום</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; background:#f1f5f9; padding:15px; border-radius:12px; text-align:center;">
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--primary);">${customStats.activeWeek}</div>
+                        <div style="font-size:0.85rem; color:var(--muted);">פעילים השבוע</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; background:#f1f5f9; padding:15px; border-radius:12px; text-align:center;">
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--success);">${customStats.newToday}</div>
+                        <div style="font-size:0.85rem; color:var(--muted);">נרשמים היום</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; background:#f1f5f9; padding:15px; border-radius:12px; text-align:center;">
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--success);">${customStats.newWeek}</div>
+                        <div style="font-size:0.85rem; color:var(--muted);">נרשמים השבוע</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; background:#fef2f2; padding:15px; border-radius:12px; text-align:center;">
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--danger);">${customStats.inactive}</div>
+                        <div style="font-size:0.85rem; color:var(--muted);">לא פעילים (מעל 30 יום)</div>
+                    </div>
+                </div>
+                <div style="margin-top:15px; background:#f8fafc; padding:15px; border-radius:12px;">
+                    <div style="font-weight:600; margin-bottom:10px;"><i class="fas fa-list-ol"></i> סה"כ רשומים לפי סמסטר:</div>
+                    <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:0.9rem;">
+                        ${bySemHtml || 'אין נתונים'}
+                    </div>
+                </div>
+            </div>
+            <div class="adv-stats-grid">
 
             <!-- ===== USERS CATEGORY ===== -->
             <div class="adv-category">
@@ -910,6 +961,9 @@
                     <button class="action-btn btn-delete" onclick="deleteStudent('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <button class="action-btn" style="background:#f8fafc; color:var(--text); border:1px solid var(--border);" onclick="showLoginHistory('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')">
+                        <i class="fas fa-history"></i> היסטוריה
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -970,17 +1024,34 @@
     
     async function loadChats() {
         const listEl = document.getElementById('chat-users-list');
-        listEl.innerHTML = allStudents.map(s => `
-            <div onclick="openChat('${s.tz}', '${s.name}')" style="padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; transition: 0.2s;" class="chat-user-item hover:bg-slate-50">
-                <div style="width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+        let unread = [];
+        try {
+            const res = await fetch('/api/admin/chat/unread');
+            unread = await res.json();
+        } catch(e) {}
+        
+        // Sort students with unread messages first
+        const sortedStudents = [...allStudents].sort((a, b) => {
+            const aUnread = unread.includes(a.tz) ? 1 : 0;
+            const bUnread = unread.includes(b.tz) ? 1 : 0;
+            return bUnread - aUnread;
+        });
+
+        listEl.innerHTML = sortedStudents.map(s => {
+            const isUnread = unread.includes(s.tz);
+            return `
+            <div onclick="openChat('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')" style="padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; transition: 0.2s; ${isUnread ? 'background:#fef3c7;' : ''}" class="chat-user-item hover:bg-slate-50">
+                <div style="width: 40px; height: 40px; background: ${isUnread ? 'var(--warning)' : 'var(--primary)'}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; position:relative;">
                     ${s.name ? s.name.charAt(0) : '?'}
+                    ${isUnread ? '<div style="position:absolute; top:-2px; right:-2px; width:12px; height:12px; background:var(--danger); border-radius:50%; border:2px solid white;"></div>' : ''}
                 </div>
                 <div>
-                    <div style="font-weight: bold; font-size: 0.9rem;">${s.name || 'ללא שם'}</div>
+                    <div style="font-weight: bold; font-size: 0.9rem; ${isUnread ? 'color:var(--danger);' : ''}">${s.name || 'ללא שם'}</div>
                     <div style="font-size: 0.8rem; color: var(--muted);">${s.tz}</div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
     
     async function openChat(tz, name) {
@@ -990,6 +1061,13 @@
         document.getElementById('admin-chat-btn').disabled = false;
         
         await fetchMessages(tz);
+        
+        // Mark as read
+        try {
+            await fetch(`/api/admin/chat/${tz}/read`, { method: 'POST' });
+            // remove badge visually
+            loadChats();
+        } catch(e) {}
     }
     
     async function fetchMessages(tz) {
@@ -1024,6 +1102,46 @@
             input.value = '';
             fetchMessages(activeChatTz);
         } catch(e) {}
+    }
+
+    async function showLoginHistory(tz, name) {
+        document.getElementById('history-modal-name').textContent = name || tz;
+        document.getElementById('history-modal-content').innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> טוען...</div>';
+        document.getElementById('history-modal').style.display = 'flex';
+        
+        try {
+            const res = await fetch(`/api/admin/student/${tz}/history`);
+            const data = await res.json();
+            
+            if (!data || data.length === 0) {
+                document.getElementById('history-modal-content').innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">אין נתוני התחברות לסטודנט זה.</div>';
+                return;
+            }
+            
+            const html = `
+                <table style="width:100%; text-align:right; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f1f5f9; border-bottom:2px solid #e2e8f0;">
+                            <th style="padding:10px;">תאריך</th>
+                            <th style="padding:10px;">כתובת IP</th>
+                            <th style="padding:10px;">מכשיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(r => `
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:10px;">${new Date(r.timestamp).toLocaleString('he-IL')}</td>
+                                <td style="padding:10px; font-family:monospace;">${r.ip || '-'}</td>
+                                <td style="padding:10px; font-size:0.8rem; color:var(--muted);">${r.device || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('history-modal-content').innerHTML = html;
+        } catch(e) {
+            document.getElementById('history-modal-content').innerHTML = '<div style="color:var(--danger); text-align:center; padding:20px;">שגיאה בטעינת נתונים</div>';
+        }
     }
 
     function showToast(msg) {
