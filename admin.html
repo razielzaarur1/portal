@@ -173,6 +173,129 @@
             #students-list-container { overflow-x: auto; width: 100%; padding-bottom: 10px; }
             .table-header, .student-row { min-width: 600px; }
         }
+
+        /* ---- Advanced Stats Dashboard ---- */
+        .adv-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 800px) { .adv-stats-grid { grid-template-columns: 1fr; } }
+
+        .adv-category {
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+        .adv-category-header {
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+        .adv-category-header.users-hdr  { background: linear-gradient(135deg,#2563eb,#60a5fa); }
+        .adv-category-header.drive-hdr  { background: linear-gradient(135deg,#059669,#34d399); }
+        .adv-category-header.grades-hdr { background: linear-gradient(135deg,#7c3aed,#a78bfa); }
+        .adv-category-header.chat-hdr   { background: linear-gradient(135deg,#d97706,#fbbf24); }
+
+        .adv-category-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+        .adv-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .adv-mini-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px 10px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .adv-mini-num {
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .adv-mini-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+        .color-blue   { color: #2563eb; }
+        .color-green  { color: #059669; }
+        .color-purple { color: #7c3aed; }
+        .color-orange { color: #d97706; }
+        .color-red    { color: #dc2626; }
+        .color-teal   { color: #0891b2; }
+
+        .adv-sub-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .adv-list { display: flex; flex-direction: column; gap: 6px; }
+        .adv-list-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .adv-list-item:last-child { border-bottom: none; }
+        .adv-rank {
+            width: 22px; height: 22px;
+            background: #f1f5f9;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700; color: var(--muted);
+            flex-shrink: 0;
+        }
+        .adv-rank.gold   { background: #fef3c7; color: #92400e; }
+        .adv-rank.silver { background: #e2e8f0; color: #475569; }
+        .adv-rank.bronze { background: #fde8d8; color: #92400e; }
+
+        .adv-bar-wrap {
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .adv-bar-row {
+            display: flex; align-items: center; gap: 8px; font-size: 0.8rem;
+        }
+        .adv-bar-label { min-width: 90px; text-align: right; color: var(--text); font-weight: 500; }
+        .adv-bar-outer {
+            flex: 1; height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;
+        }
+        .adv-bar-inner {
+            height: 100%; border-radius: 6px;
+            background: linear-gradient(90deg, #2563eb, #60a5fa);
+            transition: width 0.6s ease;
+        }
+        .adv-bar-inner.green  { background: linear-gradient(90deg, #059669, #34d399); }
+        .adv-bar-inner.purple { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+        .adv-bar-inner.orange { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .adv-bar-val { min-width: 30px; text-align: left; font-weight: 700; font-size: 0.78rem; color: var(--muted); }
+
+        .adv-divider {
+            border: none; border-top: 1px solid #f1f5f9; margin: 4px 0;
+        }
+        .adv-alert {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 500;
+        }
+        .adv-alert.info   { background: #eff6ff; color: #1d4ed8; }
+        .adv-alert.warn   { background: #fffbeb; color: #92400e; }
+        .adv-alert.good   { background: #f0fdf4; color: #15803d; }
+        .adv-alert.purple { background: #f5f3ff; color: #5b21b6; }
+        .adv-loading { text-align: center; padding: 30px; color: var(--muted); }
     </style>
 </head>
 <body>
@@ -278,22 +401,14 @@
         <div class="section" id="section-stats">
             <div class="section-title">
                 <i class="fas fa-chart-line" style="color:var(--primary)"></i>
-                סטטיסטיקות מערכת
+                סטטיסטיקות מערכת מתקדמות
+                <button onclick="loadStats()" style="margin-right:auto; background:#f1f5f9; border:none; padding:6px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:0.8rem; color:var(--muted); font-weight:600;">
+                    <i class="fas fa-sync-alt"></i> רענן
+                </button>
             </div>
-            
-            <div id="stats-container" style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="stat-card">
-                    <h3><i class="fas fa-fire"></i> הדפים הנצפים ביותר (Top 10)</h3>
-                    <div id="stats-popular-pages" style="margin-top: 10px;">טוען...</div>
-                </div>
-                <div class="stat-card">
-                    <h3><i class="fas fa-user-clock"></i> הסטודנטים הפעילים ביותר</h3>
-                    <div id="stats-active-students" style="margin-top: 10px;">טוען...</div>
-                </div>
-                <div class="stat-card">
-                    <h3><i class="fas fa-upload"></i> מעלי הקבצים המובילים</h3>
-                    <div id="stats-top-uploaders" style="margin-top: 10px;">טוען...</div>
-                </div>
+
+            <div id="adv-stats-container">
+                <div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען סטטיסטיקות...</div>
             </div>
         </div>
 
@@ -461,22 +576,270 @@
 
     // --- Students ---
     async function loadStats() {
+        const container = document.getElementById('adv-stats-container');
+        container.innerHTML = '<div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען סטטיסטיקות...</div>';
+
+        let d;
         try {
-            const res = await fetch('/api/admin/stats');
-            const data = await res.json();
-            
-            document.getElementById('stats-popular-pages').innerHTML = 
-                data.popularPages.length ? data.popularPages.map(p => `<div><strong style="color:var(--primary);">${p.views} צפיות:</strong> ${p.path}</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
-                
-            document.getElementById('stats-active-students').innerHTML = 
-                data.activeStudents.length ? data.activeStudents.map(s => `<div><strong style="color:var(--success);">${s.views} צפיות:</strong> ${s.name} (${s.tz})</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
-                
-            document.getElementById('stats-top-uploaders').innerHTML = 
-                data.topUploaders.length ? data.topUploaders.map(u => `<div><strong style="color:var(--primary);">${u.uploads} קבצים:</strong> ${u.name} (${u.tz})</div>`).join('') : '<div class="empty-state">אין נתונים</div>';
-                
+            const res = await fetch('/api/admin/advanced-stats');
+            d = await res.json();
         } catch(e) {
-            console.error('Error loading stats', e);
+            container.innerHTML = '<div class="adv-loading" style="color:var(--danger)">שגיאה בטעינת נתונים ❌</div>';
+            return;
         }
+
+        const u = d.users, dr = d.drive, gr = d.grades, ch = d.chat;
+
+        // Helper: render a leaderboard list
+        function renderList(items, labelFn, valueFn, colorClass = '') {
+            if (!items || items.length === 0) return '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:8px;">אין נתונים</div>';
+            const medals = ['gold','silver','bronze'];
+            return items.map((item, i) => `
+                <div class="adv-list-item">
+                    <div class="adv-rank ${medals[i] || ''}">${i + 1}</div>
+                    <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${labelFn(item)}</div>
+                    <div style="font-weight:700;font-size:0.85rem;${colorClass}">${valueFn(item)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Helper: render a horizontal bar chart
+        function renderBars(items, labelFn, valueFn, colorClass = '', unit = '') {
+            if (!items || items.length === 0) return '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:8px;">אין נתונים</div>';
+            const max = Math.max(...items.map(i => Number(valueFn(i)) || 0), 1);
+            return `<div class="adv-bar-wrap">${items.map(item => {
+                const val = Number(valueFn(item)) || 0;
+                const pct = Math.round((val / max) * 100);
+                return `<div class="adv-bar-row">
+                    <div class="adv-bar-label">${labelFn(item)}</div>
+                    <div class="adv-bar-outer"><div class="adv-bar-inner ${colorClass}" style="width:${pct}%"></div></div>
+                    <div class="adv-bar-val">${val}${unit}</div>
+                </div>`;
+            }).join('')}</div>`;
+        }
+
+        // Helper: mini stat card
+        function mini(num, label, colorClass) {
+            const display = num === null || num === undefined ? '–' : num;
+            return `<div class="adv-mini-card"><div class="adv-mini-num ${colorClass}">${display}</div><div class="adv-mini-label">${label}</div></div>`;
+        }
+
+        // Helper: peak hour display
+        function hourLabel(h) {
+            const n = Number(h);
+            return `${String(n).padStart(2,'0')}:00`;
+        }
+
+        // ---- YEAR DISTRIBUTION BARS ----
+        const YEAR_LABELS = {'1':'שנה א\'','2':'שנה ב\'','3':'שנה ג\'','4':'שנה ד\'','graduate':'בוגרים'};
+        const yearBars = renderBars(u.byYear || [], r => YEAR_LABELS[r.year] || `שנה ${r.year}`, r => r.count, 'green');
+
+        // ---- JOINED BY MONTH BARS ----
+        const joinBars = renderBars((u.joinedByMonth || []).reverse(), r => r.month ? r.month.replace(/^\d{4}-/,'') : '?', r => r.count, '');
+
+        // ---- FILE TYPES BARS ----
+        const extBars = renderBars(dr.fileTypes || [], r => {
+            const extIcons = {pdf:'📄',docx:'📝',doc:'📝',pptx:'📊',ppt:'📊',xlsx:'📈',xls:'📈',zip:'📦',jpg:'🖼️',png:'🖼️',mp4:'🎬',py:'🐍',c:'💻',cpp:'💻',txt:'📃'};
+            return `${extIcons[r.ext]||'📁'} .${r.ext}`;
+        }, r => r.count, 'green');
+
+        // ---- TOP DOWNLOADS ----
+        const topDlList = renderList(
+            (dr.topDownloads || []).map(r => ({ ...r, shortName: r.path.split('/').pop() })),
+            r => `<span title="${r.path}">${r.shortName}</span>`,
+            r => `${r.count} הורדות`,
+            'color:#059669'
+        );
+
+        // ---- GRADE BARS ----
+        const hardBar = renderBars(gr.hardestCourses || [], r => r.name, r => r.avg, 'orange');
+        const easyBar = renderBars(gr.easiestCourses || [], r => r.name, r => r.avg, 'green');
+
+        // ---- PEAK HOURS ----
+        const peakBars = renderBars(u.peakHours || [], r => hourLabel(r.hour), r => r.views, '');
+
+        // ---- TOP MSG STUDENTS ----
+        const topMsgList = renderList(
+            ch.topStudentsMsgs || [],
+            r => r.name || r.tz,
+            r => `${r.count} הודעות`,
+            'color:#d97706'
+        );
+
+        // ---- RENDER FINAL HTML ----
+        container.innerHTML = `<div class="adv-stats-grid">
+
+            <!-- ===== USERS CATEGORY ===== -->
+            <div class="adv-category">
+                <div class="adv-category-header users-hdr">
+                    <i class="fas fa-users"></i> משתמשים ומעורבות
+                </div>
+                <div class="adv-category-body">
+
+                    <div class="adv-mini-grid">
+                        ${mini(u.total, 'סטודנטים רשומים', 'color-blue')}
+                        ${mini(u.realtime, 'פעילים עכשיו 🟢', 'color-green')}
+                        ${mini(u.dau, 'פעילים היום (DAU)', 'color-teal')}
+                        ${mini(u.wau, 'פעילים השבוע', 'color-blue')}
+                        ${mini(u.mau, 'פעילים החודש (MAU)', 'color-blue')}
+                        ${mini(u.inactive30, 'לא פעילים 30+ יום', 'color-red')}
+                        ${mini(u.newThisWeek, 'הצטרפו השבוע', 'color-green')}
+                        ${mini(u.newThisMonth, 'הצטרפו החודש', 'color-green')}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-graduation-cap"></i> פילוח לפי שנת לימוד</div>
+                        ${yearBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-calendar-plus"></i> הרשמות לפי חודש</div>
+                        ${joinBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-clock"></i> שעות שיא (Top 5)</div>
+                        ${peakBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-trophy"></i> הסטודנטים הפעילים ביותר החודש</div>
+                        <div class="adv-list">
+                            ${renderList(u.topStudents || [], r => r.name, r => `${r.views} צפיות`, 'color:#2563eb')}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== DRIVE CATEGORY ===== -->
+            <div class="adv-category">
+                <div class="adv-category-header drive-hdr">
+                    <i class="fas fa-folder-open"></i> כונן קבצים ושיתוף
+                </div>
+                <div class="adv-category-body">
+
+                    <div class="adv-mini-grid">
+                        ${mini(dr.totalFiles, 'קבצים במערכת', 'color-green')}
+                        ${mini(dr.recentUploads, 'הועלו השבוע', 'color-teal')}
+                        ${mini(dr.totalDownloads, 'הורדות כוללות', 'color-green')}
+                        ${mini(dr.downloadsThisWeek, 'הורדות השבוע', 'color-teal')}
+                        ${mini(dr.neverDownloaded, 'קבצים ללא הורדה', 'color-red')}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-file"></i> סוגי קבצים נפוצים</div>
+                        ${extBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-download"></i> הקבצים המורדים ביותר (Top 10)</div>
+                        <div class="adv-list">${topDlList}</div>
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-crown"></i> התורמים המובילים</div>
+                        <div class="adv-list">
+                            ${renderList(dr.topUploaders || [], r => r.name || r.tz, r => `${r.uploads} קבצים`, 'color:#059669')}
+                        </div>
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-cloud-download-alt"></i> המורידים הכי פעילים</div>
+                        <div class="adv-list">
+                            ${renderList(dr.topDownloaders || [], r => r.name || r.tz, r => `${r.count} הורדות`, 'color:#0891b2')}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== GRADES CATEGORY ===== -->
+            <div class="adv-category">
+                <div class="adv-category-header grades-hdr">
+                    <i class="fas fa-star-half-alt"></i> מחשבון ציונים ואקדמיה
+                </div>
+                <div class="adv-category-body">
+
+                    <div class="adv-mini-grid">
+                        ${mini(gr.usersWithGrades, 'משתמשים עם ציונים', 'color-purple')}
+                        ${mini(gr.totalCourses, 'קורסים עם נתונים', 'color-purple')}
+                        ${mini(gr.overallAvg !== null ? gr.overallAvg : '–', 'ממוצע מערכתי כללי', gr.overallAvg >= 80 ? 'color-green' : gr.overallAvg >= 70 ? 'color-orange' : 'color-red')}
+                    </div>
+
+                    ${gr.overallAvg !== null ? `
+                    <div class="adv-alert ${gr.overallAvg >= 85 ? 'good' : gr.overallAvg >= 75 ? 'info' : gr.overallAvg >= 65 ? 'warn' : 'purple'}">
+                        <i class="fas fa-chart-bar"></i>
+                        ממוצע הציונים הכללי של כלל הסטודנטים עומד על <strong>${gr.overallAvg}</strong>
+                    </div>` : ''}
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-fire" style="color:#d97706"></i> הקורסים המאתגרים ביותר (ממוצע נמוך)</div>
+                        ${hardBar}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-smile" style="color:#059669"></i> הקורסים הקלים ביותר (ממוצע גבוה)</div>
+                        ${easyBar}
+                    </div>
+
+                    ${gr.totalCourses < 2 ? `<div class="adv-alert info"><i class="fas fa-info-circle"></i> נדרשים לפחות 2 סטודנטים עם ציון בכל קורס להצגת נתונים</div>` : ''}
+
+                </div>
+            </div>
+
+            <!-- ===== CHAT CATEGORY ===== -->
+            <div class="adv-category">
+                <div class="adv-category-header chat-hdr">
+                    <i class="fas fa-comments"></i> תקשורת ותמיכה
+                </div>
+                <div class="adv-category-body">
+
+                    <div class="adv-mini-grid">
+                        ${mini(ch.totalMsgs, 'הודעות סה"כ', 'color-orange')}
+                        ${mini(ch.msgsThisWeek, 'הודעות השבוע', 'color-orange')}
+                        ${mini(ch.msgsThisMonth, 'הודעות החודש', 'color-orange')}
+                        ${mini(ch.uniqueConversations, 'שיחות ייחודיות', 'color-teal')}
+                        ${mini(ch.avgResponseMinutes !== null ? ch.avgResponseMinutes + ' דק\'' : '–', 'זמן תגובה ממוצע', ch.avgResponseMinutes !== null && ch.avgResponseMinutes <= 60 ? 'color-green' : 'color-orange')}
+                    </div>
+
+                    ${ch.avgResponseMinutes !== null ? `
+                    <div class="adv-alert ${ch.avgResponseMinutes <= 30 ? 'good' : ch.avgResponseMinutes <= 120 ? 'info' : 'warn'}">
+                        <i class="fas fa-bolt"></i>
+                        זמן התגובה הממוצע שלך לסטודנטים הוא <strong>${ch.avgResponseMinutes < 60 ? ch.avgResponseMinutes + ' דקות' : Math.round(ch.avgResponseMinutes/60) + ' שעות'}</strong>
+                    </div>` : ''}
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-comment-dots"></i> הסטודנטים שפנו הכי הרבה</div>
+                        <div class="adv-list">${topMsgList}</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>`;
     }
 
     async function loadStudents() {

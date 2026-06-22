@@ -96,6 +96,13 @@ db.serialize(() => {
             timestamp INTEGER
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS file_downloads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT,
+            tz TEXT,
+            timestamp INTEGER
+        )`);
+
         db.run(`ALTER TABLE proposals ADD COLUMN files_json TEXT`, (err) => { /* ignore */ });
 
         // Check if DB is empty to seed it
@@ -540,6 +547,14 @@ app.get('/studies/*', async (req, res) => {
         if (!hasAccess(reqPath)) {
             return res.status(403).send("<h1>Access Denied / גישה נדחתה</h1><p>אין לך הרשאה לגשת לקובץ זה.</p>");
         }
+
+        // Track file download (only for actual files, not directory listings)
+        try {
+            const stat = fs.statSync(resolvedPath);
+            if (stat.isFile()) {
+                db.run("INSERT INTO file_downloads (path, tz, timestamp) VALUES (?, ?, ?)", [reqPath, tz || 'unknown', Date.now()]);
+            }
+        } catch(e) {}
 
         res.sendFile(resolvedPath);
     } catch(err) {
@@ -1187,6 +1202,189 @@ app.get('/api/admin/stats', (req, res) => {
                     }));
                     
                     res.json(stats);
+                });
+            });
+        });
+    });
+});
+
+// ==========================================
+// ADVANCED STATISTICS API
+// ==========================================
+
+app.get('/api/admin/advanced-stats', (req, res) => {
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    const WEEK = 7 * DAY;
+    const MONTH = 30 * DAY;
+
+    const result = {};
+
+    // Load courses.json for name lookup
+    let coursesMap = {};
+    try {
+        const coursesPath = require('path').join(__dirname, 'grade_calc', 'courses.json');
+        const courses = JSON.parse(require('fs').readFileSync(coursesPath, 'utf8'));
+        courses.forEach(c => { coursesMap[String(c.id)] = c.name; });
+    } catch(e) {}
+
+    // Helper to run queries sequentially
+    function runAll(queries, callback) {
+        const results = {};
+        let remaining = queries.length;
+        if (remaining === 0) return callback(results);
+
+        queries.forEach(({ key, sql, params }) => {
+            db.all(sql, params || [], (err, rows) => {
+                results[key] = rows || [];
+                if (--remaining === 0) callback(results);
+            });
+        });
+    }
+
+    // ----- USERS & ENGAGEMENT -----
+    const usersQueries = [
+        { key: 'total', sql: "SELECT COUNT(*) as count FROM students WHERE blocked=0" },
+        { key: 'dau', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE timestamp > ? AND tz != '322368564'", params: [now - DAY] },
+        { key: 'wau', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE timestamp > ? AND tz != '322368564'", params: [now - WEEK] },
+        { key: 'mau', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE timestamp > ? AND tz != '322368564'", params: [now - MONTH] },
+        { key: 'inactive30', sql: "SELECT COUNT(DISTINCT tz) as count FROM students WHERE tz NOT IN (SELECT DISTINCT tz FROM page_views WHERE timestamp > ?) AND tz != '322368564' AND blocked=0", params: [now - 30 * DAY] },
+        { key: 'byYear', sql: "SELECT year, COUNT(*) as count FROM students WHERE blocked=0 AND tz != '322368564' GROUP BY year ORDER BY year" },
+        { key: 'newThisWeek', sql: "SELECT COUNT(*) as count FROM students WHERE joined_at > ? AND tz != '322368564'", params: [now - WEEK] },
+        { key: 'newThisMonth', sql: "SELECT COUNT(*) as count FROM students WHERE joined_at > ? AND tz != '322368564'", params: [now - MONTH] },
+        { key: 'peakHours', sql: "SELECT CAST(ROUND((timestamp / 3600000) % 24) AS INTEGER) as hour, COUNT(*) as views FROM page_views WHERE tz != '322368564' GROUP BY hour ORDER BY views DESC LIMIT 5" },
+        { key: 'topStudents', sql: "SELECT tz, COUNT(*) as views FROM page_views WHERE tz != '322368564' AND timestamp > ? GROUP BY tz ORDER BY views DESC LIMIT 10", params: [now - MONTH] },
+        { key: 'realtime', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE timestamp > ? AND tz != '322368564'", params: [now - 5 * 60 * 1000] },
+        { key: 'joinedByMonth', sql: "SELECT strftime('%Y-%m', datetime(joined_at/1000, 'unixepoch')) as month, COUNT(*) as count FROM students WHERE joined_at > 0 AND tz != '322368564' GROUP BY month ORDER BY month DESC LIMIT 6" },
+    ];
+
+    // ----- DRIVE / FILES -----
+    const driveQueries = [
+        { key: 'totalFiles', sql: "SELECT COUNT(*) as count FROM file_metadata" },
+        { key: 'topUploaders', sql: "SELECT uploader_tz as tz, uploader_name as name, COUNT(*) as uploads FROM file_metadata WHERE uploader_tz != '322368564' GROUP BY uploader_tz ORDER BY uploads DESC LIMIT 10" },
+        { key: 'fileTypes', sql: "SELECT LOWER(SUBSTR(path, INSTR(path, '.') + 1)) as ext, COUNT(*) as count FROM file_metadata GROUP BY ext ORDER BY count DESC LIMIT 8" },
+        { key: 'recentUploads', sql: "SELECT COUNT(*) as count FROM file_metadata WHERE timestamp > ?", params: [now - WEEK] },
+        { key: 'topDownloads', sql: "SELECT path, COUNT(*) as count FROM file_downloads WHERE tz != '322368564' GROUP BY path ORDER BY count DESC LIMIT 10" },
+        { key: 'totalDownloads', sql: "SELECT COUNT(*) as count FROM file_downloads WHERE tz != '322368564'" },
+        { key: 'downloadsThisWeek', sql: "SELECT COUNT(*) as count FROM file_downloads WHERE timestamp > ? AND tz != '322368564'", params: [now - WEEK] },
+        { key: 'topDownloaders', sql: "SELECT fd.tz, s.name, COUNT(*) as count FROM file_downloads fd LEFT JOIN students s ON fd.tz = s.tz WHERE fd.tz != '322368564' GROUP BY fd.tz ORDER BY count DESC LIMIT 5" },
+        { key: 'neverDownloaded', sql: "SELECT COUNT(*) as count FROM file_metadata WHERE path NOT IN (SELECT DISTINCT path FROM file_downloads)" },
+    ];
+
+    // ----- GRADE CALC -----
+    const gradeQueries = [
+        { key: 'allGrades', sql: "SELECT tz, grades FROM students WHERE grades IS NOT NULL AND grades != '' AND tz != '322368564'" },
+    ];
+
+    // ----- CHAT / SUPPORT -----
+    const chatQueries = [
+        { key: 'totalMsgs', sql: "SELECT COUNT(*) as count FROM chat_messages" },
+        { key: 'msgsThisWeek', sql: "SELECT COUNT(*) as count FROM chat_messages WHERE timestamp > ?", params: [now - WEEK] },
+        { key: 'msgsThisMonth', sql: "SELECT COUNT(*) as count FROM chat_messages WHERE timestamp > ?", params: [now - MONTH] },
+        { key: 'topStudentsMsgs', sql: "SELECT cm.tz, s.name, COUNT(*) as count FROM chat_messages cm LEFT JOIN students s ON cm.tz = s.tz WHERE cm.sender = 'student' GROUP BY cm.tz ORDER BY count DESC LIMIT 5" },
+        { key: 'avgResponseTime', sql: "SELECT s.tz, MIN(s.timestamp) as studentTime, MIN(a.timestamp) as adminTime FROM chat_messages s JOIN chat_messages a ON s.tz = a.tz WHERE s.sender='student' AND a.sender='admin' AND a.timestamp > s.timestamp GROUP BY s.tz" },
+        { key: 'uniqueConversations', sql: "SELECT COUNT(DISTINCT tz) as count FROM chat_messages" },
+    ];
+
+    // Run all query groups
+    runAll(usersQueries, (usersData) => {
+        runAll(driveQueries, (driveData) => {
+            runAll(gradeQueries, (gradeData) => {
+                runAll(chatQueries, (chatData) => {
+
+                    // Fetch student names for top students
+                    db.all("SELECT tz, name FROM students", [], (err, allStudentsList) => {
+                        const studentMap = {};
+                        (allStudentsList || []).forEach(s => studentMap[s.tz] = s.name);
+
+                        // Enrich top students
+                        const topStudents = (usersData.topStudents || []).map(s => ({
+                            tz: s.tz,
+                            name: studentMap[s.tz] || 'לא ידוע',
+                            views: s.views
+                        }));
+
+                        // Compute grade stats
+                        const gradeStats = { courseAverages: {}, courseCounts: {}, usersWithGrades: 0 };
+                        (gradeData.allGrades || []).forEach(row => {
+                            let grades;
+                            try { grades = typeof row.grades === 'string' ? JSON.parse(row.grades) : row.grades; } catch(e) { return; }
+                            if (!grades || typeof grades !== 'object') return;
+
+                            const activeGrades = Object.entries(grades).filter(([, v]) => v && v.active && v.grade > 0);
+                            if (activeGrades.length > 0) gradeStats.usersWithGrades++;
+
+                            activeGrades.forEach(([courseId, v]) => {
+                                if (!gradeStats.courseAverages[courseId]) {
+                                    gradeStats.courseAverages[courseId] = { sum: 0, count: 0, name: coursesMap[courseId] || `קורס ${courseId}` };
+                                }
+                                gradeStats.courseAverages[courseId].sum += Number(v.grade);
+                                gradeStats.courseAverages[courseId].count++;
+                            });
+                        });
+
+                        // Convert to sorted arrays
+                        const courseList = Object.entries(gradeStats.courseAverages).map(([id, v]) => ({
+                            id, name: v.name,
+                            avg: Math.round(v.sum / v.count),
+                            count: v.count
+                        })).filter(c => c.count >= 2);
+
+                        const hardestCourses = [...courseList].sort((a, b) => a.avg - b.avg).slice(0, 5);
+                        const easiestCourses = [...courseList].sort((a, b) => b.avg - a.avg).slice(0, 5);
+                        const overallAvg = courseList.length > 0 ? Math.round(courseList.reduce((s, c) => s + c.avg, 0) / courseList.length) : null;
+
+                        // Compute avg response time
+                        const responseTimes = (chatData.avgResponseTime || []).map(r => r.adminTime - r.studentTime).filter(t => t > 0 && t < 7 * DAY);
+                        const avgResponseMs = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : null;
+                        const avgResponseMinutes = avgResponseMs ? Math.round(avgResponseMs / 60000) : null;
+
+                        // Extract counts from single-row queries
+                        const g = (arr, field = 'count') => (arr && arr[0] && arr[0][field] != null) ? arr[0][field] : 0;
+
+                        res.json({
+                            users: {
+                                total: g(usersData.total),
+                                realtime: g(usersData.realtime),
+                                dau: g(usersData.dau),
+                                wau: g(usersData.wau),
+                                mau: g(usersData.mau),
+                                inactive30: g(usersData.inactive30),
+                                newThisWeek: g(usersData.newThisWeek),
+                                newThisMonth: g(usersData.newThisMonth),
+                                byYear: usersData.byYear || [],
+                                peakHours: usersData.peakHours || [],
+                                topStudents,
+                                joinedByMonth: usersData.joinedByMonth || [],
+                            },
+                            drive: {
+                                totalFiles: g(driveData.totalFiles),
+                                recentUploads: g(driveData.recentUploads),
+                                totalDownloads: g(driveData.totalDownloads),
+                                downloadsThisWeek: g(driveData.downloadsThisWeek),
+                                neverDownloaded: g(driveData.neverDownloaded),
+                                topUploaders: driveData.topUploaders || [],
+                                fileTypes: driveData.fileTypes || [],
+                                topDownloads: driveData.topDownloads || [],
+                                topDownloaders: driveData.topDownloaders || [],
+                            },
+                            grades: {
+                                usersWithGrades: gradeStats.usersWithGrades,
+                                overallAvg,
+                                hardestCourses,
+                                easiestCourses,
+                                totalCourses: courseList.length,
+                            },
+                            chat: {
+                                totalMsgs: g(chatData.totalMsgs),
+                                msgsThisWeek: g(chatData.msgsThisWeek),
+                                msgsThisMonth: g(chatData.msgsThisMonth),
+                                uniqueConversations: g(chatData.uniqueConversations),
+                                avgResponseMinutes,
+                                topStudentsMsgs: chatData.topStudentsMsgs || [],
+                            }
+                        });
+                    });
                 });
             });
         });
