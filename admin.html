@@ -174,6 +174,32 @@
             .table-header, .student-row { min-width: 600px; }
         }
 
+        /* ====== DARK MODE ====== */
+        html[data-theme="dark"] {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #334155;
+        }
+        html[data-theme="dark"] body { background: #0f172a; }
+        html[data-theme="dark"] .students-table,
+        html[data-theme="dark"] .stat-card,
+        html[data-theme="dark"] .adv-category,
+        html[data-theme="dark"] .adv-mini-card { background: #1e293b; }
+        html[data-theme="dark"] .adv-mini-card { border-color: #334155; background: #0f172a; }
+        html[data-theme="dark"] .table-header { background: #0f172a; }
+        html[data-theme="dark"] .student-row:hover { background: #1e3a5f; }
+        html[data-theme="dark"] .student-row.blocked-row { background: #3b0f0f; }
+        html[data-theme="dark"] .search-input { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+        html[data-theme="dark"] #chat-users-list, html[data-theme="dark"] #chat-messages-container { background: #0f172a !important; }
+        html[data-theme="dark"] .adv-divider { border-color: #334155; }
+
+        .dark-toggle-admin {
+            background: rgba(255,255,255,0.15); color: white; border: none;
+            padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+        }
+
         /* ---- Advanced Stats Dashboard ---- */
         .adv-stats-grid {
             display: grid;
@@ -350,6 +376,13 @@
         <button class="logout-btn" onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> יציאה
         </button>
+        <button class="dark-toggle-admin" onclick="toggleDarkMode()" title="Dark Mode">🌙</button>
+        <button id="maintenance-toggle-btn" class="nav-btn" style="background-color: var(--danger); color: white; border-radius: 8px; font-weight: bold; padding: 6px 12px; margin-right: 10px;" onclick="toggleMaintenance()" title="הפעל/כבה מצב תחזוקה">
+            <i class="fas fa-hammer"></i> תחזוקה
+        </button>
+        <button id="maintenance-users-btn" class="nav-btn" style="background-color: #6366f1; color: white; border-radius: 8px; font-weight: bold; padding: 6px 12px; margin-right: 5px;" onclick="openMaintenanceUsersModal()" title="ניהול מורשי תחזוקה">
+            <i class="fas fa-user-shield"></i>
+        </button>
     </header>
 
     <div class="panel-content">
@@ -402,7 +435,10 @@
             <div class="section-title">
                 <i class="fas fa-chart-line" style="color:var(--primary)"></i>
                 סטטיסטיקות מערכת מתקדמות
-                <button onclick="loadStats()" style="margin-right:auto; background:#f1f5f9; border:none; padding:6px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:0.8rem; color:var(--muted); font-weight:600;">
+                <button onclick="startIndexing()" style="margin-right:auto; background:#dbeafe; border:none; padding:6px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:0.8rem; color:#1d4ed8; font-weight:600; margin-left: 10px;">
+                    <i class="fas fa-search"></i> אינדקס קבצים לחיפוש
+                </button>
+                <button onclick="loadStats()" style="background:#f1f5f9; border:none; padding:6px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:0.8rem; color:var(--muted); font-weight:600;">
                     <i class="fas fa-sync-alt"></i> רענן
                 </button>
             </div>
@@ -760,10 +796,27 @@
 
                     <hr class="adv-divider">
 
-                    <div>
                         <div class="adv-sub-title"><i class="fas fa-cloud-download-alt"></i> המורידים הכי פעילים</div>
                         <div class="adv-list">
                             ${renderList(dr.topDownloaders || [], r => r.name || r.tz, r => `${r.count} הורדות`, 'color:#0891b2')}
+                        </div>
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-star" style="color:#f59e0b"></i> התיקיות והקבצים המועדפים ביותר</div>
+                        <div class="adv-list">
+                            ${renderList(dr.topFavorites || [], r => r.path, r => `${r.count} פעמים במועדפים`, 'color:#f59e0b')}
+                        </div>
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-star-half-alt" style="color:#eab308"></i> חומרי הלימוד עם הדירוג הגבוה ביותר</div>
+                        <div class="adv-list">
+                            ${renderList(dr.topRatings || [], r => r.path, r => `⭐ ${(r.avg_rating || 0).toFixed(1)} (${r.count} מדרגים)`, 'color:#ca8a04')}
                         </div>
                     </div>
 
@@ -907,6 +960,9 @@
                                <i class="fas fa-comment-slash"></i> חסום צ'אט
                            </button>`
                     }
+                    <button class="action-btn" style="background-color: #3b82f6; color: white;" onclick="showStudentDetails('${s.tz}')" title="צפה בפרטים">
+                        <i class="fas fa-search"></i> פרטים
+                    </button>
                     <button class="action-btn btn-delete" onclick="deleteStudent('${s.tz}', '${(s.name||'').replace(/'/g,"\\'")}')">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1026,6 +1082,80 @@
         } catch(e) {}
     }
 
+    async function showStudentDetails(tz) {
+        const modal = document.getElementById('student-details-modal');
+        const content = document.getElementById('student-details-content');
+        content.innerHTML = '<div style="text-align:center; padding:40px; color:#64748b;"><i class="fas fa-spinner fa-spin fa-3x"></i><p style="margin-top:15px;">טוען נתונים...</p></div>';
+        modal.style.display = 'flex';
+
+        try {
+            const res = await fetch(`/api/admin/students/${tz}/details`);
+            if(!res.ok) throw new Error();
+            const data = await res.json();
+            
+            const formatDate = (ts) => ts ? new Date(ts).toLocaleString('he-IL') : 'לא ידוע';
+
+            let ipsHtml = (data.unique_ips || []).map(ip => `<span class="badge badge-active" style="background:#e0e7ff; color:#3730a3; margin-left:5px;">${ip}</span>`).join('');
+            if(!ipsHtml) ipsHtml = 'אין נתונים';
+
+            let uasHtml = (data.unique_uas || []).map(ua => `<div style="font-size:0.8rem; background:#f1f5f9; padding:5px; margin-bottom:5px; border-radius:4px; text-align:left; direction:ltr;">${ua}</div>`).join('');
+            if(!uasHtml) uasHtml = 'אין נתונים';
+
+            let recentViewsHtml = (data.recent_views || []).map(v => `<li style="padding:8px 0; border-bottom:1px solid #f1f5f9;"><div style="font-size:0.8rem; color:#94a3b8;">${formatDate(v.timestamp)}</div><div style="font-weight:600; color:#334155; direction:ltr; text-align:left;">${v.path}</div></li>`).join('');
+            if(!recentViewsHtml) recentViewsHtml = '<li style="color:#94a3b8;">אין היסטוריית גלישה</li>';
+
+            let recentLoginsHtml = (data.recent_logins || []).map(v => `<li style="padding:8px 0; border-bottom:1px solid #f1f5f9;"><div style="font-size:0.8rem; color:#94a3b8;">${formatDate(v.timestamp)}</div><div style="font-size:0.8rem; color:#475569;"><i class="fas fa-network-wired"></i> ${v.ip || 'לא תועד'}</div></li>`).join('');
+            if(!recentLoginsHtml) recentLoginsHtml = '<li style="color:#94a3b8;">אין היסטוריית התחברויות</li>';
+
+            content.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #f1f5f9; padding-bottom:15px;">
+                    <div>
+                        <h2 style="margin:0; color:#0f172a; font-size:1.5rem;"><i class="fas fa-user-graduate" style="color:#3b82f6;"></i> ${data.name || 'ללא שם'}</h2>
+                        <div style="color:#64748b; font-size:0.9rem; margin-top:5px;">ת.ז: ${data.tz} | הצטרף: ${formatDate(data.joined_at)}</div>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:25px;">
+                    <div style="background:#f8fafc; padding:15px; border-radius:10px; text-align:center; border:1px solid #e2e8f0;">
+                        <div style="font-size:2rem; font-weight:800; color:#3b82f6;">${data.total_logins || 0}</div>
+                        <div style="font-size:0.85rem; color:#64748b; font-weight:600;">התחברויות סה"כ</div>
+                    </div>
+                    <div style="background:#f8fafc; padding:15px; border-radius:10px; text-align:center; border:1px solid #e2e8f0;">
+                        <div style="font-size:2rem; font-weight:800; color:#10b981;">${data.total_views || 0}</div>
+                        <div style="font-size:0.85rem; color:#64748b; font-weight:600;">דפים נצפים סה"כ</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:15px;">
+                        <h3 style="margin-top:0; color:#334155; font-size:1.1rem; border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-sign-in-alt text-blue-500"></i> התחברויות אחרונות (עד 10)</h3>
+                        <ul style="list-style:none; padding:0; margin:0; max-height:200px; overflow-y:auto;">${recentLoginsHtml}</ul>
+                    </div>
+                    <div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:15px;">
+                        <h3 style="margin-top:0; color:#334155; font-size:1.1rem; border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-mouse-pointer text-green-500"></i> פעולות אחרונות (עד 10)</h3>
+                        <ul style="list-style:none; padding:0; margin:0; max-height:200px; overflow-y:auto;">${recentViewsHtml}</ul>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; background:white; border:1px solid #e2e8f0; border-radius:10px; padding:15px;">
+                    <h3 style="margin-top:0; color:#334155; font-size:1.1rem; border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-globe text-purple-500"></i> היסטוריית כתובות IP</h3>
+                    <div style="padding-top:10px;">${ipsHtml}</div>
+                </div>
+
+                <div style="margin-top:20px; background:white; border:1px solid #e2e8f0; border-radius:10px; padding:15px;">
+                    <h3 style="margin-top:0; color:#334155; font-size:1.1rem; border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-laptop text-orange-500"></i> מכשירים (User Agents)</h3>
+                    <div style="padding-top:10px;">${uasHtml}</div>
+                </div>
+            `;
+        } catch(e) {
+            content.innerHTML = '<div style="text-align:center; padding:40px; color:#ef4444;"><i class="fas fa-exclamation-triangle fa-3x"></i><p style="margin-top:15px;">שגיאה בטעינת נתוני הסטודנט</p></div>';
+        }
+    }
+
+    function closeStudentDetails() {
+        document.getElementById('student-details-modal').style.display = 'none';
+    }
+
     function showToast(msg) {
         const toast = document.getElementById('toast');
         toast.textContent = msg;
@@ -1050,7 +1180,166 @@
         if (localStorage.getItem('adminToken') === 'true') {
             enterPanel();
         }
+
+        // Apply dark mode
+        const saved = localStorage.getItem('portal_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        const btn = document.querySelector('.dark-toggle-admin');
+        if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
     });
+
+    function toggleDarkMode() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('portal_theme', newTheme);
+        document.querySelector('.dark-toggle-admin').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    let isMaintenance = false;
+    async function fetchMaintenanceStatus() {
+        try {
+            const res = await fetch('/api/maintenance/status');
+            const data = await res.json();
+            isMaintenance = data.enabled;
+            const btn = document.getElementById('maintenance-toggle-btn');
+            if(isMaintenance) {
+                btn.innerHTML = '<i class="fas fa-hammer"></i> תחזוקה פעילה';
+                btn.style.backgroundColor = 'var(--danger)';
+                btn.style.animation = 'pulse 2s infinite';
+            } else {
+                btn.innerHTML = '<i class="fas fa-hammer"></i> הפעל תחזוקה';
+                btn.style.backgroundColor = 'var(--secondary)';
+                btn.style.animation = 'none';
+            }
+        } catch(e) {}
+    }
+
+    async function toggleMaintenance() {
+        if(!confirm(isMaintenance ? "האם לכבות את מצב התחזוקה? האתר יחזור לפעילות." : "האם להפעיל מצב תחזוקה? האתר ירד זמנית לסטודנטים.")) return;
+        try {
+            await fetch('/api/admin/maintenance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ enabled: !isMaintenance })
+            });
+            showToast("מצב תחזוקה עודכן!");
+            fetchMaintenanceStatus();
+        } catch(e) {
+            showToast("שגיאה בעדכון");
+        }
+    }
+
+    async function openMaintenanceUsersModal() {
+        document.getElementById('maintenance-users-modal').style.display = 'flex';
+        await loadMaintenanceUsers();
+    }
+
+    function closeMaintenanceUsersModal() {
+        document.getElementById('maintenance-users-modal').style.display = 'none';
+        document.getElementById('maintenance-tz-input').value = '';
+    }
+
+    async function loadMaintenanceUsers() {
+        const list = document.getElementById('maintenance-users-list');
+        list.innerHTML = '<div style="text-align:center; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const res = await fetch('/api/admin/maintenance/users');
+            const data = await res.json();
+            if(!data.users || data.users.length === 0) {
+                list.innerHTML = '<li style="padding:10px; color:#64748b; text-align:center;">אין משתמשים מורשים</li>';
+                return;
+            }
+            list.innerHTML = data.users.map(tz => `
+                <li style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+                    <div style="font-weight:600; color:#334155;">${tz}</div>
+                    <button onclick="removeMaintenanceUser('${tz}')" style="background:transparent; color:#ef4444; border:none; cursor:pointer;" title="הסר הרשאה"><i class="fas fa-trash"></i></button>
+                </li>
+            `).join('');
+        } catch(e) {
+            list.innerHTML = '<li style="color:#ef4444; text-align:center;">שגיאה בטעינה</li>';
+        }
+    }
+
+    async function addMaintenanceUser() {
+        const tz = document.getElementById('maintenance-tz-input').value.trim();
+        if(!tz) return;
+        try {
+            await fetch('/api/admin/maintenance/users', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tz })
+            });
+            document.getElementById('maintenance-tz-input').value = '';
+            await loadMaintenanceUsers();
+            showToast("משתמש התווסף בהצלחה");
+        } catch(e) {
+            showToast("שגיאה בהוספת משתמש");
+        }
+    }
+
+    async function removeMaintenanceUser(tz) {
+        if(!confirm(`האם להסיר את הרשאת התחזוקה עבור ${tz}?`)) return;
+        try {
+            await fetch(`/api/admin/maintenance/users/${tz}`, { method: 'DELETE' });
+            await loadMaintenanceUsers();
+            showToast("משתמש הוסר בהצלחה");
+        } catch(e) {
+            showToast("שגיאה בהסרת משתמש");
+        }
+    }
+
+    // Call it when admin panel loads
+    const originalEnterPanel = enterPanel;
+    enterPanel = function() {
+        originalEnterPanel();
+        fetchMaintenanceStatus();
+    };
+
+    async function startIndexing() {
+        if (!confirm("האם להתחיל באינדוקס קבצים ברקע? פעולה זו עשויה לקחת זמן ותרוץ בשרת.")) return;
+        try {
+            const res = await fetch('/api/admin/index-files', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showToast("פעולת אינדוקס החלה בשרת!");
+            } else {
+                showToast("שגיאה בהפעלת אינדוקס");
+            }
+        } catch(e) {
+            showToast("שגיאת רשת");
+        }
+    }
+
 </script>
+
+<!-- Student Details Modal -->
+<div id="student-details-modal" class="modal" style="z-index: 9999;">
+    <div class="modal-content" style="max-width:800px; padding:30px;">
+        <button class="close-btn" onclick="closeStudentDetails()"><i class="fas fa-times"></i></button>
+        <div id="student-details-content">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Users Modal -->
+<div id="maintenance-users-modal" class="modal" style="z-index: 9999;">
+    <div class="modal-content" style="max-width:500px; padding:30px;">
+        <button class="close-btn" onclick="closeMaintenanceUsersModal()"><i class="fas fa-times"></i></button>
+        <h2 style="margin-top:0; color:#334155;"><i class="fas fa-user-shield" style="color:#6366f1;"></i> משתמשים מורשים - מצב תחזוקה</h2>
+        <p style="color:#64748b; font-size:0.9rem;">הזן תעודת זהות של סטודנט שיוכל להיכנס לאתר גם כאשר הוא במצב תחזוקה.</p>
+        
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <input type="text" id="maintenance-tz-input" placeholder="תעודת זהות..." style="flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            <button onclick="addMaintenanceUser()" style="background:#6366f1; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:bold;">הוסף</button>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+            <ul id="maintenance-users-list" style="list-style:none; padding:0; margin:0; max-height:200px; overflow-y:auto;">
+                <!-- dynamic -->
+            </ul>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

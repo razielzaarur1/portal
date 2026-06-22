@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const archiver = require('archiver');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 const multer = require('multer');
 const unzipper = require('unzipper');
 const crypto = require('crypto');
@@ -103,7 +105,41 @@ db.serialize(() => {
             timestamp INTEGER
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS user_favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tz TEXT,
+            path TEXT,
+            is_folder INTEGER,
+            timestamp INTEGER,
+            UNIQUE(tz, path)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS file_ratings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT,
+            tz TEXT,
+            rating INTEGER,
+            timestamp INTEGER,
+            UNIQUE(tz, path)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS file_contents (
+            path TEXT PRIMARY KEY,
+            content TEXT,
+            last_modified INTEGER
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS login_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tz TEXT,
+            ip TEXT,
+            user_agent TEXT,
+            timestamp INTEGER
+        )`);
+
         db.run(`ALTER TABLE proposals ADD COLUMN files_json TEXT`, (err) => { /* ignore */ });
+        db.run(`ALTER TABLE page_views ADD COLUMN ip TEXT`, (err) => { /* ignore */ });
+        db.run(`ALTER TABLE page_views ADD COLUMN user_agent TEXT`, (err) => { /* ignore */ });
 
         // Check if DB is empty to seed it
         db.get("SELECT COUNT(*) as count FROM students", (err, row) => {
@@ -143,6 +179,19 @@ function getAdminTZList() {
     return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+// --- Maintenance Mode Setup ---
+const maintenanceFile = path.join(dataDir, 'maintenance.json');
+let maintenanceState = { enabled: false, allowedUsers: [] };
+if (fs.existsSync(maintenanceFile)) {
+    try {
+        maintenanceState = JSON.parse(fs.readFileSync(maintenanceFile, 'utf8'));
+        if (!maintenanceState.allowedUsers) maintenanceState.allowedUsers = [];
+    } catch(e) {}
+}
+function saveMaintenanceState() {
+    fs.writeFileSync(maintenanceFile, JSON.stringify(maintenanceState));
+}
+
 function isAdminTZ(tz) {
     return getAdminTZList().includes(tz);
 }
@@ -175,6 +224,120 @@ function notifyClient(tz, eventType, payload = {}) {
 
 // API Routes
 
+// Maintenance Middleware (Blocks API requests if maintenance is ON and user is not admin)
+app.use('/api', (req, res, next) => {
+    if (!maintenanceState.enabled) return next();
+    if (req.path.startsWith('/admin') || req.path.startsWith('/maintenance') || req.path.startsWith('/auth')) {
+        return next();
+    }
+    
+    // Try to extract tz from query, body, or path
+    let tz = req.query.tz || (req.body && req.body.tz);
+    if (!tz && req.path.startsWith('/students/')) {
+        tz = req.path.split('/')[2];
+    }
+    if (!tz && req.path.startsWith('/chat/')) {
+        tz = req.path.split('/')[2];
+    }
+
+    if (tz && (isAdminTZ(tz) || (maintenanceState.allowedUsers && maintenanceState.allowedUsers.includes(tz)))) {
+        return next();
+    }
+
+    res.status(503).json({ error: 'maintenance', message: 'האתר בתחזוקה' });
+});
+
+// Maintenance Status
+app.get('/api/maintenance/status', (req, res) => {
+    const tz = req.query.tz;
+    const isAdmin = tz ? isAdminTZ(tz) : false;
+    res.json({ enabled: maintenanceState.enabled, isAdmin });
+});
+
+app.post('/api/admin/maintenance', (req, res) => {
+    maintenanceState.enabled = req.body.enabled === true;
+    saveMaintenanceState();
+    res.json({ success: true, enabled: maintenanceState.enabled });
+});
+
+app.get('/api/admin/maintenance/users', (req, res) => {
+    res.json({ users: maintenanceState.allowedUsers || [] });
+});
+
+app.post('/api/admin/maintenance/users', (req, res) => {
+    const tz = req.body.tz;
+    if (tz && !maintenanceState.allowedUsers.includes(tz)) {
+        maintenanceState.allowedUsers.push(tz);
+        saveMaintenanceState();
+    }
+    res.json({ success: true, users: maintenanceState.allowedUsers });
+});
+
+app.delete('/api/admin/maintenance/users/:tz', (req, res) => {
+    const tz = req.params.tz;
+    maintenanceState.allowedUsers = maintenanceState.allowedUsers.filter(u => u !== tz);
+    saveMaintenanceState();
+    res.json({ success: true, users: maintenanceState.allowedUsers });
+});
+
+// Favorites API
+app.get('/api/favorites/:tz', (req, res) => {
+    db.all("SELECT path, is_folder FROM user_favorites WHERE tz = ?", [req.params.tz], (err, rows) => {
+        if (err) return res.status(500).json({ error: "DB Error" });
+        res.json(rows || []);
+    });
+});
+
+app.post('/api/favorites/:tz', (req, res) => {
+    const tz = req.params.tz;
+    const { path: fpath, isFolder, action } = req.body;
+    if (action === 'add') {
+        db.run("INSERT OR IGNORE INTO user_favorites (tz, path, is_folder, timestamp) VALUES (?, ?, ?, ?)", [tz, fpath, isFolder ? 1 : 0, Date.now()], (err) => {
+            res.json({ success: !err });
+        });
+    } else {
+        db.run("DELETE FROM user_favorites WHERE tz = ? AND path = ?", [tz, fpath], (err) => {
+            res.json({ success: !err });
+        });
+    }
+});
+
+// Ratings API
+app.get('/api/ratings', (req, res) => {
+    // Return average ratings for all files
+    db.all("SELECT path, AVG(rating) as avg_rating, COUNT(rating) as count FROM file_ratings GROUP BY path", (err, rows) => {
+        if (err) return res.status(500).json({ error: "DB Error" });
+        const result = {};
+        (rows || []).forEach(r => result[r.path] = { avg: r.avg_rating, count: r.count });
+        res.json(result);
+    });
+});
+
+app.get('/api/ratings/:tz', (req, res) => {
+    // Return specific user's ratings
+    db.all("SELECT path, rating FROM file_ratings WHERE tz = ?", [req.params.tz], (err, rows) => {
+        if (err) return res.status(500).json({ error: "DB Error" });
+        const result = {};
+        (rows || []).forEach(r => result[r.path] = r.rating);
+        res.json(result);
+    });
+});
+
+app.post('/api/ratings/:tz', (req, res) => {
+    const tz = req.params.tz;
+    const { path: fpath, rating } = req.body;
+    if (rating >= 1 && rating <= 5) {
+        db.run("INSERT INTO file_ratings (path, tz, rating, timestamp) VALUES (?, ?, ?, ?) ON CONFLICT(tz, path) DO UPDATE SET rating=excluded.rating, timestamp=excluded.timestamp", 
+            [fpath, tz, rating, Date.now()], (err) => {
+            res.json({ success: !err });
+        });
+    } else {
+        db.run("DELETE FROM file_ratings WHERE tz = ? AND path = ?", [tz, fpath], (err) => {
+            res.json({ success: !err });
+        });
+    }
+});
+
 // GET user
 app.get('/api/students/:tz', (req, res) => {
     const tz = req.params.tz;
@@ -189,6 +352,13 @@ app.get('/api/students/:tz', (req, res) => {
             return res.status(403).json({ error: "blocked", message: "החשבון שלך חסום. פנה למנהל המערכת." });
         }
         
+        // Record login history
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '';
+        const userAgent = req.headers['user-agent'] || '';
+        db.run("INSERT INTO login_history (tz, ip, user_agent, timestamp) VALUES (?, ?, ?, ?)", [tz, ip, userAgent, Date.now()], (err) => {
+            if (err) console.error("Error saving login history", err);
+        });
+
         try {
             res.json({
                 name: row.name,
@@ -497,6 +667,74 @@ app.get('/api/drive/list', async (req, res) => {
         console.error("Error listing directory:", err);
         res.status(500).json({ error: "Server error" });
     }
+});
+
+// --- Search & Indexing ---
+async function indexFile(fullPath, relPath) {
+    try {
+        const stat = await fs.promises.stat(fullPath);
+        if (stat.isDirectory()) return;
+
+        // Check if already indexed and up-to-date
+        const existing = await new Promise(res => db.get("SELECT last_modified FROM file_contents WHERE path=?", [relPath], (err, row) => res(row)));
+        if (existing && existing.last_modified >= stat.mtimeMs) return; // Up to date
+
+        const ext = path.extname(fullPath).toLowerCase();
+        let content = '';
+        if (ext === '.pdf') {
+            const dataBuffer = await fs.promises.readFile(fullPath);
+            const data = await pdfParse(dataBuffer);
+            content = data.text;
+        } else if (ext === '.docx') {
+            const result = await mammoth.extractRawText({ path: fullPath });
+            content = result.value;
+        } else if (['.txt', '.md', '.csv'].includes(ext)) {
+            content = await fs.promises.readFile(fullPath, 'utf8');
+        } else {
+            return; // Not indexable
+        }
+
+        if (content) {
+            db.run("INSERT OR REPLACE INTO file_contents (path, content, last_modified) VALUES (?, ?, ?)", [relPath, content, stat.mtimeMs]);
+        }
+    } catch(e) {
+        console.error("Index error for", relPath, e.message);
+    }
+}
+
+app.post('/api/admin/index-files', async (req, res) => {
+    // Basic auth check
+    const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+    if(!fs.existsSync(baseDir)) return res.json({ success: false });
+    
+    // Background task
+    (async function scanDir(currentDir, relPath) {
+        try {
+            const items = await fs.promises.readdir(currentDir, { withFileTypes: true });
+            for (const item of items) {
+                const fullPath = path.join(currentDir, item.name);
+                const itemRel = relPath === '/' ? '/' + item.name : relPath + '/' + item.name;
+                if (item.isDirectory()) {
+                    await scanDir(fullPath, itemRel);
+                } else {
+                    await indexFile(fullPath, itemRel);
+                }
+            }
+        } catch(e) {}
+    })(baseDir, '/');
+    
+    res.json({ success: true, message: "Indexing started in background" });
+});
+
+app.get('/api/drive/search', (req, res) => {
+    const query = req.query.q;
+    if (!query || query.length < 2) return res.json({ results: [] });
+    
+    // Search DB
+    db.all("SELECT path FROM file_contents WHERE content LIKE ? LIMIT 50", [`%${query}%`], (err, rows) => {
+        if (err) return res.status(500).json({ error: "DB Error" });
+        res.json({ results: rows ? rows.map(r => r.path) : [] });
+    });
 });
 
 // Serve the files dynamically with permission checks
@@ -1173,8 +1411,57 @@ app.post('/api/track', express.json(), (req, res) => {
     const { tz, path } = req.body;
     if (!tz || !path) return res.json({ success: false });
     
-    db.run("INSERT INTO page_views (tz, path, timestamp) VALUES (?, ?, ?)", [tz, path, Date.now()], (err) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '';
+    const userAgent = req.headers['user-agent'] || '';
+
+    db.run("INSERT INTO page_views (tz, path, timestamp, ip, user_agent) VALUES (?, ?, ?, ?, ?)", [tz, path, Date.now(), ip, userAgent], (err) => {
         res.json({ success: !err });
+    });
+});
+
+app.get('/api/admin/students/:tz/details', (req, res) => {
+    const tz = req.params.tz;
+    
+    // Check if student exists
+    db.get("SELECT * FROM students WHERE tz = ?", [tz], (err, student) => {
+        if (err || !student) return res.status(404).json({ error: "Student not found" });
+
+        const details = {
+            tz: student.tz,
+            name: student.name,
+            joined_at: student.joined_at,
+            blocked: student.blocked,
+            chat_blocked: student.chat_blocked
+        };
+
+        // Queries
+        const queries = [
+            { key: 'total_logins', sql: "SELECT COUNT(*) as count FROM login_history WHERE tz = ?" },
+            { key: 'total_views', sql: "SELECT COUNT(*) as count FROM page_views WHERE tz = ?" },
+            { key: 'recent_logins', sql: "SELECT * FROM login_history WHERE tz = ? ORDER BY timestamp DESC LIMIT 10" },
+            { key: 'recent_views', sql: "SELECT * FROM page_views WHERE tz = ? ORDER BY timestamp DESC LIMIT 10" },
+            { key: 'unique_ips', sql: "SELECT DISTINCT ip FROM login_history WHERE tz = ? UNION SELECT DISTINCT ip FROM page_views WHERE tz = ?" },
+            { key: 'unique_uas', sql: "SELECT DISTINCT user_agent FROM login_history WHERE tz = ? UNION SELECT DISTINCT user_agent FROM page_views WHERE tz = ?" }
+        ];
+
+        let pending = queries.length;
+        queries.forEach(q => {
+            db.all(q.sql, [tz], (err, rows) => {
+                if(q.key === 'total_logins' || q.key === 'total_views') {
+                    details[q.key] = rows && rows.length > 0 ? rows[0].count : 0;
+                } else if(q.key === 'unique_ips') {
+                    details[q.key] = rows ? [...new Set(rows.map(r=>r.ip).filter(Boolean))] : [];
+                } else if(q.key === 'unique_uas') {
+                    details[q.key] = rows ? [...new Set(rows.map(r=>r.user_agent).filter(Boolean))] : [];
+                } else {
+                    details[q.key] = rows || [];
+                }
+
+                if(--pending === 0) {
+                    res.json(details);
+                }
+            });
+        });
     });
 });
 
@@ -1269,6 +1556,8 @@ app.get('/api/admin/advanced-stats', (req, res) => {
         { key: 'downloadsThisWeek', sql: "SELECT COUNT(*) as count FROM file_downloads WHERE timestamp > ? AND tz != '322368564'", params: [now - WEEK] },
         { key: 'topDownloaders', sql: "SELECT fd.tz, s.name, COUNT(*) as count FROM file_downloads fd LEFT JOIN students s ON fd.tz = s.tz WHERE fd.tz != '322368564' GROUP BY fd.tz ORDER BY count DESC LIMIT 5" },
         { key: 'neverDownloaded', sql: "SELECT COUNT(*) as count FROM file_metadata WHERE path NOT IN (SELECT DISTINCT path FROM file_downloads)" },
+        { key: 'topFavorites', sql: "SELECT path, COUNT(*) as count FROM user_favorites GROUP BY path ORDER BY count DESC LIMIT 10" },
+        { key: 'topRatings', sql: "SELECT path, AVG(rating) as avg_rating, COUNT(*) as count FROM file_ratings GROUP BY path HAVING count >= 1 ORDER BY avg_rating DESC, count DESC LIMIT 10" },
     ];
 
     // ----- GRADE CALC -----
