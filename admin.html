@@ -1194,6 +1194,8 @@
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('portal_theme', newTheme);
         document.querySelector('.dark-toggle-admin').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    }
+    
     let isMaintenance = false;
     async function fetchMaintenanceStatus() {
         try {
