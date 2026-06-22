@@ -37,26 +37,6 @@
         }
         #debug-error { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #fee2e2; color: #991b1b; padding: 20px; z-index: 9999; border-bottom: 2px solid #ef4444; font-weight: bold; text-align: center; }
         .secret-trigger:active { transform: scale(0.95); }
-
-        /* ====== DARK MODE ====== */
-        html[data-theme="dark"] body { background-color: #0f172a !important; color: #e2e8f0; }
-        html[data-theme="dark"] .bg-slate-50 { background-color: #0f172a !important; }
-        html[data-theme="dark"] .bg-white { background-color: #1e293b !important; }
-        html[data-theme="dark"] .bg-slate-100, html[data-theme="dark"] .bg-slate-200 { background-color: #334155 !important; }
-        html[data-theme="dark"] .text-slate-800, html[data-theme="dark"] .text-slate-900, html[data-theme="dark"] .text-slate-700 { color: #e2e8f0 !important; }
-        html[data-theme="dark"] .text-slate-600, html[data-theme="dark"] .text-slate-500 { color: #94a3b8 !important; }
-        html[data-theme="dark"] .border-b, html[data-theme="dark"] .border-slate-100, html[data-theme="dark"] .border-slate-200 { border-color: #334155 !important; }
-        html[data-theme="dark"] .hover\:bg-slate-50:hover { background-color: #1e293b !important; }
-        html[data-theme="dark"] .shadow, html[data-theme="dark"] .shadow-sm, html[data-theme="dark"] .shadow-lg { box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important; }
-        html[data-theme="dark"] input[type=number], html[data-theme="dark"] input[type=text] { background: #0f172a !important; color: #e2e8f0 !important; border-color: #475569 !important; }
-        html[data-theme="dark"] .bg-amber-50 { background-color: #451a03 !important; }
-        html[data-theme="dark"] .custom-tooltip { background: #1e293b; border-color: #475569; color: #e2e8f0; }
-
-        .grade-dark-toggle {
-            background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569;
-            padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
-        }
-        html[data-theme="dark"] .grade-dark-toggle { background: #334155; border-color: #475569; color: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -66,20 +46,6 @@
         <p id="debug-content" style="direction: ltr; margin-top: 5px;"></p>
         <button onclick="location.reload()" style="margin-top:10px; background:#991b1b; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">רענן דף</button>
     </div>
-
-    <script>
-        (function() {
-            const t = localStorage.getItem('portal_theme') || 'light';
-            document.documentElement.setAttribute('data-theme', t);
-        })();
-        function toggleDarkMode() {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const t = isDark ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', t);
-            localStorage.setItem('portal_theme', t);
-            document.querySelectorAll('.grade-dark-toggle').forEach(b => b.textContent = t === 'dark' ? '☀️' : '🌙');
-        }
-    </script>
 
     <div id="root">
         <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; color:#64748b;">
@@ -174,21 +140,10 @@
             const [isCheckingAuth, setIsCheckingAuth] = useState(true);
             const [isAdmin, setIsAdmin] = useState(isAdminMode);
             const [isSaving, setIsSaving] = useState(false);
-            const [simulatorMode, setSimulatorMode] = useState(false);
-            const [originalGrades, setOriginalGrades] = useState({});
 
             useEffect(() => {
                 const fetchBaseData = async () => {
                     try {
-                        const savedTz = localStorage.getItem('student_tz');
-                        // Check maintenance
-                        const mRes = await fetch(`../api/maintenance/status?tz=${savedTz || ''}`);
-                        const mData = await mRes.json();
-                        if (mData.enabled && !mData.isAdmin) {
-                            window.location.href = '../maintenance.html';
-                            return;
-                        }
-
                         const response = await fetch('../api/admin/courses?t=' + new Date().getTime());
                         if (!response.ok) throw new Error("קובץ הנתונים לא נמצא");
                         
@@ -277,18 +232,6 @@
                 } catch (error) { alert("\u05e9\u05d2\u05d9\u05d0\u05d4: " + error.message); } finally { setIsSaving(false); }
             };
 
-            const toggleSimulator = () => {
-                if (!simulatorMode) {
-                    setOriginalGrades(JSON.parse(JSON.stringify(courses)));
-                    setSimulatorMode(true);
-                    setHasUnsavedChanges(false);
-                } else {
-                    setCourses(originalGrades);
-                    setSimulatorMode(false);
-                    setHasUnsavedChanges(false);
-                }
-            };
-
             const toggleYear = (y) => setExpandedYears(p => ({ ...p, [y]: !p[y] }));
             const toggleSemester = (y, s) => setExpandedSemesters(p => ({ ...p, [`${y}-${s}`]: !p[`${y}-${s}`] }));
             const updateCourse = useCallback((id, f, v) => setCourses(p => p.map(c => c.id !== id ? c : ( (f === 'year' || f === 'semester') ? (setExpandedYears(e=>({...e, [f==='year'?v:c.year]:true})), setExpandedSemesters(e=>({...e, [`${f==='year'?v:c.year}-${f==='semester'?v:c.semester}`]:true})), {...c, [f]: v}) : {...c, [f]: v} ))), []);
@@ -344,54 +287,24 @@
                                     </button>
                                 </div>
                             )}
-                            <button onClick={toggleSimulator} className={`px-4 py-2 rounded-lg font-medium transition-colors ${simulatorMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}>
-                                🎮 מצב סימולטור
-                            </button>
                             <a href="../index.html" className="text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors">חזרה לפורטל <Icon name="ChevronLeft" className="mr-2" /></a>
-                            <button className="grade-dark-toggle" onClick={() => typeof toggleDarkMode === 'function' && toggleDarkMode()}>
-                                {localStorage.getItem('portal_theme') === 'dark' ? '☀️' : '🌙'}
-                            </button>
                         </div>
                     </header>
 
 
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <div className={`p-6 rounded-2xl shadow-sm border flex items-center justify-between ${simulatorMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
-                            <div>
-                                <div className="text-slate-500 text-sm font-medium mb-1">ממוצע משוקלל {simulatorMode && <span className="text-amber-600 font-bold ml-1">(סימולטור)</span>}</div>
-                                <div className="flex items-center gap-3">
-                                    <div className={`text-4xl font-bold`} style={{color: getGradeColor(stats.average)}}>{stats.average.toFixed(2)}</div>
-                                    {simulatorMode && (() => {
-                                        let origAvg = 0, origCredits = 0;
-                                        originalGrades.forEach(c => { if(c.active) { origAvg += c.grade * c.credits; origCredits += c.credits; } });
-                                        origAvg = origCredits > 0 ? origAvg / origCredits : 0;
-                                        const diff = stats.average - origAvg;
-                                        if (Math.abs(diff) > 0.01) {
-                                            return <span className={`text-sm font-bold px-2 py-1 rounded-md ${diff > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{diff > 0 ? '+' : ''}{diff.toFixed(2)}</span>;
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-xl">📊</div>
-                        </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"><div><div className="text-slate-500 text-sm font-medium mb-1">ממוצע משוקלל</div><div className={`text-4xl font-bold`} style={{color: getGradeColor(stats.average)}}>{stats.average.toFixed(2)}</div></div><div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-xl">📊</div></div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"><div><div className="text-slate-500 text-sm font-medium mb-1">נ"ז (פעיל)</div><div className="text-4xl font-bold text-slate-700">{stats.totalCredits}</div></div><div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-xl">🎓</div></div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"><div><div className="text-slate-500 text-sm font-medium mb-1">קורסים פעילים</div><div className="text-4xl font-bold text-slate-700">{stats.activeCourses.length}</div></div><div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-xl">✅</div></div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         <div className="lg:col-span-7 space-y-4">
-                            {currentUser && !isAdmin && hasUnsavedChanges && !simulatorMode && (
+                            {currentUser && !isAdmin && hasUnsavedChanges && (
                                 <div className="sticky top-4 z-10 bg-indigo-50 border border-indigo-200 p-4 rounded-xl shadow-lg flex justify-between items-center mb-6 animate-pulse">
                                     <div className="text-sm text-indigo-900 flex items-center gap-2"><Icon name="Save" className="text-indigo-600" /><p className="font-bold">ביצעת שינויים שטרם נשמרו.</p></div>
                                     <button onClick={saveStudentGrades} disabled={isSaving} className={`text-xs ${isSaving ? 'bg-slate-400' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-5 py-2 rounded-lg font-bold shadow-sm transition-all flex items-center gap-2`}>{isSaving ? <Icon name="Refresh" className="animate-spin"/> : <Icon name="Cloud" />}{isSaving ? "שומר..." : "שמור שינויים"}</button>
-                                </div>
-                            )}
-                            {simulatorMode && (
-                                <div className="sticky top-4 z-10 bg-amber-100 border border-amber-300 p-4 rounded-xl shadow-lg flex justify-between items-center mb-6">
-                                    <div className="text-sm text-amber-900 flex items-center gap-2"><p className="font-bold">🎮 מצב סימולטור פעיל.</p> שחק עם הציונים, שום דבר לא יישמר באמת.</div>
-                                    <button onClick={toggleSimulator} className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-all">סיום סימולציה</button>
                                 </div>
                             )}
                             {isAdmin && <div className="sticky top-4 z-10 bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-lg flex justify-between items-center mb-6"><div className="text-sm text-amber-900"><p className="font-bold"><i className="fas fa-lock-open ml-2"></i> מצב עריכת מבנה קורסים</p></div><div className="flex gap-2"><button onClick={saveToServer} disabled={isSaving} className={`text-xs ${isSaving ? 'bg-slate-400' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-all flex items-center gap-2`}>{isSaving ? <Icon name="Refresh" className="animate-spin"/> : <Icon name="Cloud" />}{isSaving ? "שומר..." : "שמור"}</button><button onClick={() => { sessionStorage.removeItem('adminMode'); window.location.href='../admin.html'; }} className="text-xs bg-white border border-amber-300 text-amber-700 px-3 py-2 rounded-lg hover:bg-amber-100">חזרה לניהול</button></div></div>}
