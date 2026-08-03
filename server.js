@@ -1739,7 +1739,9 @@ app.post('/api/students/:tz/block-chat', (req, res) => {
 // ==========================================
 
 // Serve static files
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname), {
+    extensions: ['html', 'htm']
+}));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
