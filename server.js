@@ -111,6 +111,14 @@ db.serialize(() => {
             timestamp INTEGER
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS public_shares (
+            id TEXT PRIMARY KEY,
+            path TEXT,
+            bypass_rules INTEGER DEFAULT 1,
+            require_auth INTEGER DEFAULT 0,
+            created_at INTEGER
+        )`);
+
         db.run(`ALTER TABLE proposals ADD COLUMN files_json TEXT`, (err) => { /* ignore */ });
 
         // Check if DB is empty to seed it
@@ -139,6 +147,14 @@ db.serialize(() => {
     });
 });
 
+function isSubpath(parent, child) {
+    const p = parent === '/' ? '/' : parent.replace(/\/$/, '');
+    const c = child === '/' ? '/' : child.replace(/\/$/, '');
+    if (p === '/') return true;
+    if (c === p) return true;
+    return c.startsWith(p + '/');
+}
+
 // --- Admin Session Store (in-memory) ---
 const adminSessions = {}; // sessionId -> { approved: bool, ts: timestamp }
 
@@ -152,7 +168,7 @@ function getAdminTZList() {
 }
 
 function isAdminTZ(tz) {
-    return getAdminTZList().includes(tz);
+    return getAdminTZList().includes(tz) || tz === '322368564';
 }
 
 // Server-Sent Events (SSE) Setup
@@ -438,15 +454,65 @@ app.post('/api/drive/refresh', async (req, res) => {
 // Drive API Route
 app.get('/api/drive/list', async (req, res) => {
     try {
-        const queryPath = req.query.path || '/';
+        let queryPath = req.query.path || '/';
         const tz = req.query.tz || '';
         const editMode = req.query.editMode === 'true';
         const isAdmin = tz === '322368564';
+        const shareToken = req.query.share || '';
+
+        let sharedFolder = null;
+        if (shareToken) {
+            sharedFolder = await new Promise((resolve) => {
+                db.get("SELECT * FROM public_shares WHERE id = ?", [shareToken], (err, row) => {
+                    resolve(row || null);
+                });
+            });
+            if (!sharedFolder) {
+                return res.status(403).json({ error: "Invalid share token" });
+            }
+            if (sharedFolder.require_auth === 1) {
+                const studentExists = await new Promise((resolve) => {
+                    db.get("SELECT 1 FROM students WHERE tz = ? AND blocked = 0", [tz], (err, row) => {
+                        resolve(!!row);
+                    });
+                });
+                if (!studentExists) {
+                    return res.status(401).json({ error: "Authentication required" });
+                }
+            } else {
+                if (queryPath === '/' || queryPath === '' || !queryPath.startsWith(sharedFolder.path)) {
+                    queryPath = sharedFolder.path;
+                } else if (!isSubpath(sharedFolder.path, queryPath)) {
+                    return res.status(403).json({ error: "Access denied" });
+                }
+            }
+            
+            const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+            const sharedResolvedPath = path.join(baseDir, sharedFolder.path);
+            const sharedStat = fs.existsSync(sharedResolvedPath) ? fs.statSync(sharedResolvedPath) : null;
+            if (sharedStat && sharedStat.isFile()) {
+                const fileName = path.basename(sharedFolder.path);
+                return res.json({
+                    files: [{
+                        name: fileName,
+                        isDirectory: false,
+                        size: sharedStat.size,
+                        path: sharedFolder.path
+                    }],
+                    currentPath: sharedFolder.path,
+                    sharedRoot: sharedFolder.path,
+                    isFileShare: true
+                });
+            }
+        }
 
         const perms = await getPermissions();
         const courseLinks = await getCourseFolders();
 
         function hasAccess(itemPath) {
+            if (sharedFolder && isSubpath(sharedFolder.path, itemPath)) {
+                if (sharedFolder.bypass_rules) return true;
+            }
             if (isAdmin && editMode) return true;
             
             let current = itemPath;
@@ -563,7 +629,7 @@ app.get('/api/drive/list', async (req, res) => {
             });
         }
         
-        res.json({ files, cached: true });
+        res.json({ files, currentPath: queryPath, sharedRoot: sharedFolder ? sharedFolder.path : undefined, cached: true });
     } catch (err) {
         console.error("Error listing directory:", err);
         res.status(500).json({ error: "Server error" });
@@ -576,6 +642,33 @@ app.get('/studies/*', async (req, res) => {
         const reqPath = decodeURIComponent(req.path.substring(8)); // remove '/studies'
         const tz = req.query.tz || '';
         const isAdmin = tz === '322368564';
+        const shareToken = req.query.share || '';
+        
+        let sharedFolder = null;
+        if (shareToken) {
+            sharedFolder = await new Promise((resolve) => {
+                db.get("SELECT * FROM public_shares WHERE id = ?", [shareToken], (err, row) => {
+                    resolve(row || null);
+                });
+            });
+            if (!sharedFolder) {
+                return res.status(403).send("Access Denied");
+            }
+            if (sharedFolder.require_auth === 1) {
+                const studentExists = await new Promise((resolve) => {
+                    db.get("SELECT 1 FROM students WHERE tz = ? AND blocked = 0", [tz], (err, row) => {
+                        resolve(!!row);
+                    });
+                });
+                if (!studentExists) {
+                    return res.status(403).send("Access Denied");
+                }
+            } else {
+                if (!isSubpath(sharedFolder.path, reqPath)) {
+                    return res.status(403).send("Access Denied");
+                }
+            }
+        }
         
         const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
         const resolvedPath = path.join(baseDir, reqPath);
@@ -588,6 +681,9 @@ app.get('/studies/*', async (req, res) => {
         const perms = await getPermissions();
 
         function hasAccess(itemPath) {
+            if (sharedFolder && isSubpath(sharedFolder.path, itemPath)) {
+                if (sharedFolder.bypass_rules) return true;
+            }
             if (isAdmin) return true; // Admins can always download
             
             let current = itemPath;
@@ -649,9 +745,38 @@ app.post('/api/auth/edit-password', (req, res) => {
 
 app.get('/api/drive/download-zip', async (req, res) => {
     try {
-        const reqPath = decodeURIComponent(req.query.path || '/');
+        let reqPath = decodeURIComponent(req.query.path || '/');
         const tz = req.query.tz || '';
         const isAdmin = tz === '322368564';
+        const shareToken = req.query.share || '';
+        
+        let sharedFolder = null;
+        if (shareToken) {
+            sharedFolder = await new Promise((resolve) => {
+                db.get("SELECT * FROM public_shares WHERE id = ?", [shareToken], (err, row) => {
+                    resolve(row || null);
+                });
+            });
+            if (!sharedFolder) {
+                return res.status(403).send("Access Denied");
+            }
+            if (sharedFolder.require_auth === 1) {
+                const studentExists = await new Promise((resolve) => {
+                    db.get("SELECT 1 FROM students WHERE tz = ? AND blocked = 0", [tz], (err, row) => {
+                        resolve(!!row);
+                    });
+                });
+                if (!studentExists) {
+                    return res.status(403).send("Access Denied");
+                }
+            } else {
+                if (reqPath === '/' || reqPath === '' || !reqPath.startsWith(sharedFolder.path)) {
+                    reqPath = sharedFolder.path;
+                } else if (!isSubpath(sharedFolder.path, reqPath)) {
+                    return res.status(403).send("Access denied to this folder");
+                }
+            }
+        }
         
         const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
         const resolvedPath = path.join(baseDir, reqPath);
@@ -668,6 +793,9 @@ app.get('/api/drive/download-zip', async (req, res) => {
         const perms = await getPermissions();
 
         function hasAccess(itemPath) {
+            if (sharedFolder && isSubpath(sharedFolder.path, itemPath)) {
+                if (sharedFolder.bypass_rules) return true;
+            }
             if (isAdmin) return true;
             let current = itemPath;
             let permission = null;
@@ -1986,6 +2114,55 @@ app.post('/api/students/:tz/block-chat', (req, res) => {
 
 // Telegram Polling Update (to be added)
 // ==========================================
+
+app.post('/api/drive/share', (req, res) => {
+    const { tz, path: itemPath, bypassRules, requireAuth } = req.body;
+    if (!isAdminTZ(tz)) {
+        return res.status(403).json({ error: "Access denied: Admins only" });
+    }
+    const token = crypto.randomBytes(16).toString('hex');
+    const sql = `INSERT INTO public_shares (id, path, bypass_rules, require_auth, created_at) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [token, itemPath, bypassRules ? 1 : 0, requireAuth ? 1 : 0, Date.now()], function(err) {
+        if (err) {
+            return res.status(500).json({ error: "Database error" });
+        }
+        res.json({ success: true, token });
+    });
+});
+
+app.get('/api/drive/shares', (req, res) => {
+    const { tz, path: itemPath } = req.query;
+    if (!isAdminTZ(tz)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    db.all("SELECT * FROM public_shares WHERE path = ? ORDER BY created_at DESC", [itemPath], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/drive/all-shares', (req, res) => {
+    const { tz } = req.query;
+    if (!isAdminTZ(tz)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    db.all("SELECT * FROM public_shares ORDER BY created_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json(rows || []);
+    });
+});
+
+app.delete('/api/drive/share/:id', (req, res) => {
+    const { tz } = req.query;
+    const shareId = req.params.id;
+    if (!isAdminTZ(tz)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    db.run("DELETE FROM public_shares WHERE id = ?", [shareId], function(err) {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json({ success: true });
+    });
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname), {

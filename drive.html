@@ -75,6 +75,7 @@
         const Home = (props) => <IconBase {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconBase>;
         const LinkIcon = (props) => <IconBase {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></IconBase>;
         const ExternalLink = (props) => <IconBase {...props}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></IconBase>;
+        const Share2 = (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></IconBase>;
 
         function App() {
           const urlParams = new URLSearchParams(window.location.search);
@@ -202,10 +203,35 @@ const [previewLoading, setPreviewLoading] = useState(false);
           const [passwordModal, setPasswordModal] = useState({ open: false, inputVal: '', error: '' });
           const [sharedFilesToken, setSharedFilesToken] = useState(null);
 
-          // Handle PWA Share Target
+          const [shareToken, setShareToken] = useState(urlParams.get('share') || urlParams.get('authShare') || sessionStorage.getItem('share_token') || '');
+          const [isAuthShare, setIsAuthShare] = useState(!!urlParams.get('authShare') || sessionStorage.getItem('is_auth_share') === 'true');
+          const [sharedRoot, setSharedRoot] = useState(sessionStorage.getItem('shared_root') || '');
+          const [isFileShare, setIsFileShare] = useState(false);
+          const [allSharesModalOpen, setAllSharesModalOpen] = useState(false);
+          const [allShares, setAllShares] = useState([]);
+          const [itemShareModal, setItemShareModal] = useState({ open: false, item: null, shares: [], type: 'public', bypass: true });
+
           useEffect(() => {
               const urlParams = new URLSearchParams(window.location.search);
+              const sh = urlParams.get('share');
+              const ash = urlParams.get('authShare');
               const st = urlParams.get('shareToken');
+              
+              if (sh || ash) {
+                  const token = sh || ash;
+                  const auth = !!ash;
+                  setShareToken(token);
+                  setIsAuthShare(auth);
+                  sessionStorage.setItem('share_token', token);
+                  sessionStorage.setItem('is_auth_share', String(auth));
+                  
+                  if (auth && !tz) {
+                      window.location.href = `index.html?redirect=${encodeURIComponent(window.location.href)}`;
+                      return;
+                  }
+                  window.history.replaceState({}, document.title, window.location.pathname);
+              }
+              
               if (st) {
                   setSharedFilesToken(st);
                   setProposeModalOpen(true);
@@ -216,7 +242,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                   });
                   window.history.replaceState({}, document.title, window.location.pathname);
               }
-          }, []);
+          }, [tz]);
 
           // Check admin status from server
           useEffect(() => {
@@ -267,8 +293,18 @@ const [previewLoading, setPreviewLoading] = useState(false);
                   }
               }
 
-              const response = await fetch(`/api/drive/list?path=${encodeURIComponent(actualPath)}&tz=${tz}&editMode=${editMode}`);
+              const response = await fetch(`/api/drive/list?path=${encodeURIComponent(actualPath)}&tz=${tz}&editMode=${editMode}&share=${shareToken}`);
               const data = await response.json();
+              if (data.sharedRoot) {
+                  setSharedRoot(data.sharedRoot);
+                  sessionStorage.setItem('shared_root', data.sharedRoot);
+              } else if (!shareToken) {
+                  setSharedRoot('');
+                  setIsFileShare(false);
+              }
+              if (data.isFileShare) {
+                  setIsFileShare(true);
+              }
               
               setCurrentPath(actualPath === "/" ? "" : actualPath);
 
@@ -289,7 +325,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
             } finally {
               if (showLoading) setLoading(false);
             }
-          }, [tz, editMode, courseIdParam]);
+          }, [tz, editMode, courseIdParam, shareToken]);
 
           const currentPathRef = useRef(currentPath);
           useEffect(() => { currentPathRef.current = currentPath; }, [currentPath]);
@@ -345,7 +381,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const getDownloadUrl = (file) => {
             const basePath = currentPath === "" ? "" : currentPath;
-            return `/studies${basePath}/${file.name}?tz=${tz}`;
+            return `/studies${basePath}/${file.name}?tz=${tz}&share=${shareToken}`;
           };
 
           const getRawFileUrl = (file) => {
@@ -483,7 +519,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const handleDownloadFolderAsZip = () => {
              const tz = localStorage.getItem('student_tz') || '';
-             const url = `/api/drive/download-zip?path=${encodeURIComponent(currentPath)}&tz=${tz}`;
+             const url = `/api/drive/download-zip?path=${encodeURIComponent(currentPath)}&tz=${tz}&share=${shareToken}`;
              window.open(url, '_blank');
           };
 
@@ -508,6 +544,76 @@ const [previewLoading, setPreviewLoading] = useState(false);
           const openCourseLinkModal = (e, item) => {
              e.stopPropagation();
              setCourseLinkModal({ open: true, path: item.path });
+          };
+
+          const openItemShareModal = async (e, item) => {
+              e.stopPropagation();
+              setItemShareModal({ open: true, item, shares: [], type: 'public', bypass: true });
+              fetchItemShares(item.path);
+          };
+
+          const fetchItemShares = async (itemPath) => {
+              try {
+                  const res = await fetch(`/api/drive/shares?path=${encodeURIComponent(itemPath)}&tz=${tz}`);
+                  const data = await res.json();
+                  setItemShareModal(prev => ({ ...prev, shares: data }));
+              } catch(e) {}
+          };
+
+          const createShareLink = async () => {
+              const { item, type, bypass } = itemShareModal;
+              try {
+                  const res = await fetch('/api/drive/share', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          tz,
+                          path: item.path,
+                          bypassRules: bypass,
+                          requireAuth: type === 'auth'
+                      })
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                      alert('קישור שיתוף נוצר בהצלחה!');
+                      fetchItemShares(item.path);
+                  } else {
+                      alert(data.error || 'שגיאה ביצירת קישור');
+                  }
+              } catch(e) {
+                  alert('שגיאת תקשורת');
+              }
+          };
+
+          const deleteShareLink = async (shareId, itemPath) => {
+              if (!confirm('האם אתה בטוח שברצונך למחוק קישור שיתוף זה?')) return;
+              try {
+                  const res = await fetch(`/api/drive/share/${shareId}?tz=${tz}`, {
+                      method: 'DELETE'
+                  });
+                  if (res.ok) {
+                      if (itemPath) fetchItemShares(itemPath);
+                      else fetchAllShares();
+                  }
+              } catch(e) {}
+          };
+
+          const openAllSharesModal = () => {
+              setAllSharesModalOpen(true);
+              fetchAllShares();
+          };
+
+          const fetchAllShares = async () => {
+              try {
+                  const res = await fetch(`/api/drive/all-shares?tz=${tz}`);
+                  const data = await res.json();
+                  setAllShares(data);
+              } catch(e) {}
+          };
+
+          const copyToClipboard = (text) => {
+              navigator.clipboard.writeText(text);
+              alert('הקישור הועתק ללוח!');
           };
 
           const saveCourseLink = async (courseId) => {
@@ -546,9 +652,17 @@ const [previewLoading, setPreviewLoading] = useState(false);
                             רענן מפת תיקיות
                         </button>
                         {isAdminMode && (
-                           <span className="text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
-                             🛡️ מצב ניהול פעיל
-                           </span>
+                           <div className="flex items-center gap-2">
+                               <button 
+                                 onClick={openAllSharesModal}
+                                 className="text-sm bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg font-medium hover:bg-purple-200 transition-colors flex items-center gap-1.5"
+                               >
+                                 <i className="fas fa-share-nodes"></i> קישורי שיתוף פעילים
+                               </button>
+                               <span className="text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                 🛡️ מצב ניהול פעיל
+                               </span>
+                           </div>
                         )}
                       </div>
                     )}
@@ -569,7 +683,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="bg-slate-100 border-b border-slate-200 p-4 flex items-center justify-between flex-wrap gap-4">
                        <div className="flex items-center gap-3">
-                          {pathHistory.length > 0 && (
+                          {pathHistory.length > 0 && currentPath !== sharedRoot && (
                             <button 
                               onClick={handleBackClick}
                               className="p-1.5 hover:bg-slate-200 rounded-md transition-colors text-slate-600 flex items-center gap-1 text-sm font-medium"
@@ -581,11 +695,11 @@ const [previewLoading, setPreviewLoading] = useState(false);
                           <div className="font-semibold text-slate-700 flex items-center gap-2 text-lg">
                             <Folder size={20} className="text-blue-500" />
                             תיקיית הלימודים
-                            {currentPath && <span className="text-slate-400 font-normal break-all whitespace-normal" dir="ltr">{currentPath}</span>}
+                            {currentPath && <span className="text-slate-400 font-normal break-all whitespace-normal" dir="ltr">{sharedRoot ? (currentPath.replace(sharedRoot, '') || '/') : currentPath}</span>}
                           </div>
                        </div>
                        
-                       {!isAdminMode && (
+                       {!isAdminMode && (!shareToken || isAuthShare) && (
                            <div className="flex gap-2">
                                <button 
                                  onClick={createVirtualFolder}
@@ -730,6 +844,13 @@ const [previewLoading, setPreviewLoading] = useState(false);
                               
                               {isAdmin && editMode && (
                                 <div className="flex items-center gap-1 ml-4 shrink-0">
+                                    <button 
+                                      onClick={(e) => openItemShareModal(e, item)}
+                                      className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-100 rounded-full transition-colors"
+                                      title="קישורי שיתוף"
+                                    >
+                                      <Share2 size={20} />
+                                    </button>
                                     {item.isDirectory && (
                                         <button 
                                           onClick={(e) => openCourseLinkModal(e, item)}
@@ -1041,6 +1162,111 @@ const [previewLoading, setPreviewLoading] = useState(false);
                        </div>
                     </div>
                  </div>
+              )}
+
+              {/* Item Share Modal */}
+              {itemShareModal.open && (
+                  <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+                          <div className="flex justify-between items-center mb-4">
+                              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Share2 size={24} className="text-green-600"/> שיתוף פריט</h2>
+                              <button onClick={() => setItemShareModal(p => ({...p, open: false}))} className="p-1 text-slate-400 hover:text-slate-600">
+                                  <X size={20} />
+                              </button>
+                          </div>
+                          <div className="mb-4 text-sm font-medium text-slate-600 truncate bg-slate-50 p-2 rounded-lg" dir="ltr">{itemShareModal.item?.path}</div>
+                          
+                          <div className="space-y-4 mb-6">
+                              <div className="flex flex-col gap-2">
+                                  <label className="text-sm font-semibold text-slate-700">סוג שיתוף</label>
+                                  <div className="flex gap-4">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name="shareType" checked={itemShareModal.type === 'public'} onChange={() => setItemShareModal(p => ({...p, type: 'public'}))} className="accent-green-600" /> ציבורי (לאורחים)
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name="shareType" checked={itemShareModal.type === 'auth'} onChange={() => setItemShareModal(p => ({...p, type: 'auth'}))} className="accent-green-600" /> למחוברים בלבד
+                                      </label>
+                                  </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <input type="checkbox" id="bypassRules" checked={itemShareModal.bypass} onChange={(e) => setItemShareModal(p => ({...p, bypass: e.target.checked}))} className="accent-green-600 rounded" />
+                                  <label htmlFor="bypassRules" className="text-sm font-medium text-slate-700 cursor-pointer">עקוף חוקי הרשאות לסטודנטים פשוטים</label>
+                              </div>
+                              <button onClick={createShareLink} className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors shadow-sm">
+                                  צור קישור שיתוף
+                              </button>
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto border-t border-slate-100 pt-4">
+                              <h3 className="font-bold text-slate-700 mb-3 text-sm">קישורים קיימים ({itemShareModal.shares.length})</h3>
+                              {itemShareModal.shares.map(s => {
+                                  const link = window.location.origin + '/drive.html?' + (s.require_auth ? 'authShare=' : 'share=') + s.id;
+                                  return (
+                                      <div key={s.id} className="bg-slate-50 p-3 rounded-lg mb-2 text-sm border border-slate-200">
+                                          <div className="flex justify-between items-center mb-2">
+                                              <span className="font-semibold text-slate-700">{s.require_auth ? 'למחוברים בלבד' : 'ציבורי'}</span>
+                                              <span className="text-xs text-slate-500">{new Date(s.created_at).toLocaleDateString('he-IL')}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                              <input type="text" readOnly value={link} className="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-500" dir="ltr" />
+                                              <button onClick={() => copyToClipboard(link)} className="bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200" title="העתק"><i className="fas fa-copy"></i></button>
+                                              <button onClick={() => deleteShareLink(s.id, itemShareModal.item.path)} className="bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200" title="מחק קישור"><i className="fas fa-trash"></i></button>
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                              {itemShareModal.shares.length === 0 && <div className="text-sm text-slate-400 text-center py-4">אין קישורים קיימים לפריט זה</div>}
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {/* All Shares Manager Modal */}
+              {allSharesModalOpen && (
+                  <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-xl flex flex-col max-h-[90vh]">
+                          <div className="flex justify-between items-center mb-6">
+                              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><i className="fas fa-share-nodes text-purple-600"></i> ניהול קישורי שיתוף פעילים</h2>
+                              <button onClick={() => setAllSharesModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                                  <X size={24} />
+                              </button>
+                          </div>
+                          
+                          <div className="flex-1 overflow-y-auto">
+                              <table className="w-full text-sm text-right">
+                                  <thead className="text-slate-500 bg-slate-50 sticky top-0">
+                                      <tr>
+                                          <th className="px-4 py-3 rounded-tr-lg">נתיב</th>
+                                          <th className="px-4 py-3">סוג</th>
+                                          <th className="px-4 py-3">עוקף הרשאות</th>
+                                          <th className="px-4 py-3">תאריך יצירה</th>
+                                          <th className="px-4 py-3 rounded-tl-lg text-left">פעולות</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {allShares.map(s => {
+                                          const link = window.location.origin + '/drive.html?' + (s.require_auth ? 'authShare=' : 'share=') + s.id;
+                                          return (
+                                              <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                                                  <td className="px-4 py-3 font-medium text-slate-700" dir="ltr" style={{textAlign: 'left'}}>{s.path}</td>
+                                                  <td className="px-4 py-3">{s.require_auth ? <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">מחוברים</span> : <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">ציבורי</span>}</td>
+                                                  <td className="px-4 py-3">{s.bypass_rules ? 'כן' : 'לא'}</td>
+                                                  <td className="px-4 py-3 text-slate-500">{new Date(s.created_at).toLocaleDateString('he-IL')}</td>
+                                                  <td className="px-4 py-3 text-left">
+                                                      <div className="flex justify-end gap-2">
+                                                          <button onClick={() => copyToClipboard(link)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="העתק קישור"><i className="fas fa-copy"></i></button>
+                                                          <button onClick={() => deleteShareLink(s.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors" title="מחק"><i className="fas fa-trash"></i></button>
+                                                      </div>
+                                                  </td>
+                                              </tr>
+                                          )
+                                      })}
+                                  </tbody>
+                              </table>
+                              {allShares.length === 0 && <div className="text-center text-slate-400 py-8">לא נמצאו קישורי שיתוף פעילים במערכת</div>}
+                          </div>
+                      </div>
+                  </div>
               )}
 
               {/* Password Modal */}

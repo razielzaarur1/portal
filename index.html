@@ -437,6 +437,13 @@
                     currentUserData = data;
                     localStorage.setItem('student_tz', tz);
                     
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirect = urlParams.get('redirect');
+                    if (redirect) {
+                        window.location.href = redirect;
+                        return;
+                    }
+                    
                     document.getElementById('user-greeting').innerHTML = `<i class="fas fa-user-circle"></i> שלום, ${data.name}`;
                     document.getElementById('auth-main-btn').style.display = 'inline-block';
                     document.getElementById('settings-main-btn').style.display = 'inline-block';
