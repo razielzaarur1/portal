@@ -46,7 +46,8 @@ if (startIdx !== -1 && endIdx !== -1) {
               }
 
               setFiles(data.files || []);
-              setCurrentPath(pathToFetch === "/" ? "" : pathToFetch);
+              const serverPath = data.currentPath ?? pathToFetch;
+              setCurrentPath(serverPath === "/" ? "" : serverPath);
             } catch (err) {
               setError(err.message);
               // if access denied, clear files

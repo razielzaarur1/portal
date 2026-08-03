@@ -305,8 +305,11 @@ const [previewLoading, setPreviewLoading] = useState(false);
               if (data.isFileShare) {
                   setIsFileShare(true);
               }
-              
-              setCurrentPath(actualPath === "/" ? "" : actualPath);
+
+              if (response.ok) {
+                const serverPath = data.currentPath ?? actualPath;
+                setCurrentPath(serverPath === "/" ? "" : serverPath);
+              }
 
               if (!response.ok) {
                 if(data.error === 'Not found' || response.status === 404) {
