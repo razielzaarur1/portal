@@ -356,23 +356,37 @@ const [previewLoading, setPreviewLoading] = useState(false);
             e.preventDefault();
             e.stopPropagation();
             const url = getDownloadUrl(file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
             
-            const evt = new MouseEvent('click', {
-              ctrlKey: true,
-              metaKey: true,
-              bubbles: true,
-              cancelable: true
-            });
-            a.dispatchEvent(evt);
-            
-            // Re-focus current window to make sure we keep focus
-            window.focus();
-            if (window.parent) {
-              window.parent.focus();
+            const newWin = window.open(url, '_blank');
+            if (newWin) {
+              try {
+                newWin.blur();
+              } catch (err) {}
+              window.focus();
+              if (window.parent) {
+                window.parent.focus();
+              }
+              
+              // Defer focusing back to ensure it runs after tab initialization
+              setTimeout(() => {
+                try {
+                  newWin.blur();
+                } catch (err) {}
+                window.focus();
+                if (window.parent) {
+                  window.parent.focus();
+                }
+              }, 50);
+
+              setTimeout(() => {
+                try {
+                  newWin.blur();
+                } catch (err) {}
+                window.focus();
+                if (window.parent) {
+                  window.parent.focus();
+                }
+              }, 150);
             }
           };
 
