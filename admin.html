@@ -296,6 +296,215 @@
         .adv-alert.good   { background: #f0fdf4; color: #15803d; }
         .adv-alert.purple { background: #f5f3ff; color: #5b21b6; }
         .adv-loading { text-align: center; padding: 30px; color: var(--muted); }
+
+        /* Drill-down Modal */
+        .drill-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px);
+            z-index: 500; display: none; justify-content: flex-end;
+            animation: fadeIn 0.2s ease;
+        }
+        .drill-modal-overlay.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .drill-modal {
+            width: 520px; max-width: 95vw; height: 100vh;
+            background: var(--bg); box-shadow: -8px 0 30px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column;
+            animation: slideIn 0.3s ease;
+            overflow: hidden;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        .drill-modal-header {
+            padding: 20px 24px; background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .drill-modal-header h2 {
+            flex: 1; font-size: 1.1rem; font-weight: 700; margin: 0;
+        }
+        .drill-modal-close {
+            width: 36px; height: 36px; border-radius: 10px;
+            border: none; background: #f1f5f9; cursor: pointer;
+            font-size: 1.1rem; color: var(--muted); transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .drill-modal-close:hover { background: #fee2e2; color: var(--danger); }
+
+        .drill-modal-search {
+            padding: 12px 24px; background: white;
+            border-bottom: 1px solid var(--border);
+        }
+        .drill-modal-search input {
+            width: 100%; padding: 10px 14px; border: 2px solid var(--border);
+            border-radius: 10px; font-family: inherit; font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .drill-modal-search input:focus { outline: none; border-color: var(--primary); }
+
+        .drill-modal-body {
+            flex: 1; overflow-y: auto; padding: 16px 24px;
+        }
+
+        .drill-user-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px; background: white; border-radius: 12px;
+            margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+            border: 1px solid var(--border);
+        }
+        .drill-user-item:hover {
+            border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,0.1);
+            transform: translateY(-1px);
+        }
+        .drill-user-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: white; font-size: 1rem; flex-shrink: 0;
+        }
+        .drill-user-info { flex: 1; overflow: hidden; }
+        .drill-user-name { font-weight: 600; font-size: 0.95rem; }
+        .drill-user-tz { font-size: 0.8rem; color: var(--muted); direction: ltr; display: inline-block; }
+        .drill-user-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+        .drill-user-views {
+            font-size: 0.8rem; font-weight: 700; color: var(--primary);
+            background: #eff6ff; padding: 4px 10px; border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        /* User Activity Modal (second layer) */
+        .activity-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px);
+            z-index: 600; display: none; align-items: center; justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .activity-modal-overlay.active { display: flex; }
+
+        .activity-modal {
+            width: 700px; max-width: 95vw; max-height: 90vh;
+            background: var(--bg); border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
+            animation: scaleIn 0.3s ease;
+            overflow: hidden;
+        }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .activity-modal-header {
+            padding: 20px 24px; background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            color: white; display: flex; align-items: center; gap: 14px;
+        }
+        .activity-modal-header .activity-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.3rem;
+        }
+        .activity-modal-header .activity-info { flex: 1; }
+        .activity-modal-header .activity-info h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+        .activity-modal-header .activity-info p { font-size: 0.85rem; opacity: 0.8; margin: 2px 0 0; }
+        .activity-modal-close {
+            width: 36px; height: 36px; border-radius: 10px;
+            border: none; background: rgba(255,255,255,0.15); cursor: pointer;
+            font-size: 1.1rem; color: white; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .activity-modal-close:hover { background: rgba(255,255,255,0.3); }
+
+        .activity-summary {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px; padding: 16px 24px;
+        }
+        .activity-summary-card {
+            background: white; border-radius: 12px; padding: 12px;
+            text-align: center; border: 1px solid var(--border);
+        }
+        .activity-summary-num { font-size: 1.3rem; font-weight: 800; }
+        .activity-summary-label { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+        .activity-tabs {
+            display: flex; gap: 0; padding: 0 24px; border-bottom: 2px solid var(--border);
+            background: white; overflow-x: auto;
+        }
+        .activity-tab {
+            padding: 10px 16px; border: none; background: none;
+            font-family: inherit; font-size: 0.8rem; font-weight: 600;
+            color: var(--muted); cursor: pointer; transition: 0.2s;
+            border-bottom: 2px solid transparent; margin-bottom: -2px;
+            white-space: nowrap;
+        }
+        .activity-tab:hover { color: var(--text); }
+        .activity-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .activity-tab-content {
+            flex: 1; overflow-y: auto; padding: 16px 24px;
+        }
+
+        .activity-timeline-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+            font-size: 0.85rem;
+        }
+        .activity-timeline-item:last-child { border-bottom: none; }
+        .activity-timeline-icon {
+            width: 28px; height: 28px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; flex-shrink: 0;
+        }
+        .activity-timeline-text { flex: 1; }
+        .activity-timeline-time { font-size: 0.75rem; color: var(--muted); white-space: nowrap; direction: ltr; }
+
+        .activity-day-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 0; font-size: 0.8rem;
+        }
+        .activity-day-label { min-width: 85px; font-weight: 500; direction: ltr; text-align: right; }
+        .activity-day-bar-outer { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+        .activity-day-bar-inner { height: 100%; background: linear-gradient(90deg, #2563eb, #60a5fa); border-radius: 4px; transition: width 0.4s; }
+        .activity-day-count { min-width: 30px; font-weight: 700; font-size: 0.75rem; color: var(--muted); }
+
+        /* Clickable mini cards */
+        .adv-mini-card.clickable {
+            cursor: pointer; transition: all 0.2s;
+        }
+        .adv-mini-card.clickable:hover {
+            border-color: var(--primary); background: #eff6ff;
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(37,99,235,0.1);
+        }
+
+        /* Grades overview table */
+        .grades-overview-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            font-size: 0.85rem;
+        }
+        .grades-overview-table th {
+            background: #f8fafc; padding: 10px 12px;
+            text-align: right; font-weight: 700; font-size: 0.75rem;
+            color: var(--muted); text-transform: uppercase;
+            border-bottom: 2px solid var(--border);
+        }
+        .grades-overview-table td {
+            padding: 10px 12px; border-bottom: 1px solid #f1f5f9;
+        }
+        .grades-overview-table tr:hover td { background: #f8fafc; }
+        .grades-filter-tabs {
+            display: flex; gap: 8px; margin-bottom: 10px;
+        }
+        .grades-filter-btn {
+            padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
+            background: white; font-family: inherit; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; transition: 0.2s; color: var(--muted);
+        }
+        .grades-filter-btn.active, .grades-filter-btn:hover {
+            background: var(--primary); color: white; border-color: var(--primary);
+        }
+
+        @media (max-width: 640px) {
+            .drill-modal { width: 100vw; }
+            .activity-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+            .activity-summary { grid-template-columns: repeat(3, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -438,6 +647,42 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Drill-Down Modal -->
+<div class="drill-modal-overlay" id="drill-modal-overlay" onclick="if(event.target===this)closeDrillModal()">
+    <div class="drill-modal">
+        <div class="drill-modal-header">
+            <i class="fas fa-users" id="drill-modal-icon" style="font-size:1.2rem;color:var(--primary)"></i>
+            <h2 id="drill-modal-title">טוען...</h2>
+            <button class="drill-modal-close" onclick="closeDrillModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="drill-modal-search">
+            <input type="text" id="drill-search" placeholder="חיפוש לפי שם או ת.ז..." oninput="filterDrillUsers()">
+        </div>
+        <div class="drill-modal-body" id="drill-modal-body">
+            <div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען...</div>
+        </div>
+    </div>
+</div>
+
+<!-- User Activity Modal -->
+<div class="activity-modal-overlay" id="activity-modal-overlay" onclick="if(event.target===this)closeActivityModal()">
+    <div class="activity-modal">
+        <div class="activity-modal-header">
+            <div class="activity-avatar" id="activity-avatar">?</div>
+            <div class="activity-info">
+                <h2 id="activity-name">טוען...</h2>
+                <p id="activity-subtitle"></p>
+            </div>
+            <button class="activity-modal-close" onclick="closeActivityModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="activity-summary" id="activity-summary"></div>
+        <div class="activity-tabs" id="activity-tabs"></div>
+        <div class="activity-tab-content" id="activity-tab-content">
+            <div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען היסטוריה...</div>
         </div>
     </div>
 </div>
@@ -590,6 +835,14 @@
 
         const u = d.users, dr = d.drive, gr = d.grades, ch = d.chat;
 
+        // Fetch grades overview
+        let gradesOverviewResult = [];
+        try {
+            const goRes = await fetch('/api/admin/grades-overview');
+            gradesOverviewResult = await goRes.json();
+        } catch(e) {}
+        const grOverviewCount = gradesOverviewResult.length;
+
         // Helper: render a leaderboard list
         function renderList(items, labelFn, valueFn, colorClass = '') {
             if (!items || items.length === 0) return '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:8px;">אין נתונים</div>';
@@ -619,9 +872,11 @@
         }
 
         // Helper: mini stat card
-        function mini(num, label, colorClass) {
+        function mini(num, label, colorClass, drillType) {
             const display = num === null || num === undefined ? '–' : num;
-            return `<div class="adv-mini-card"><div class="adv-mini-num ${colorClass}">${display}</div><div class="adv-mini-label">${label}</div></div>`;
+            const clickable = drillType ? 'clickable' : '';
+            const onclick = drillType ? `onclick="drillDown('${drillType}', '${label}')"` : '';
+            return `<div class="adv-mini-card ${clickable}" ${onclick}><div class="adv-mini-num ${colorClass}">${display}</div><div class="adv-mini-label">${label}</div></div>`;
         }
 
         // Helper: peak hour display
@@ -654,6 +909,8 @@
         // ---- GRADE BARS ----
         const hardBar = renderBars(gr.hardestCourses || [], r => r.name, r => r.avg, 'orange');
         const easyBar = renderBars(gr.easiestCourses || [], r => r.name, r => r.avg, 'green');
+        const gradeChangeDateBars = renderBars(gr.gradeChangesByDate || [], r => r.date, r => r.changes, 'purple', ' שינויים');
+        const gradeChangeCourseBars = renderBars(gr.gradeChangesByCourse || [], r => r.name || `קורס ${r.course_id}`, r => r.changes, 'purple', ' שינויים');
 
         // ---- PEAK HOURS ----
         const peakBars = renderBars(u.peakHours || [], r => hourLabel(r.hour), r => r.views, '');
@@ -677,14 +934,14 @@
                 <div class="adv-category-body">
 
                     <div class="adv-mini-grid">
-                        ${mini(u.total, 'סטודנטים רשומים', 'color-blue')}
-                        ${mini(u.realtime, 'פעילים עכשיו 🟢', 'color-green')}
-                        ${mini(u.dau, 'פעילים היום (DAU)', 'color-teal')}
-                        ${mini(u.wau, 'פעילים השבוע', 'color-blue')}
-                        ${mini(u.mau, 'פעילים החודש (MAU)', 'color-blue')}
-                        ${mini(u.inactive30, 'לא פעילים 30+ יום', 'color-red')}
-                        ${mini(u.newThisWeek, 'הצטרפו השבוע', 'color-green')}
-                        ${mini(u.newThisMonth, 'הצטרפו החודש', 'color-green')}
+                        ${mini(u.total, 'סטודנטים רשומים', 'color-blue', 'total')}
+                        ${mini(u.realtime, 'פעילים עכשיו 🟢', 'color-green', 'realtime')}
+                        ${mini(u.dau, 'פעילים היום (DAU)', 'color-teal', 'dau')}
+                        ${mini(u.wau, 'פעילים השבוע', 'color-blue', 'wau')}
+                        ${mini(u.mau, 'פעילים החודש (MAU)', 'color-blue', 'mau')}
+                        ${mini(u.inactive30, 'לא פעילים 30+ יום', 'color-red', 'inactive30')}
+                        ${mini(u.newThisWeek, 'הצטרפו השבוע', 'color-green', 'newWeek')}
+                        ${mini(u.newThisMonth, 'הצטרפו החודש', 'color-green', 'newMonth')}
                     </div>
 
                     <hr class="adv-divider">
@@ -805,6 +1062,32 @@
 
                     ${gr.totalCourses < 2 ? `<div class="adv-alert info"><i class="fas fa-info-circle"></i> נדרשים לפחות 2 סטודנטים עם ציון בכל קורס להצגת נתונים</div>` : ''}
 
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-calendar-alt" style="color:#7c3aed"></i> תאריכים עם הכי הרבה שינויי ציונים</div>
+                        ${gradeChangeDateBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-book" style="color:#7c3aed"></i> קורסים עם הכי הרבה שינויי ציונים</div>
+                        ${gradeChangeCourseBars}
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-user-graduate" style="color:#7c3aed"></i> מצב הכנסת ציונים לפי סטודנט</div>
+                        <div class="grades-filter-tabs">
+                            <button class="grades-filter-btn active" data-filter="all" onclick="filterGradesOverview('all')">הכול (${grOverviewCount})</button>
+                            <button class="grades-filter-btn" data-filter="with" onclick="filterGradesOverview('with')">הכניסו ציונים</button>
+                            <button class="grades-filter-btn" data-filter="without" onclick="filterGradesOverview('without')">לא הכניסו</button>
+                        </div>
+                        <div id="grades-overview-container"><div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען...</div></div>
+                    </div>
+
                 </div>
             </div>
 
@@ -840,6 +1123,8 @@
             </div>
 
         </div>`;
+
+        renderGradesOverview(gradesOverviewResult);
     }
 
     async function loadStudents() {
@@ -964,6 +1249,284 @@
     }
 
     // --- Toast ---
+    
+    // --- Drill-Down & Activity ---
+    let drillUsersData = [];
+
+    async function drillDown(type, label) {
+        const overlay = document.getElementById('drill-modal-overlay');
+        overlay.classList.add('active');
+        document.getElementById('drill-modal-title').textContent = label + ' – טוען...';
+        document.getElementById('drill-modal-body').innerHTML = '<div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען...</div>';
+        document.getElementById('drill-search').value = '';
+
+        try {
+            const res = await fetch(`/api/admin/stat-users/${type}`);
+            drillUsersData = await res.json();
+            document.getElementById('drill-modal-title').textContent = `${label} – ${drillUsersData.length} משתמשים`;
+            renderDrillUsers(drillUsersData);
+        } catch(e) {
+            document.getElementById('drill-modal-body').innerHTML = '<div class="adv-loading" style="color:var(--danger)">שגיאה בטעינה ❌</div>';
+        }
+    }
+
+    function filterDrillUsers() {
+        const q = (document.getElementById('drill-search').value || '').toLowerCase();
+        const filtered = drillUsersData.filter(u => 
+            (u.name || '').toLowerCase().includes(q) || (u.tz || '').includes(q)
+        );
+        renderDrillUsers(filtered);
+    }
+
+    function renderDrillUsers(users) {
+        const body = document.getElementById('drill-modal-body');
+        if (!users || users.length === 0) {
+            body.innerHTML = '<div class="adv-loading"><i class="fas fa-search"></i> לא נמצאו תוצאות</div>';
+            return;
+        }
+        const avatarColors = ['#2563eb','#059669','#7c3aed','#d97706','#dc2626','#0891b2'];
+        body.innerHTML = users.map((u, i) => {
+            const color = avatarColors[i % avatarColors.length];
+            const initial = u.name ? u.name.charAt(0) : '?';
+            const lastSeenStr = u.lastSeen ? timeAgo(u.lastSeen) : 'לא ידוע';
+            const yearLabel = {'A':"א'","B":"ב'","C":"ג'","D":"ד'"};
+            return `<div class="drill-user-item" onclick="showUserActivity('${u.tz}')">
+                <div class="drill-user-avatar" style="background:${color}">${initial}</div>
+                <div class="drill-user-info">
+                    <div class="drill-user-name">${u.name || 'ללא שם'}</div>
+                    <div class="drill-user-meta"><span class="drill-user-tz">${u.tz}</span> · שנה ${yearLabel[u.year] || u.year || '-'} · נראה ${lastSeenStr}</div>
+                </div>
+                <div class="drill-user-views">${u.totalViews || 0} צפיות</div>
+            </div>`;
+        }).join('');
+    }
+
+    function timeAgo(ts) {
+        const diff = Date.now() - ts;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'עכשיו';
+        if (mins < 60) return `לפני ${mins} דק'`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `לפני ${hours} שעות`;
+        const days = Math.floor(hours / 24);
+        if (days < 30) return `לפני ${days} ימים`;
+        return `לפני ${Math.floor(days/30)} חודשים`;
+    }
+
+    function closeDrillModal() {
+        document.getElementById('drill-modal-overlay').classList.remove('active');
+    }
+
+    async function showUserActivity(tz) {
+        const overlay = document.getElementById('activity-modal-overlay');
+        overlay.classList.add('active');
+        document.getElementById('activity-summary').innerHTML = '';
+        document.getElementById('activity-tabs').innerHTML = '';
+        document.getElementById('activity-tab-content').innerHTML = '<div class="adv-loading"><i class="fas fa-spinner fa-spin"></i> טוען היסטוריה...</div>';
+        document.getElementById('activity-name').textContent = 'טוען...';
+        document.getElementById('activity-subtitle').textContent = '';
+        document.getElementById('activity-avatar').textContent = '?';
+
+        try {
+            const res = await fetch(`/api/admin/user-activity/${tz}`);
+            const data = await res.json();
+            renderUserActivity(data);
+        } catch(e) {
+            document.getElementById('activity-tab-content').innerHTML = '<div class="adv-loading" style="color:var(--danger)">שגיאה בטעינה ❌</div>';
+        }
+    }
+
+    function renderUserActivity(data) {
+        const s = data.student;
+        const yearLabel = {'A':"א'","B":"ב'","C":"ג'","D":"ד'"};
+        
+        document.getElementById('activity-avatar').textContent = s.name ? s.name.charAt(0) : '?';
+        document.getElementById('activity-name').textContent = s.name || 'ללא שם';
+        document.getElementById('activity-subtitle').textContent = `ת.ז: ${s.tz} · שנה ${yearLabel[s.year] || s.year || '-'} · ${data.lastSeen ? 'נראה ' + timeAgo(data.lastSeen) : 'מעולם לא התחבר'}`;
+
+        // Summary cards
+        const joinedDate = s.joined_at ? new Date(s.joined_at).toLocaleDateString('he-IL') : '–';
+        document.getElementById('activity-summary').innerHTML = `
+            <div class="activity-summary-card"><div class="activity-summary-num color-blue">${data.totalPageViews}</div><div class="activity-summary-label">צפיות כוללות</div></div>
+            <div class="activity-summary-card"><div class="activity-summary-num color-green">${(data.loginDays || []).length}</div><div class="activity-summary-label">ימים פעילים</div></div>
+            <div class="activity-summary-card"><div class="activity-summary-num color-teal">${(data.filesUploaded || []).length}</div><div class="activity-summary-label">קבצים שהעלה</div></div>
+            <div class="activity-summary-card"><div class="activity-summary-num color-purple">${(data.filesDownloaded || []).length}</div><div class="activity-summary-label">קבצים שהוריד</div></div>
+            <div class="activity-summary-card"><div class="activity-summary-num color-orange">${data.chatMessagesSent || 0}</div><div class="activity-summary-label">הודעות ששלח</div></div>
+            <div class="activity-summary-card"><div class="activity-summary-num color-blue">${joinedDate}</div><div class="activity-summary-label">תאריך הצטרפות</div></div>
+        `;
+
+        // Tabs
+        const tabs = [
+            { id: 'logins', icon: 'fa-clock', label: 'כניסות' },
+            { id: 'pages', icon: 'fa-file-alt', label: 'עמודים' },
+            { id: 'files', icon: 'fa-folder', label: 'קבצים' },
+            { id: 'messages', icon: 'fa-envelope', label: 'הודעות' },
+            { id: 'grades', icon: 'fa-graduation-cap', label: 'ציונים' }
+        ];
+
+        document.getElementById('activity-tabs').innerHTML = tabs.map((t, i) => 
+            `<button class="activity-tab ${i === 0 ? 'active' : ''}" onclick="switchActivityTab('${t.id}', this)" data-tab="${t.id}"><i class="fas ${t.icon}"></i> ${t.label}</button>`
+        ).join('');
+
+        // Store data for tab switching
+        window._activityData = data;
+        switchActivityTab('logins');
+    }
+
+    function switchActivityTab(tabId, btnEl) {
+        // Update tab buttons
+        document.querySelectorAll('.activity-tab').forEach(t => t.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        else document.querySelector(`.activity-tab[data-tab="${tabId}"]`)?.classList.add('active');
+
+        const data = window._activityData;
+        const content = document.getElementById('activity-tab-content');
+
+        switch(tabId) {
+            case 'logins': {
+                const days = data.loginDays || [];
+                if (days.length === 0) { content.innerHTML = '<div class="adv-loading">אין נתוני כניסות</div>'; return; }
+                const max = Math.max(...days.map(d => d.views), 1);
+                content.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;">${days.map(d => {
+                    const pct = Math.round((d.views / max) * 100);
+                    const dayName = new Date(d.date + 'T00:00:00').toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'short' });
+                    return `<div class="activity-day-bar">
+                        <div class="activity-day-label">${dayName}</div>
+                        <div class="activity-day-bar-outer"><div class="activity-day-bar-inner" style="width:${pct}%"></div></div>
+                        <div class="activity-day-count">${d.views}</div>
+                    </div>`;
+                }).join('')}</div>`;
+                break;
+            }
+            case 'pages': {
+                const pages = data.recentPages || [];
+                if (pages.length === 0) { content.innerHTML = '<div class="adv-loading">אין נתוני עמודים</div>'; return; }
+                content.innerHTML = pages.map(p => {
+                    const shortPath = p.path.length > 50 ? '...' + p.path.slice(-47) : p.path;
+                    const time = new Date(p.timestamp).toLocaleString('he-IL');
+                    return `<div class="activity-timeline-item">
+                        <div class="activity-timeline-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-globe"></i></div>
+                        <div class="activity-timeline-text" title="${p.path}">${shortPath}</div>
+                        <div class="activity-timeline-time">${time}</div>
+                    </div>`;
+                }).join('');
+                break;
+            }
+            case 'files': {
+                const uploaded = data.filesUploaded || [];
+                const downloaded = data.filesDownloaded || [];
+                let html = '';
+                if (uploaded.length > 0) {
+                    html += '<div class="adv-sub-title" style="margin-bottom:8px"><i class="fas fa-upload" style="color:#059669"></i> קבצים שהעלה</div>';
+                    html += uploaded.map(f => {
+                        const name = f.path.split('/').pop();
+                        const time = new Date(f.timestamp).toLocaleString('he-IL');
+                        return `<div class="activity-timeline-item">
+                            <div class="activity-timeline-icon" style="background:#d1fae5;color:#059669"><i class="fas fa-upload"></i></div>
+                            <div class="activity-timeline-text" title="${f.path}">${name}</div>
+                            <div class="activity-timeline-time">${time}</div>
+                        </div>`;
+                    }).join('');
+                }
+                if (downloaded.length > 0) {
+                    html += '<div class="adv-sub-title" style="margin:16px 0 8px"><i class="fas fa-download" style="color:#2563eb"></i> קבצים שהוריד</div>';
+                    html += downloaded.map(f => {
+                        const name = f.path.split('/').pop();
+                        const time = new Date(f.timestamp).toLocaleString('he-IL');
+                        return `<div class="activity-timeline-item">
+                            <div class="activity-timeline-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-download"></i></div>
+                            <div class="activity-timeline-text" title="${f.path}">${name}</div>
+                            <div class="activity-timeline-time">${time}</div>
+                        </div>`;
+                    }).join('');
+                }
+                if (!html) html = '<div class="adv-loading">אין נתוני קבצים</div>';
+                content.innerHTML = html;
+                break;
+            }
+            case 'messages': {
+                const count = data.chatMessagesSent || 0;
+                content.innerHTML = `<div style="text-align:center;padding:30px;">
+                    <div style="font-size:3rem;margin-bottom:10px;"><i class="fas fa-envelope" style="color:var(--primary)"></i></div>
+                    <div style="font-size:2rem;font-weight:800;color:var(--primary);">${count}</div>
+                    <div style="color:var(--muted);font-size:0.9rem;">הודעות נשלחו בצ'אט</div>
+                </div>`;
+                break;
+            }
+            case 'grades': {
+                const gi = data.gradesInfo || {};
+                const changes = data.gradeChanges || [];
+                let html = `<div style="display:flex;gap:12px;margin-bottom:16px;">
+                    <div class="activity-summary-card" style="flex:1;"><div class="activity-summary-num ${gi.hasGrades ? 'color-green' : 'color-red'}">${gi.hasGrades ? '✅' : '❌'}</div><div class="activity-summary-label">הכניס ציונים</div></div>
+                    <div class="activity-summary-card" style="flex:1;"><div class="activity-summary-num color-purple">${gi.coursesWithGrades || 0}</div><div class="activity-summary-label">קורסים עם ציונים</div></div>
+                </div>`;
+                if (changes.length > 0) {
+                    html += '<div class="adv-sub-title" style="margin-bottom:8px"><i class="fas fa-history" style="color:#7c3aed"></i> שינויי ציונים אחרונים</div>';
+                    const actionLabels = { added: 'הוסיף ציון', updated: 'עדכן ציון', removed: 'הסיר ציון' };
+                    const actionColors = { added: '#059669', updated: '#d97706', removed: '#dc2626' };
+                    const actionIcons = { added: 'fa-plus', updated: 'fa-pen', removed: 'fa-minus' };
+                    html += changes.map(c => {
+                        const time = new Date(c.timestamp).toLocaleString('he-IL');
+                        const actionLabel = actionLabels[c.action] || c.action;
+                        const color = actionColors[c.action] || '#64748b';
+                        const icon = actionIcons[c.action] || 'fa-edit';
+                        return `<div class="activity-timeline-item">
+                            <div class="activity-timeline-icon" style="background:${color}15;color:${color}"><i class="fas ${icon}"></i></div>
+                            <div class="activity-timeline-text">${actionLabel} <span style="color:var(--muted);">(קורס ${c.course_id})</span></div>
+                            <div class="activity-timeline-time">${time}</div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    html += '<div style="color:var(--muted);text-align:center;padding:12px;font-size:0.85rem;">אין שינויי ציונים מתועדים</div>';
+                }
+                content.innerHTML = html;
+                break;
+            }
+        }
+    }
+
+    function closeActivityModal() {
+        document.getElementById('activity-modal-overlay').classList.remove('active');
+    }
+
+    // Grades overview rendering
+    let gradesOverviewData = [];
+    let gradesOverviewFilter = 'all';
+
+    function renderGradesOverview(data) {
+        gradesOverviewData = data;
+        gradesOverviewFilter = 'all';
+        filterGradesOverview('all');
+    }
+
+    function filterGradesOverview(filter) {
+        gradesOverviewFilter = filter;
+        document.querySelectorAll('.grades-filter-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.grades-filter-btn[data-filter="${filter}"]`)?.classList.add('active');
+
+        let filtered = gradesOverviewData;
+        if (filter === 'with') filtered = gradesOverviewData.filter(s => s.hasGrades);
+        else if (filter === 'without') filtered = gradesOverviewData.filter(s => !s.hasGrades);
+
+        const container = document.getElementById('grades-overview-container');
+        if (!filtered || filtered.length === 0) {
+            container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:12px;font-size:0.85rem;">אין נתונים</div>';
+            return;
+        }
+        container.innerHTML = `<table class="grades-overview-table">
+            <thead><tr><th>שם</th><th>ת.ז</th><th>שנה</th><th>הכניס ציונים</th><th>קורסים</th></tr></thead>
+            <tbody>${filtered.map(s => {
+                const yearLabel = {'A':"א'","B":"ב'","C":"ג'","D":"ד'"};
+                return `<tr style="cursor:pointer" onclick="showUserActivity('${s.tz}')">
+                    <td style="font-weight:600">${s.name || 'ללא שם'}</td>
+                    <td style="direction:ltr;color:var(--muted)">${s.tz}</td>
+                    <td>${yearLabel[s.year] || s.year || '-'}</td>
+                    <td>${s.hasGrades ? '<span style="color:#059669;font-weight:700">✅ כן</span>' : '<span style="color:#dc2626;font-weight:700">❌ לא</span>'}</td>
+                    <td><span style="font-weight:700;color:var(--primary)">${s.coursesWithGrades || 0}</span></td>
+                </tr>`;
+            }).join('')}</tbody>
+        </table>`;
+    }
     
     // --- Chats ---
     let activeChatTz = null;

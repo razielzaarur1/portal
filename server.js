@@ -96,6 +96,14 @@ db.serialize(() => {
             timestamp INTEGER
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS grade_changes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tz TEXT,
+            course_id TEXT,
+            action TEXT,
+            timestamp INTEGER
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS file_downloads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             path TEXT,
@@ -209,20 +217,52 @@ app.post('/api/students/:tz', (req, res) => {
     
     const gradesStr = grades ? JSON.stringify(grades) : '{}';
 
-    const sql = `INSERT INTO students (tz, name, year, semester, grades, joined_at) 
-                 VALUES (?, ?, ?, ?, ?, ?) 
-                 ON CONFLICT(tz) DO UPDATE SET 
-                    name=excluded.name, 
-                    year=excluded.year, 
-                    semester=excluded.semester, 
-                    grades=excluded.grades`;
-    
-    db.run(sql, [tz, name || '', year || 'A', semester || '1', gradesStr, Date.now()], function(err) {
-        if (err) {
-            console.error("Update error:", err);
-            return res.status(500).json({ error: "Database error" });
+    db.get("SELECT grades FROM students WHERE tz = ?", [tz], (err, row) => {
+        let oldGrades = {};
+        if (row && row.grades) {
+            try { oldGrades = JSON.parse(row.grades); } catch (e) {}
         }
-        res.json({ success: true });
+
+        const sql = `INSERT INTO students (tz, name, year, semester, grades, joined_at) 
+                     VALUES (?, ?, ?, ?, ?, ?) 
+                     ON CONFLICT(tz) DO UPDATE SET 
+                        name=excluded.name, 
+                        year=excluded.year, 
+                        semester=excluded.semester, 
+                        grades=excluded.grades`;
+        
+        db.run(sql, [tz, name || '', year || 'A', semester || '1', gradesStr, Date.now()], function(err) {
+            if (err) {
+                console.error("Update error:", err);
+                return res.status(500).json({ error: "Database error" });
+            }
+            
+            if (grades) {
+                const now = Date.now();
+                const stmt = db.prepare("INSERT INTO grade_changes (tz, course_id, action, timestamp) VALUES (?, ?, ?, ?)");
+                
+                for (const courseId in grades) {
+                    const newGradeVal = Number(grades[courseId].grade) || 0;
+                    if (newGradeVal > 0) {
+                        if (!oldGrades[courseId] || (Number(oldGrades[courseId].grade) || 0) === 0) {
+                            stmt.run(tz, courseId, 'added', now);
+                        } else if ((Number(oldGrades[courseId].grade) || 0) !== newGradeVal) {
+                            stmt.run(tz, courseId, 'updated', now);
+                        }
+                    } else if (newGradeVal === 0 && oldGrades[courseId] && (Number(oldGrades[courseId].grade) || 0) > 0) {
+                        stmt.run(tz, courseId, 'removed', now);
+                    }
+                }
+                for (const courseId in oldGrades) {
+                    if ((Number(oldGrades[courseId].grade) || 0) > 0 && !grades[courseId]) {
+                        stmt.run(tz, courseId, 'removed', now);
+                    }
+                }
+                stmt.finalize();
+            }
+
+            res.json({ success: true });
+        });
     });
 });
 
@@ -239,6 +279,11 @@ app.patch('/api/students/:tz', (req, res) => {
         const newSemester = updates.semester !== undefined ? updates.semester : row.semester;
         
         let newGrades = row.grades;
+        let parsedOldGrades = {};
+        if (row.grades) {
+            try { parsedOldGrades = JSON.parse(row.grades); } catch (e) {}
+        }
+
         if (updates.grades !== undefined) {
             newGrades = JSON.stringify(updates.grades);
         }
@@ -247,6 +292,32 @@ app.patch('/api/students/:tz', (req, res) => {
             [newName, newYear, newSemester, newGrades, tz], 
             function(err) {
                 if (err) return res.status(500).json({ error: "Database error" });
+
+                if (updates.grades !== undefined) {
+                    const now = Date.now();
+                    const stmt = db.prepare("INSERT INTO grade_changes (tz, course_id, action, timestamp) VALUES (?, ?, ?, ?)");
+                    
+                    const newGradesObj = updates.grades;
+                    for (const courseId in newGradesObj) {
+                        const newGradeVal = Number(newGradesObj[courseId].grade) || 0;
+                        if (newGradeVal > 0) {
+                            if (!parsedOldGrades[courseId] || (Number(parsedOldGrades[courseId].grade) || 0) === 0) {
+                                stmt.run(tz, courseId, 'added', now);
+                            } else if ((Number(parsedOldGrades[courseId].grade) || 0) !== newGradeVal) {
+                                stmt.run(tz, courseId, 'updated', now);
+                            }
+                        } else if (newGradeVal === 0 && parsedOldGrades[courseId] && (Number(parsedOldGrades[courseId].grade) || 0) > 0) {
+                            stmt.run(tz, courseId, 'removed', now);
+                        }
+                    }
+                    for (const courseId in parsedOldGrades) {
+                        if ((Number(parsedOldGrades[courseId].grade) || 0) > 0 && !newGradesObj[courseId]) {
+                            stmt.run(tz, courseId, 'removed', now);
+                        }
+                    }
+                    stmt.finalize();
+                }
+
                 res.json({ success: true });
             }
         );
@@ -1274,6 +1345,8 @@ app.get('/api/admin/advanced-stats', (req, res) => {
     // ----- GRADE CALC -----
     const gradeQueries = [
         { key: 'allGrades', sql: "SELECT tz, grades FROM students WHERE grades IS NOT NULL AND grades != '' AND tz != '322368564'" },
+        { key: 'gradeChangesByDate', sql: "SELECT strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch', '+3 hours')) as date, COUNT(*) as changes FROM grade_changes GROUP BY date ORDER BY changes DESC LIMIT 10" },
+        { key: 'gradeChangesByCourse', sql: "SELECT course_id, COUNT(*) as changes FROM grade_changes GROUP BY course_id ORDER BY changes DESC LIMIT 10" },
     ];
 
     // ----- CHAT / SUPPORT -----
@@ -1374,6 +1447,11 @@ app.get('/api/admin/advanced-stats', (req, res) => {
                                 hardestCourses,
                                 easiestCourses,
                                 totalCourses: courseList.length,
+                                gradeChangesByDate: gradeData.gradeChangesByDate || [],
+                                gradeChangesByCourse: (gradeData.gradeChangesByCourse || []).map(c => ({
+                                    ...c,
+                                    course_name: coursesMap[c.course_id] || `קורס ${c.course_id}`
+                                })),
                             },
                             chat: {
                                 totalMsgs: g(chatData.totalMsgs),
@@ -1388,6 +1466,177 @@ app.get('/api/admin/advanced-stats', (req, res) => {
                 });
             });
         });
+    });
+});
+
+// ==========================================
+// NEW ADMIN APIS
+// ==========================================
+
+app.get('/api/admin/stat-users/:type', (req, res) => {
+    const type = req.params.type;
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    let sql = "";
+    let params = [];
+    
+    switch (type) {
+        case 'realtime':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE timestamp > ? AND tz != '322368564'";
+            params = [now - 5 * 60 * 1000];
+            break;
+        case 'dau':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE timestamp > ? AND tz != '322368564'";
+            params = [now - DAY];
+            break;
+        case 'wau':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE timestamp > ? AND tz != '322368564'";
+            params = [now - 7 * DAY];
+            break;
+        case 'mau':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE timestamp > ? AND tz != '322368564'";
+            params = [now - 30 * DAY];
+            break;
+        case 'inactive30':
+            sql = "SELECT tz FROM students WHERE tz NOT IN (SELECT DISTINCT tz FROM page_views WHERE timestamp > ?) AND tz != '322368564' AND blocked=0";
+            params = [now - 30 * DAY];
+            break;
+        case 'newWeek':
+            sql = "SELECT tz FROM students WHERE joined_at > ? AND tz != '322368564'";
+            params = [now - 7 * DAY];
+            break;
+        case 'newMonth':
+            sql = "SELECT tz FROM students WHERE joined_at > ? AND tz != '322368564'";
+            params = [now - 30 * DAY];
+            break;
+        case 'total':
+        default:
+            sql = "SELECT tz FROM students WHERE blocked=0 AND tz != '322368564'";
+            params = [];
+            break;
+    }
+
+    db.all(sql, params, (err, rows) => {
+        if (err || !rows) return res.status(500).json({ error: "Database error" });
+        
+        const tzList = rows.map(r => r.tz);
+        if (tzList.length === 0) return res.json([]);
+        
+        const placeholders = tzList.map(() => '?').join(',');
+        
+        db.all(`SELECT tz, name, year FROM students WHERE tz IN (${placeholders})`, tzList, (err, students) => {
+            if (err || !students) return res.status(500).json({ error: "Database error" });
+            
+            db.all(`SELECT tz, MAX(timestamp) as lastSeen, COUNT(*) as totalViews FROM page_views WHERE tz IN (${placeholders}) GROUP BY tz`, tzList, (err, stats) => {
+                const statsMap = {};
+                (stats || []).forEach(s => statsMap[s.tz] = s);
+                
+                const result = students.map(s => ({
+                    tz: s.tz,
+                    name: s.name,
+                    year: s.year,
+                    lastSeen: statsMap[s.tz] ? statsMap[s.tz].lastSeen : null,
+                    totalViews: statsMap[s.tz] ? statsMap[s.tz].totalViews : 0
+                }));
+                
+                res.json(result);
+            });
+        });
+    });
+});
+
+app.get('/api/admin/user-activity/:tz', (req, res) => {
+    const tz = req.params.tz;
+    
+    db.get("SELECT name, tz, year, semester, joined_at, blocked, grades FROM students WHERE tz = ?", [tz], (err, student) => {
+        if (err || !student) return res.status(404).json({ error: "Student not found" });
+        
+        let hasGrades = false;
+        let coursesWithGrades = 0;
+        try {
+            const gradesObj = JSON.parse(student.grades || '{}');
+            for (const courseId in gradesObj) {
+                if (gradesObj[courseId].active && Number(gradesObj[courseId].grade) > 0) {
+                    hasGrades = true;
+                    coursesWithGrades++;
+                }
+            }
+        } catch (e) {}
+        
+        const studentInfo = {
+            name: student.name,
+            tz: student.tz,
+            year: student.year,
+            semester: student.semester,
+            joined_at: student.joined_at,
+            blocked: student.blocked
+        };
+        
+        const now = Date.now();
+        const DAY30 = 30 * 24 * 60 * 60 * 1000;
+        
+        const queries = [
+            { key: 'pageStats', sql: "SELECT MAX(timestamp) as lastSeen, COUNT(*) as totalViews FROM page_views WHERE tz = ?", params: [tz] },
+            { key: 'loginDays', sql: "SELECT strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch', '+3 hours')) as date, COUNT(*) as views FROM page_views WHERE tz = ? AND timestamp > ? GROUP BY date ORDER BY date DESC", params: [tz, now - DAY30] },
+            { key: 'recentPages', sql: "SELECT path, timestamp FROM page_views WHERE tz = ? ORDER BY timestamp DESC LIMIT 50", params: [tz] },
+            { key: 'filesUploaded', sql: "SELECT path, timestamp FROM file_metadata WHERE uploader_tz = ? ORDER BY timestamp DESC", params: [tz] },
+            { key: 'filesDownloaded', sql: "SELECT path, timestamp FROM file_downloads WHERE tz = ? ORDER BY timestamp DESC LIMIT 50", params: [tz] },
+            { key: 'chatMessagesSent', sql: "SELECT COUNT(*) as count FROM chat_messages WHERE tz = ? AND sender = 'student'", params: [tz] },
+            { key: 'gradeChanges', sql: "SELECT course_id, action, timestamp FROM grade_changes WHERE tz = ? ORDER BY timestamp DESC LIMIT 50", params: [tz] }
+        ];
+        
+        const results = {};
+        let remaining = queries.length;
+        
+        queries.forEach(({ key, sql, params }) => {
+            db.all(sql, params, (err, rows) => {
+                results[key] = rows || [];
+                if (--remaining === 0) {
+                    res.json({
+                        student: studentInfo,
+                        lastSeen: results.pageStats[0] ? results.pageStats[0].lastSeen : null,
+                        totalPageViews: results.pageStats[0] ? results.pageStats[0].totalViews : 0,
+                        loginDays: results.loginDays,
+                        recentPages: results.recentPages,
+                        filesUploaded: results.filesUploaded,
+                        filesDownloaded: results.filesDownloaded,
+                        chatMessagesSent: results.chatMessagesSent[0] ? results.chatMessagesSent[0].count : 0,
+                        gradeChanges: results.gradeChanges,
+                        gradesInfo: { hasGrades, coursesWithGrades }
+                    });
+                }
+            });
+        });
+    });
+});
+
+app.get('/api/admin/grades-overview', (req, res) => {
+    db.all("SELECT tz, name, year, grades FROM students WHERE tz != '322368564'", [], (err, students) => {
+        if (err || !students) return res.status(500).json({ error: "Database error" });
+        
+        const result = students.map(s => {
+            let hasGrades = false;
+            let coursesWithGrades = 0;
+            try {
+                const gradesObj = JSON.parse(s.grades || '{}');
+                for (const courseId in gradesObj) {
+                    if (gradesObj[courseId].active && Number(gradesObj[courseId].grade) > 0) {
+                        hasGrades = true;
+                        coursesWithGrades++;
+                    }
+                }
+            } catch (e) {}
+            
+            return {
+                tz: s.tz,
+                name: s.name,
+                year: s.year,
+                hasGrades,
+                coursesWithGrades
+            };
+        });
+        
+        res.json(result);
     });
 });
 
