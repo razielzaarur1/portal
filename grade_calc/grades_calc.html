@@ -130,6 +130,11 @@
 
         function App() {
             const isAdminMode = sessionStorage.getItem('adminMode') === 'true';
+            const adminSessionId = sessionStorage.getItem('adminSessionId') || '';
+            const adminFetch = (url, options = {}) => {
+                options.headers = { ...options.headers, 'x-admin-session': adminSessionId };
+                return fetch(url, options);
+            };
             const [baseCourses, setBaseCourses] = useState([]);
             const [courses, setCourses] = useState(BACKUP_COURSES);
             const [expandedYears, setExpandedYears] = useState({});
@@ -144,7 +149,7 @@
             useEffect(() => {
                 const fetchBaseData = async () => {
                     try {
-                        const response = await fetch('../api/admin/courses?t=' + new Date().getTime());
+                        const response = await fetch('../api/courses?t=' + new Date().getTime());
                         if (!response.ok) throw new Error("קובץ הנתונים לא נמצא");
                         
                         const globalData = await response.json();
@@ -222,7 +227,7 @@
                 setIsSaving(true);
                 try {
                     const cleanCourses = courses.map(c => ({ id: c.id, year: c.year, semester: c.semester, name: c.name, credits: c.credits, grade: 0, active: false }));
-                    const res = await fetch('../api/admin/courses', {
+                    const res = await adminFetch('../api/admin/courses', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(cleanCourses)
