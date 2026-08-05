@@ -925,6 +925,15 @@ app.post('/api/auth/admin-login', authLimiter, (req, res) => {
     Object.keys(adminSessions).forEach(k => {
         if (Date.now() - adminSessions[k].ts > 5 * 60 * 1000) delete adminSessions[k];
     });
+    // Clean old pending logins
+    if (global.adminPendingLogins) {
+        Object.keys(global.adminPendingLogins).forEach(msgId => {
+            const sid = global.adminPendingLogins[msgId];
+            if (!adminSessions[sid]) {
+                delete global.adminPendingLogins[msgId];
+            }
+        });
+    }
     // Send Telegram approval request
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -940,6 +949,12 @@ app.post('/api/auth/admin-login', authLimiter, (req, res) => {
             chat_id: chatId,
             text: `⚠️ בקשת כניסה לפאנל הניהול\nהאם אתה מאשר את הכניסה?`,
             reply_markup: JSON.parse(keyboard)
+        }).then(response => {
+            const messageId = response.data?.result?.message_id;
+            if (messageId) {
+                global.adminPendingLogins = global.adminPendingLogins || {};
+                global.adminPendingLogins[messageId] = sessionId;
+            }
         }).catch(e => console.error('Telegram error:', e.message));
     }
     res.json({ sessionId });
@@ -964,6 +979,44 @@ function handleTelegramMessage(msg, token) {
     if (!msg.text) return;
     const text = msg.text;
     const chatId = msg.chat.id;
+    
+    // Check if this is a reply to a login request message
+    if (msg.reply_to_message && msg.reply_to_message.message_id) {
+        const repliedMsgId = msg.reply_to_message.message_id;
+        global.adminPendingLogins = global.adminPendingLogins || {};
+        const sessionId = global.adminPendingLogins[repliedMsgId];
+        
+        if (sessionId && adminSessions[sessionId]) {
+            const cleanText = text.trim();
+            if (cleanText === 'כן' || cleanText.toLowerCase() === 'yes') {
+                adminSessions[sessionId].approved = true;
+                sendTelegramMessage('✅ אושר סשן מנהל באמצעות תגובה!');
+                
+                // Remove buttons from original message
+                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+                    chat_id: chatId,
+                    message_id: repliedMsgId,
+                    reply_markup: null
+                }).catch(()=>{});
+                
+                delete global.adminPendingLogins[repliedMsgId];
+                return;
+            } else if (cleanText === 'לא' || cleanText.toLowerCase() === 'no') {
+                adminSessions[sessionId].denied = true;
+                sendTelegramMessage('❌ סשן מנהל נדחה באמצעות תגובה');
+                
+                // Remove buttons from original message
+                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+                    chat_id: chatId,
+                    message_id: repliedMsgId,
+                    reply_markup: null
+                }).catch(()=>{});
+                
+                delete global.adminPendingLogins[repliedMsgId];
+                return;
+            }
+        }
+    }
     
     // Command: /pending
     if (text === '/pending') {
