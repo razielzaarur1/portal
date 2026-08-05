@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { exec } = require('child_process');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -191,7 +192,7 @@ function isSubpath(parent, child) {
 const adminSessions = {}; // sessionId -> { approved: bool, ts: timestamp }
 
 function generateSessionId() {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(16).toString('hex');
 }
 
 function getAdminTZList() {
