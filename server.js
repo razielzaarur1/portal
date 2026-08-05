@@ -935,8 +935,11 @@ app.post('/api/auth/admin-login', authLimiter, (req, res) => {
                 { text: '\u274c \u05d3\u05d7\u05d4', callback_data: `deny_admin_${sessionId}` }
             ]]
         });
-        fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${msg}&reply_markup=${encodeURIComponent(keyboard)}`)
-            .catch(e => console.error('Telegram error:', e));
+        require('axios').post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chatId,
+            text: `⚠️ בקשת כניסה לפאנל הניהול\nהאם אתה מאשר את הכניסה?`,
+            reply_markup: JSON.parse(keyboard)
+        }).catch(e => console.error('Telegram error:', e.message));
     }
     res.json({ sessionId });
 });
