@@ -516,7 +516,7 @@ app.get('/api/drive/list', async (req, res) => {
         let queryPath = req.query.path || '/';
         const tz = req.query.tz || '';
         const editMode = req.query.editMode === 'true';
-        const isAdmin = tz === '322368564';
+        const isAdmin = isAdminTZ(tz);
         const shareToken = req.query.share || '';
 
         let sharedFolder = null;
@@ -700,7 +700,7 @@ app.get('/studies/*', async (req, res) => {
     try {
         const reqPath = decodeURIComponent(req.path.substring(8)); // remove '/studies'
         const tz = req.query.tz || '';
-        const isAdmin = tz === '322368564';
+        const isAdmin = isAdminTZ(tz);
         const shareToken = req.query.share || '';
         
         let sharedFolder = null;
@@ -806,7 +806,7 @@ app.get('/api/drive/download-zip', async (req, res) => {
     try {
         let reqPath = decodeURIComponent(req.query.path || '/');
         const tz = req.query.tz || '';
-        const isAdmin = tz === '322368564';
+        const isAdmin = isAdminTZ(tz);
         const shareToken = req.query.share || '';
         
         let sharedFolder = null;
