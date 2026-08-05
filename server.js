@@ -10,6 +10,38 @@ const { exec } = require('child_process');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP since we use inline scripts
+    crossOriginEmbedderPolicy: false
+}));
+
+// Block access to sensitive files
+app.use((req, res, next) => {
+    const blocked = [
+        '/server.js', '/update.js', '/package.json', '/package-lock.json',
+        '/Dockerfile', '/docker-compose.yml', '/docker-compose.prod.yml',
+        '/Caddyfile', '/.env', '/.gitignore',
+        '/students_backup.json'
+    ];
+    const lowerPath = req.path.toLowerCase();
+    if (blocked.includes(req.path) || blocked.includes(lowerPath) ||
+        lowerPath.startsWith('/data/') || lowerPath.startsWith('/node_modules/') ||
+        lowerPath === '/data' || lowerPath === '/node_modules') {
+        return res.status(403).send('Access Denied');
+    }
+    next();
+});
+
+// Rate limiters
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { error: 'Too many login attempts, please try again later' }
+});
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, 'data');
@@ -159,7 +191,7 @@ function isSubpath(parent, child) {
 const adminSessions = {}; // sessionId -> { approved: bool, ts: timestamp }
 
 function generateSessionId() {
-    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return crypto.randomBytes(32).toString('hex');
 }
 
 function getAdminTZList() {
@@ -168,7 +200,34 @@ function getAdminTZList() {
 }
 
 function isAdminTZ(tz) {
-    return getAdminTZList().includes(tz) || tz === '322368564';
+    return getAdminTZList().includes(tz);
+}
+
+// Timing-safe password comparison
+function timingSafeCompare(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+        // Compare against self to maintain constant time
+        crypto.timingSafeEqual(bufA, bufA);
+        return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Admin authentication middleware
+function requireAdmin(req, res, next) {
+    const sessionId = req.headers['x-admin-session'] || req.query.adminSession || '';
+    if (!sessionId || !adminSessions[sessionId] || !adminSessions[sessionId].approved) {
+        return res.status(401).json({ error: 'Admin authentication required' });
+    }
+    // Check session expiry (1 hour)
+    if (Date.now() - adminSessions[sessionId].ts > 60 * 60 * 1000) {
+        delete adminSessions[sessionId];
+        return res.status(401).json({ error: 'Session expired' });
+    }
+    next();
 }
 
 // Server-Sent Events (SSE) Setup
@@ -341,7 +400,7 @@ app.patch('/api/students/:tz', (req, res) => {
 });
 
 // GET users (admin: full info)
-app.get('/api/users', (req, res) => {
+app.get('/api/users', requireAdmin, (req, res) => {
     db.all("SELECT tz, name, year, semester, blocked, chat_blocked FROM students", [], (err, rows) => {
         if (err) return res.status(500).json({ error: "Database error" });
         res.json(rows);
@@ -349,7 +408,7 @@ app.get('/api/users', (req, res) => {
 });
 
 // PATCH block/unblock student
-app.patch('/api/students/:tz/block', (req, res) => {
+app.patch('/api/students/:tz/block', requireAdmin, (req, res) => {
     const tz = req.params.tz;
     const { blocked } = req.body;
     db.run("UPDATE students SET blocked = ? WHERE tz = ?", [blocked ? 1 : 0, tz], function(err) {
@@ -359,7 +418,7 @@ app.patch('/api/students/:tz/block', (req, res) => {
 });
 
 // DELETE student
-app.delete('/api/students/:tz', (req, res) => {
+app.delete('/api/students/:tz', requireAdmin, (req, res) => {
     const tz = req.params.tz;
     db.run("DELETE FROM students WHERE tz = ?", [tz], function(err) {
         if (err) return res.status(500).json({ error: "Database error" });
@@ -368,7 +427,7 @@ app.delete('/api/students/:tz', (req, res) => {
 });
 
 // POST permission
-app.post('/api/drive/permissions', (req, res) => {
+app.post('/api/drive/permissions', requireAdmin, (req, res) => {
     const { path: itemPath, visibility, users } = req.body;
     const usersStr = JSON.stringify(users || []);
     
@@ -423,7 +482,7 @@ const getCourseFolders = () => {
 };
 
 // Course linking API
-app.post('/api/courses/link', (req, res) => {
+app.post('/api/courses/link', requireAdmin, (req, res) => {
     const { courseId, folderPath } = req.body;
     db.run("INSERT INTO course_folders (course_id, folder_path) VALUES (?, ?) ON CONFLICT(course_id) DO UPDATE SET folder_path=excluded.folder_path", 
         [courseId, folderPath], function(err) {
@@ -445,7 +504,7 @@ app.get('/api/courses/link/:courseId', (req, res) => {
 let dirCacheMap = {}; // { '/path': { lastUpdate: timestamp, items: [ ... ] } }
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-app.post('/api/drive/refresh', async (req, res) => {
+app.post('/api/drive/refresh', requireAdmin, async (req, res) => {
     // Clear the cache manually
     dirCacheMap = {};
     res.json({ success: true, message: "Cache cleared successfully" });
@@ -731,13 +790,13 @@ app.get('/studies/*', async (req, res) => {
 });
 
 // Edit password verification
-app.post('/api/auth/edit-password', (req, res) => {
+app.post('/api/auth/edit-password', authLimiter, (req, res) => {
     const { password } = req.body;
     const editPassword = process.env.EDIT_PASSWORD;
     if (!editPassword) {
         return res.status(500).json({ error: 'EDIT_PASSWORD not configured' });
     }
-    if (password === editPassword) {
+    if (timingSafeCompare(password, editPassword)) {
         return res.json({ success: true });
     }
     return res.status(401).json({ error: 'wrong_password' });
@@ -853,10 +912,10 @@ app.get('/api/drive/download-zip', async (req, res) => {
 });
 
 // Admin login – check password then send Telegram approval request
-app.post('/api/auth/admin-login', (req, res) => {
+app.post('/api/auth/admin-login', authLimiter, (req, res) => {
     const { password } = req.body;
     const adminPassword = process.env.ADMIN_PASSWORD;
-    if (!adminPassword || password !== adminPassword) {
+    if (!adminPassword || !timingSafeCompare(password, adminPassword)) {
         return res.status(401).json({ error: 'wrong_password' });
     }
     const sessionId = generateSessionId();
@@ -1319,7 +1378,7 @@ function pollTelegram() {
 setTimeout(pollTelegram, 2000);
 
 // Admin courses GET
-app.get('/api/admin/courses', (req, res) => {
+app.get('/api/admin/courses', requireAdmin, (req, res) => {
     const coursesPath = path.join(__dirname, 'data', 'courses.json');
     if (!fs.existsSync(coursesPath)) {
         const defaultPath = path.join(__dirname, 'grade_calc', 'courses.json');
@@ -1334,7 +1393,7 @@ app.get('/api/admin/courses', (req, res) => {
 });
 
 // Admin courses PUT
-app.put('/api/admin/courses', (req, res) => {
+app.put('/api/admin/courses', requireAdmin, (req, res) => {
     const coursesPath = path.join(__dirname, 'data', 'courses.json');
     try {
         fs.writeFileSync(coursesPath, JSON.stringify(req.body, null, 2), 'utf8');
@@ -1377,7 +1436,7 @@ app.post('/api/track', express.json(), (req, res) => {
     });
 });
 
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
     // Only return data, admin UI checks auth
     db.all(`SELECT path, COUNT(*) as views FROM page_views GROUP BY path ORDER BY views DESC LIMIT 10`, [], (err, popularPages) => {
         db.all(`SELECT tz, COUNT(*) as views FROM page_views WHERE tz != '322368564' GROUP BY tz ORDER BY views DESC LIMIT 5`, [], (err, activeStudents) => {
@@ -1411,7 +1470,7 @@ app.get('/api/admin/stats', (req, res) => {
 // ADVANCED STATISTICS API
 // ==========================================
 
-app.get('/api/admin/advanced-stats', (req, res) => {
+app.get('/api/admin/advanced-stats', requireAdmin, (req, res) => {
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
     const WEEK = 7 * DAY;
@@ -1601,7 +1660,7 @@ app.get('/api/admin/advanced-stats', (req, res) => {
 // NEW ADMIN APIS
 // ==========================================
 
-app.get('/api/admin/stat-users/:type', (req, res) => {
+app.get('/api/admin/stat-users/:type', requireAdmin, (req, res) => {
     const type = req.params.type;
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
@@ -1673,7 +1732,7 @@ app.get('/api/admin/stat-users/:type', (req, res) => {
     });
 });
 
-app.get('/api/admin/user-activity/:tz', (req, res) => {
+app.get('/api/admin/user-activity/:tz', requireAdmin, (req, res) => {
     const tz = req.params.tz;
     
     db.get("SELECT name, tz, year, semester, joined_at, blocked, grades FROM students WHERE tz = ?", [tz], (err, student) => {
@@ -1738,7 +1797,7 @@ app.get('/api/admin/user-activity/:tz', (req, res) => {
     });
 });
 
-app.get('/api/admin/grades-overview', (req, res) => {
+app.get('/api/admin/grades-overview', requireAdmin, (req, res) => {
     db.all("SELECT tz, name, year, grades FROM students WHERE tz != '322368564'", [], (err, students) => {
         if (err || !students) return res.status(500).json({ error: "Database error" });
         
@@ -2107,7 +2166,7 @@ ${history}`,
     });
 });
 
-app.post('/api/students/:tz/block-chat', (req, res) => {
+app.post('/api/students/:tz/block-chat', requireAdmin, (req, res) => {
     db.run("UPDATE students SET chat_blocked = ? WHERE tz = ?", [req.body.blocked ? 1 : 0, req.params.tz]);
     res.json({ success: true });
 });

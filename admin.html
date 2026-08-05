@@ -697,6 +697,17 @@
     let pollInterval = null;
     let loginTimeout = null;
 
+    // Helper to build admin headers
+    function adminHeaders(extra = {}) {
+        const sid = sessionStorage.getItem('adminSessionId') || '';
+        return { 'x-admin-session': sid, ...extra };
+    }
+    function adminFetch(url, options = {}) {
+        const sid = sessionStorage.getItem('adminSessionId') || '';
+        options.headers = { ...options.headers, 'x-admin-session': sid };
+        return fetch(url, options);
+    }
+
     // --- Auth ---
     async function attemptLogin() {
         const password = document.getElementById('admin-password').value;
@@ -826,7 +837,7 @@
 
         let d;
         try {
-            const res = await fetch('/api/admin/advanced-stats');
+            const res = await adminFetch('/api/admin/advanced-stats');
             d = await res.json();
         } catch(e) {
             container.innerHTML = '<div class="adv-loading" style="color:var(--danger)">שגיאה בטעינת נתונים ❌</div>';
@@ -838,7 +849,7 @@
         // Fetch grades overview
         let gradesOverviewResult = [];
         try {
-            const goRes = await fetch('/api/admin/grades-overview');
+            const goRes = await adminFetch('/api/admin/grades-overview');
             gradesOverviewResult = await goRes.json();
         } catch(e) {}
         const grOverviewCount = gradesOverviewResult.length;
@@ -1129,7 +1140,7 @@
 
     async function loadStudents() {
         try {
-            const res = await fetch('/api/users');
+            const res = await adminFetch('/api/users');
             allStudents = await res.json();
             updateStats();
             renderStudents();
@@ -1203,7 +1214,7 @@
     async function toggleBlock(tz, blocked) {
         if (!confirm(blocked ? `לחסום את ${tz}?` : `לשחרר את ${tz}?`)) return;
         try {
-            await fetch(`/api/students/${tz}/block`, {
+            await adminFetch(`/api/students/${tz}/block`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ blocked })
@@ -1221,7 +1232,7 @@
     async function toggleChatBlock(tz, blocked) {
         if (!confirm(blocked ? `לחסום את הצ'אט ל-${tz}?` : `לשחרר את חסימת הצ'אט מ-${tz}?`)) return;
         try {
-            await fetch(`/api/students/${tz}/block-chat`, {
+            await adminFetch(`/api/students/${tz}/block-chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ blocked })
@@ -1238,7 +1249,7 @@
     async function deleteStudent(tz, name) {
         if (!confirm(`האם אתה בטוח שברצונך למחוק את ${name} (${tz})?\nפעולה זו אינה הפיכה.`)) return;
         try {
-            await fetch(`/api/students/${tz}`, { method: 'DELETE' });
+            await adminFetch(`/api/students/${tz}`, { method: 'DELETE' });
             allStudents = allStudents.filter(s => s.tz !== tz);
             updateStats();
             renderStudents();
@@ -1261,7 +1272,7 @@
         document.getElementById('drill-search').value = '';
 
         try {
-            const res = await fetch(`/api/admin/stat-users/${type}`);
+            const res = await adminFetch(`/api/admin/stat-users/${type}`);
             drillUsersData = await res.json();
             document.getElementById('drill-modal-title').textContent = `${label} – ${drillUsersData.length} משתמשים`;
             renderDrillUsers(drillUsersData);
@@ -1328,7 +1339,7 @@
         document.getElementById('activity-avatar').textContent = '?';
 
         try {
-            const res = await fetch(`/api/admin/user-activity/${tz}`);
+            const res = await adminFetch(`/api/admin/user-activity/${tz}`);
             const data = await res.json();
             renderUserActivity(data);
         } catch(e) {

@@ -84,6 +84,11 @@
 
           const tz = localStorage.getItem('student_tz') || '';
           const isAdminMode = sessionStorage.getItem('adminMode') === 'true';
+          const adminSessionId = sessionStorage.getItem('adminSessionId') || '';
+          const adminFetch = (url, options = {}) => {
+              options.headers = { ...options.headers, 'x-admin-session': adminSessionId };
+              return fetch(url, options);
+          };
           const [isAdmin, setIsAdmin] = React.useState(false);
           
           const [files, setFiles] = useState([]);
@@ -257,7 +262,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
           // Fetch users on load if admin
           useEffect(() => {
             if (isAdmin) {
-              fetch('/api/users').then(r => r.json()).then(setAllUsers).catch(console.error);
+              adminFetch('/api/users').then(r => r.json()).then(setAllUsers).catch(console.error);
             }
           }, [isAdmin]);
 
@@ -488,7 +493,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const savePermissions = async () => {
              try {
-                await fetch('/api/drive/permissions', {
+                await adminFetch('/api/drive/permissions', {
                    method: 'POST',
                    headers: { 'Content-Type': 'application/json' },
                    body: JSON.stringify({
@@ -513,7 +518,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const triggerCacheRefresh = async () => {
              try {
-                await fetch('/api/drive/refresh', { method: 'POST' });
+                await adminFetch('/api/drive/refresh', { method: 'POST' });
                 alert("רענון מטמון נשלח לשרת. זה עשוי לקחת כמה רגעים.");
              } catch(e) {
                 alert("שגיאה ברענון");
@@ -621,7 +626,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
 
           const saveCourseLink = async (courseId) => {
              try {
-                await fetch('/api/courses/link', {
+                await adminFetch('/api/courses/link', {
                    method: 'POST',
                    headers: { 'Content-Type': 'application/json' },
                    body: JSON.stringify({ courseId: courseId, folderPath: courseLinkModal.path })
