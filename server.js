@@ -978,6 +978,7 @@ const telegramState = {}; // tz -> { action: 'reply_student', tz }
 
 function handleTelegramMessage(msg, token) {
     console.log("Received Telegram message:", msg.text, "Message ID:", msg.message_id);
+    console.log("Telegram msg JSON:", JSON.stringify(msg));
     if (msg.reply_to_message) {
         console.log("This is a reply to message ID:", msg.reply_to_message.message_id);
         console.log("Current pending logins map:", global.adminPendingLogins);
