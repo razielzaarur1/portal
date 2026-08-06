@@ -988,44 +988,83 @@ function handleTelegramMessage(msg, token) {
     const text = msg.text;
     const chatId = msg.chat.id;
     
-    // Check if this is a reply to a login request message
+    // Check if we can identify a pending session ID
+    let sessionId = null;
+    let repliedMsgId = null;
+
+    // 1. Check if this is an explicit reply to a login request message
     if (msg.reply_to_message && msg.reply_to_message.message_id) {
-        const repliedMsgId = msg.reply_to_message.message_id;
+        repliedMsgId = msg.reply_to_message.message_id;
         global.adminPendingLogins = global.adminPendingLogins || {};
-        const sessionId = global.adminPendingLogins[repliedMsgId];
+        sessionId = global.adminPendingLogins[repliedMsgId];
         console.log("Matched session ID for reply:", sessionId);
+    }
+    
+    // 2. If it's a private chat and not an explicit reply, find the most recent pending session
+    if (!sessionId && msg.chat && msg.chat.type === 'private') {
+        let newestSessionId = null;
+        let newestTs = 0;
         
-        if (sessionId && adminSessions[sessionId]) {
-            const cleanText = text.trim();
-            if (cleanText === 'כן' || cleanText.toLowerCase() === 'yes') {
-                console.log("Approving admin session:", sessionId);
-                adminSessions[sessionId].approved = true;
-                sendTelegramMessage('✅ אושר סשן מנהל באמצעות תגובה!');
-                
-                // Remove buttons from original message
-                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
-                    chat_id: chatId,
-                    message_id: repliedMsgId,
-                    reply_markup: null
-                }).catch(()=>{});
-                
-                delete global.adminPendingLogins[repliedMsgId];
-                return;
-            } else if (cleanText === 'לא' || cleanText.toLowerCase() === 'no') {
-                console.log("Denying admin session:", sessionId);
-                adminSessions[sessionId].denied = true;
-                sendTelegramMessage('❌ סשן מנהל נדחה באמצעות תגובה');
-                
-                // Remove buttons from original message
-                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
-                    chat_id: chatId,
-                    message_id: repliedMsgId,
-                    reply_markup: null
-                }).catch(()=>{});
-                
-                delete global.adminPendingLogins[repliedMsgId];
-                return;
+        Object.keys(adminSessions).forEach(sid => {
+            const sess = adminSessions[sid];
+            if (!sess.approved && !sess.denied && sess.ts > newestTs) {
+                newestTs = sess.ts;
+                newestSessionId = sid;
             }
+        });
+        
+        sessionId = newestSessionId;
+        console.log("Matched newest pending session ID in private chat:", sessionId);
+    }
+    
+    if (sessionId && adminSessions[sessionId]) {
+        const cleanText = text.trim();
+        if (cleanText === 'כן' || cleanText.toLowerCase() === 'yes') {
+            console.log("Approving admin session:", sessionId);
+            adminSessions[sessionId].approved = true;
+            sendTelegramMessage('✅ אושר סשן מנהל!');
+            
+            // Clean up keyboard buttons on the original message if mapped
+            let mappedMsgId = repliedMsgId;
+            if (!mappedMsgId && global.adminPendingLogins) {
+                Object.keys(global.adminPendingLogins).forEach(msgId => {
+                    if (global.adminPendingLogins[msgId] === sessionId) {
+                        mappedMsgId = parseInt(msgId);
+                    }
+                });
+            }
+            if (mappedMsgId) {
+                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+                    chat_id: chatId,
+                    message_id: mappedMsgId,
+                    reply_markup: null
+                }).catch(()=>{});
+                delete global.adminPendingLogins[mappedMsgId];
+            }
+            return;
+        } else if (cleanText === 'לא' || cleanText.toLowerCase() === 'no') {
+            console.log("Denying admin session:", sessionId);
+            adminSessions[sessionId].denied = true;
+            sendTelegramMessage('❌ סשן מנהל נדחה');
+            
+            // Clean up keyboard buttons on the original message if mapped
+            let mappedMsgId = repliedMsgId;
+            if (!mappedMsgId && global.adminPendingLogins) {
+                Object.keys(global.adminPendingLogins).forEach(msgId => {
+                    if (global.adminPendingLogins[msgId] === sessionId) {
+                        mappedMsgId = parseInt(msgId);
+                    }
+                });
+            }
+            if (mappedMsgId) {
+                require('axios').post(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+                    chat_id: chatId,
+                    message_id: mappedMsgId,
+                    reply_markup: null
+                }).catch(()=>{});
+                delete global.adminPendingLogins[mappedMsgId];
+            }
+            return;
         }
     }
     
