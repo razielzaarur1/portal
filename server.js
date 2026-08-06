@@ -951,6 +951,7 @@ app.post('/api/auth/admin-login', authLimiter, (req, res) => {
             reply_markup: JSON.parse(keyboard)
         }).then(response => {
             const messageId = response.data?.result?.message_id;
+            console.log("Telegram login request sent. Message ID:", messageId, "Session ID:", sessionId);
             if (messageId) {
                 global.adminPendingLogins = global.adminPendingLogins || {};
                 global.adminPendingLogins[messageId] = sessionId;
@@ -976,6 +977,12 @@ let lastUpdateId = 0;
 const telegramState = {}; // tz -> { action: 'reply_student', tz }
 
 function handleTelegramMessage(msg, token) {
+    console.log("Received Telegram message:", msg.text, "Message ID:", msg.message_id);
+    if (msg.reply_to_message) {
+        console.log("This is a reply to message ID:", msg.reply_to_message.message_id);
+        console.log("Current pending logins map:", global.adminPendingLogins);
+    }
+    
     if (!msg.text) return;
     const text = msg.text;
     const chatId = msg.chat.id;
@@ -985,10 +992,12 @@ function handleTelegramMessage(msg, token) {
         const repliedMsgId = msg.reply_to_message.message_id;
         global.adminPendingLogins = global.adminPendingLogins || {};
         const sessionId = global.adminPendingLogins[repliedMsgId];
+        console.log("Matched session ID for reply:", sessionId);
         
         if (sessionId && adminSessions[sessionId]) {
             const cleanText = text.trim();
             if (cleanText === 'כן' || cleanText.toLowerCase() === 'yes') {
+                console.log("Approving admin session:", sessionId);
                 adminSessions[sessionId].approved = true;
                 sendTelegramMessage('✅ אושר סשן מנהל באמצעות תגובה!');
                 
@@ -1002,6 +1011,7 @@ function handleTelegramMessage(msg, token) {
                 delete global.adminPendingLogins[repliedMsgId];
                 return;
             } else if (cleanText === 'לא' || cleanText.toLowerCase() === 'no') {
+                console.log("Denying admin session:", sessionId);
                 adminSessions[sessionId].denied = true;
                 sendTelegramMessage('❌ סשן מנהל נדחה באמצעות תגובה');
                 
