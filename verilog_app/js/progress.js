@@ -3,6 +3,11 @@
    Handles LocalStorage state persistence, user code, streaks, and stats.
    ========================================================================== */
 
+class ProgressManager {
+  constructor() {
+    this.data = this.load();
+  }
+
   getStorageKey() {
     const tz = typeof localStorage !== 'undefined' ? localStorage.getItem('student_tz') : null;
     return tz ? `verilearn_user_progress_master_${tz}` : 'verilearn_user_progress_master_v1';
