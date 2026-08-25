@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  verilearn:
+    build: .
+    container_name: verilearn_app
+    ports:
+      - "8088:3001"
+    restart: always

@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Code Editor Styles (Mobile-optimized)
+   Explicit LTR isolation to prevent RTL text flipping in Hebrew mode
+   ========================================================================== */
+
+.editor-wrapper, 
+.editor-input-area, 
+.verilog-textarea, 
+.line-numbers, 
+#verilog-editor-mount {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+
+.editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  direction: ltr !important;
+}
+
+/* Snippets Toolbar */
+.editor-toolbar {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  white-space: nowrap;
+  direction: ltr !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.editor-toolbar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.editor-toolbar::-webkit-scrollbar-thumb {
+  background: var(--border-color-light);
+  border-radius: var(--radius-full);
+}
+
+.snippet-btn {
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  color: var(--accent-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono) !important;
+  font-size: 0.8rem;
+  font-weight: 500;
+  direction: ltr !important;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.snippet-btn:active {
+  transform: scale(0.94);
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* Editor Input & Line Numbers Layout */
+.editor-input-area {
+  display: flex;
+  min-height: 180px;
+  position: relative;
+  background: #0d1117;
+  direction: ltr !important;
+}
+
+.line-numbers {
+  width: 36px;
+  padding: var(--space-sm) 0;
+  text-align: center !important;
+  font-family: var(--font-family-mono) !important;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: #161b22;
+  border-right: 1px solid var(--border-color);
+  border-left: none;
+  user-select: none;
+  overflow: hidden;
+  line-height: 1.5;
+  direction: ltr !important;
+}
+
+.verilog-textarea {
+  flex: 1;
+  padding: var(--space-sm);
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-family: var(--font-family-mono) !important;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
+  direction: ltr !important;
+  text-align: left !important;
+}

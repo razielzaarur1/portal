@@ -80,6 +80,7 @@ db.serialize(() => {
         // Add columns if they don't exist (migration)
         db.run(`ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0`, () => {});
         db.run(`ALTER TABLE students ADD COLUMN chat_blocked INTEGER DEFAULT 0`, () => {});
+        db.run(`ALTER TABLE students ADD COLUMN verilearn_progress TEXT`, () => {});
     
         db.run(`CREATE TABLE IF NOT EXISTS page_views (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -247,6 +248,187 @@ app.get('/api/events/:tz', (req, res) => {
     req.on('close', () => {
         sseClients[tz] = sseClients[tz].filter(client => client !== res);
     });
+});
+
+// VeriLearn Progress Endpoints
+app.get('/api/students/:tz/verilearn', (req, res) => {
+    const tz = req.params.tz;
+    db.get("SELECT verilearn_progress FROM students WHERE tz = ?", [tz], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: "Not found" });
+        try {
+            const progress = JSON.parse(row.verilearn_progress || '{}');
+            res.json(progress);
+        } catch(e) {
+            res.json({});
+        }
+    });
+});
+
+app.patch('/api/students/:tz/verilearn', (req, res) => {
+    const tz = req.params.tz;
+    const progressData = JSON.stringify(req.body || {});
+    db.run("UPDATE students SET verilearn_progress = ? WHERE tz = ?", [progressData, tz], function(err) {
+        if (err) return res.status(500).json({ error: "Database error" });
+        res.json({ success: true });
+    });
+});
+
+// VeriLearn Icarus Verilog Compiler API
+const VL_KNOWN_OUTPUT_KEYS = [
+  'out', 'q', 'sum', 'cout', 'out_bitwise', 'out_logical', 'out_and', 'out_or',
+  'pwm_out', 'tx', 'tx_busy', 'rx_data', 'rx_done', 'baud_tick', 'sclk', 'mosi',
+  'ss', 'done', 'scl', 'sda', 'sda_oe', 'busy', 'empty', 'full', 'read_data1',
+  'read_data2', 'data_out', 'data_out_b', 'fifo_cnt', 'wr_ptr', 'rd_ptr', 'sp',
+  'read_val', 'reg_ctrl', 'reg_data0', 'reg_data1', 'z', 'y'
+];
+
+function generateVerilogTestbench(userCode, expectedOutputs) {
+  if (!expectedOutputs || expectedOutputs.length === 0) return '';
+  const sample0 = expectedOutputs[0];
+  const allKeys = Object.keys(sample0).filter(k => k !== 'time');
+  const outputKeys = allKeys.filter(k => VL_KNOWN_OUTPUT_KEYS.includes(k));
+
+  if (outputKeys.length === 0) {
+    if (allKeys.includes('q')) outputKeys.push('q');
+    else if (allKeys.includes('out')) outputKeys.push('out');
+    else outputKeys.push(allKeys[allKeys.length - 1]);
+  }
+
+  const actualInputKeys = allKeys.filter(k => !outputKeys.includes(k));
+
+  let tb = `\`timescale 1ns/1ps\nmodule tb;\n`;
+  actualInputKeys.forEach(k => { tb += `  reg [31:0] ${k};\n`; });
+  outputKeys.forEach(k => { tb += `  wire [31:0] ${k};\n`; });
+
+  tb += `\n  top_module uut (\n`;
+  const portConnections = [...actualInputKeys, ...outputKeys].map(k => `    .${k}(${k})`).join(',\n');
+  tb += portConnections + `\n  );\n\n`;
+
+  tb += `  initial begin\n    $display("=== START_SIM ===");\n`;
+  expectedOutputs.forEach((step, idx) => {
+    const delay = (idx === 0) ? 0 : 5;
+    if (delay > 0) tb += `    #${delay};\n`;
+    actualInputKeys.forEach(k => {
+      const val = step[k] !== undefined ? step[k] : 0;
+      tb += `    ${k} = 32'd${val};\n`;
+    });
+    tb += `    #1;\n`;
+    outputKeys.forEach(k => {
+      const expVal = step[k] !== undefined ? step[k] : 0;
+      tb += `    if (${k} !== 32'd${expVal}) begin\n`;
+      tb += `      $display("MISMATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, 32'd${expVal});\n`;
+      tb += `    end else begin\n`;
+      tb += `      $display("MATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, 32'd${expVal});\n`;
+      tb += `    end\n`;
+    });
+  });
+  tb += `    $display("=== END_SIM ===");\n    $finish;\n  end\nendmodule\n`;
+  return tb;
+}
+
+app.post('/api/compile', (req, res) => {
+  try {
+    const payload = req.body || {};
+    const userCode = payload.userCode || '';
+    const expectedOutputs = payload.expectedOutputs || [];
+
+    if (!userCode.trim()) {
+      return res.status(400).json({ compileError: true, log: '# Error: Code is empty.' });
+    }
+
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'verilearn-'));
+    const topPath = path.join(tmpDir, 'top_module.v');
+    const tbPath = path.join(tmpDir, 'tb.v');
+    const simPath = path.join(tmpDir, 'sim.out');
+
+    const tbCode = generateVerilogTestbench(userCode, expectedOutputs);
+    fs.writeFileSync(topPath, userCode);
+    fs.writeFileSync(tbPath, tbCode);
+
+    const cmdCompile = `iverilog -g2012 -o "${simPath}" "${topPath}" "${tbPath}"`;
+    exec(cmdCompile, (compileErr, stdout, stderr) => {
+      if (compileErr || (stderr && (stderr.includes('syntax error') || stderr.includes('error:')))) {
+        const rawErr = (stderr || stdout || compileErr.message);
+        const cleanErr = rawErr
+          .replace(new RegExp(tmpDir.replace(/\\/g, '\\\\'), 'g'), 'top_module.v')
+          .replace(/.*top_module\.v:/g, '# ** Error: top_module.v:');
+
+        const log = `\n# vlog top_module.v\n${cleanErr.trim()}\n# Errors: 1, Warnings: 0`.trim();
+
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+        return res.json({
+          compileError: true,
+          status: 'Compile Error',
+          log,
+          actualOutputs: [],
+          mismatches: expectedOutputs.length
+        });
+      }
+
+      const cmdSim = `vvp "${simPath}"`;
+      exec(cmdSim, (simErr, simStdout, simStderr) => {
+        let mismatches = 0;
+        const actualOutputsMap = {};
+
+        const lines = simStdout.split('\n');
+        lines.forEach(line => {
+          if (line.includes('MISMATCH')) {
+            mismatches++;
+          }
+          const match = line.match(/(?:MATCH|MISMATCH) time=(\d+) key=([a-zA-Z0-9_]+) act=([0-9xXzZ]+) exp=(\d+)/);
+          if (match) {
+            const time = parseInt(match[1], 10);
+            const key = match[2];
+            const actStr = match[3];
+            const act = (actStr.includes('z') || actStr.includes('x') || actStr.includes('Z') || actStr.includes('X')) ? 0 : parseInt(actStr, 10);
+            if (!actualOutputsMap[time]) {
+              actualOutputsMap[time] = { time };
+            }
+            actualOutputsMap[time][key] = act;
+          }
+        });
+
+        const actualOutputs = Object.values(actualOutputsMap);
+        const passed = mismatches === 0;
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toTimeString().split(' ')[0];
+
+        const log = `
+# do /home/h/hdlbits/runsim.do
+# Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+# Start time: ${timeStr} on ${dateStr}
+# vlog top_module.v
+# -- Compiling module top_module
+# Loading work.tb
+# Loading work.top_module
+#
+# Hint: Output has ${mismatches} mismatches.
+# Hint: Total mismatched samples is ${mismatches} out of ${expectedOutputs.length} samples
+#
+# Simulation finished at ${expectedOutputs.length * 5 + 10} ps
+# Mismatches: ${mismatches} in ${expectedOutputs.length} samples
+# Errors: 0, Warnings: ${mismatches > 0 ? 1 : 0}
+`.trim();
+
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+
+        res.json({
+          compileError: false,
+          passed,
+          status: passed ? 'Success' : 'Incorrect',
+          log,
+          actualOutputs,
+          mismatches,
+          totalSamples: expectedOutputs.length
+        });
+      });
+    });
+  } catch (err) {
+    res.status(500).json({ compileError: true, log: `# Internal Server Error: ${err.message}` });
+  }
 });
 
 function notifyClient(tz, eventType, payload = {}) {
