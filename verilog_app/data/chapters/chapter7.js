@@ -233,6 +233,7 @@ On the rising clock edge, shift bits leftward: the new input <code dir="ltr">in<
     input in,
     output reg [3:0] q
 );
+    initial q = 4'b0;
     // כתבו את לוגיקת אוגר ההזזה כאן / Write your shift register logic here
 
 endmodule`,
@@ -242,6 +243,7 @@ endmodule`,
     input in,
     output reg [3:0] q
 );
+    initial q = 4'b0;
     always @(posedge clk) begin
         q <= {q[2:0], in};
     end

@@ -554,14 +554,12 @@ endmodule
 module decoder_2to4 (
     input [1:0] in,
     input en,
-    input enable,
     output [3:0] out
 );
-    wire act_en = en | enable;
-    assign out[0] = act_en & (~in[1] & ~in[0]);
-    assign out[1] = act_en & (~in[1] &  in[0]);
-    assign out[2] = act_en & ( in[1] & ~in[0]);
-    assign out[3] = act_en & ( in[1] &  in[0]);
+    assign out[0] = en & (~in[1] & ~in[0]);
+    assign out[1] = en & (~in[1] &  in[0]);
+    assign out[2] = en & ( in[1] & ~in[0]);
+    assign out[3] = en & ( in[1] &  in[0]);
 endmodule
 `,
   decoder_3to8: `
@@ -654,20 +652,15 @@ module ram_block #(
     parameter ADDR_WIDTH = 4
 ) (
     input clk,
-    input we,
     input [ADDR_WIDTH-1:0] addr,
     input [DATA_WIDTH-1:0] wdata,
-    input [DATA_WIDTH-1:0] data_in,
-    output [DATA_WIDTH-1:0] rdata,
-    output [DATA_WIDTH-1:0] data_out
+    output [DATA_WIDTH-1:0] rdata
 );
     reg [DATA_WIDTH-1:0] memory [0:(1<<ADDR_WIDTH)-1];
-    wire [DATA_WIDTH-1:0] in_d = wdata | data_in;
     always @(posedge clk) begin
-        if (we) memory[addr] <= in_d;
+        memory[addr] <= wdata;
     end
     assign rdata = memory[addr];
-    assign data_out = memory[addr];
 endmodule
 `
 };
@@ -675,7 +668,6 @@ endmodule
 function getHelperDependencies(userCode) {
   const dependencies = [];
   const added = new Set();
-
   function scan(code) {
     for (const [name, modCode] of Object.entries(MODULE_LIBRARY)) {
       if (!added.has(name)) {
@@ -689,20 +681,15 @@ function getHelperDependencies(userCode) {
       }
     }
   }
-
   scan(userCode);
   return dependencies;
 }
 
-function getTopModuleName(userCode) {
-  const modMatches = [...userCode.matchAll(/\bmodule\s+([a-zA-Z0-9_]+)\b/g)].map(m => m[1]);
-  if (modMatches.includes('top_module')) return 'top_module';
-  if (modMatches.length > 0) return modMatches[modMatches.length - 1];
-  return 'top_module';
-}
+
 
 function parseVerilogPorts(userCode) {
-  const topName = getTopModuleName(userCode);
+  const modMatches = [...userCode.matchAll(/\bmodule\s+([a-zA-Z0-9_]+)\b/g)].map(m => m[1]);
+  const topName = modMatches.includes('top_module') ? 'top_module' : (modMatches[modMatches.length - 1] || 'top_module');
   const modRegex = new RegExp(`\\bmodule\\s+${topName}\\s*(?:#\\s*\\([^)]*\\)\\s*)?\\(([^;]*?)\\);`, 's');
   const match = userCode.match(modRegex);
   const inputs = [];
@@ -711,7 +698,6 @@ function parseVerilogPorts(userCode) {
   if (match) {
     const portListStr = match[1];
     const portDecls = portListStr.split(',').map(s => s.trim()).filter(Boolean);
-
     portDecls.forEach(decl => {
       const pMatch = decl.match(/(input|output)\s+(?:signed\s+)?(?:reg\s+|wire\s+)?(?:\[(\d+):(\d+)\]\s+)?([a-zA-Z0-9_]+)/);
       if (pMatch) {
@@ -725,7 +711,6 @@ function parseVerilogPorts(userCode) {
       }
     });
   }
-
   return { inputs, outputs, topName };
 }
 
@@ -775,12 +760,6 @@ function generateVerilogTestbench(userCode, expectedOutputs, lessonId) {
   tb += '        $dumpfile("/dump.vcd");\n';
   tb += '        $dumpvars(0, tb);\n\n';
 
-  // Initialize signals at t=0
-  inputs.forEach(inp => {
-    tb += `        ${inp.name} = 0;\n`;
-  });
-  tb += '        #1;\n\n';
-
   expectedOutputs.forEach((step, idx) => {
     tb += `        // Sample #${idx + 1}\n`;
     if (hasExplicitClk && step.clk !== undefined) {
@@ -816,9 +795,18 @@ function generateVerilogTestbench(userCode, expectedOutputs, lessonId) {
 
     outputs.forEach(out => {
       if (step[out.name] !== undefined) {
-        tb += `        if (^${out.name} !== 1'bx && ${out.name} !== ${out.width}'d${step[out.name]}) begin\n`;
-        tb += `            $display("  [MISMATCH at sample %0d] ${out.name}: Expected %0d, Got %0d", ${idx}, ${step[out.name]}, ${out.name});\n`;
-        tb += '            error_count = error_count + 1;\n';
+        tb += `        if (${out.name} !== ${out.width}'d${step[out.name]}) begin\n`;
+        if (idx === 0 && (hasClkPort || hasExplicitClk) && (step.clk === 0 || !hasExplicitClk)) {
+          tb += `            if (${out.name} === ${out.width}'bx) begin\n`;
+          tb += `                // Initial unclocked state (x) on sample 0 before first clock transition\n`;
+          tb += `            end else begin\n`;
+          tb += `                $display("  [MISMATCH at sample %0d] ${out.name}: Expected %0d, Got %b", ${idx}, ${step[out.name]}, ${out.name});\n`;
+          tb += '                error_count = error_count + 1;\n';
+          tb += `            end\n`;
+        } else {
+          tb += `            $display("  [MISMATCH at sample %0d] ${out.name}: Expected %0d, Got %b", ${idx}, ${step[out.name]}, ${out.name});\n`;
+          tb += '            error_count = error_count + 1;\n';
+        }
         tb += '        end\n';
       }
     });

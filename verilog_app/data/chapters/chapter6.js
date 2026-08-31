@@ -486,8 +486,12 @@ endmodule`,
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, clk: 0, reset: 1, t: 1, q: 0 },
-        { time: 5, clk: 1, reset: 0, t: 1, q: 1 }
+        { time: 0, clk: 0, reset: 1, t: 0, q: 0 },
+        { time: 5, clk: 1, reset: 1, t: 0, q: 0 },
+        { time: 10, clk: 0, reset: 0, t: 1, q: 0 },
+        { time: 15, clk: 1, reset: 0, t: 1, q: 1 },
+        { time: 20, clk: 0, reset: 0, t: 1, q: 1 },
+        { time: 25, clk: 1, reset: 0, t: 1, q: 0 }
       ],
 
       hints: {
