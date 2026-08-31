@@ -35,9 +35,18 @@ endmodule</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. איך מחברים חוט פיזי? ההוראה <code dir="ltr">assign</code> ⚡</h3>
-<p>הרכיב הבסיסי ביותר באלקטרוניקה הוא חוט נחושת פשוט (Wire). חוט מעביר אות כניסה ישירות אל היציאה.</p>
-<p>כדי ליצור חיבור רציף וקבוע בין יציאה לבין כניסה, משתמשים במילה השמורה <code dir="ltr">assign</code> לפי התבנית הבאה:</p>
+<h3>3. מהו הטיפוס wire ב-Verilog ואיך חוט פיזי עובד? ⚡</h3>
+<p>הרכיב הבסיסי ביותר באלקטרוניקה ובשפת Verilog הוא ה-<strong>wire (תיל / מוליך)</strong>.</p>
+<ul>
+  <li><strong>מוליך פיזי ללא זיכרון:</strong> חוט ב-Verilog אינו "משתנה" בתוכנה ששומר ערך בתא זיכרון. חוט הוא קו נחושת אמיתי שמעביר מתח חשמלי. ברגע שהאות בכניסה משתנה מ-0 ל-1, המתח בחוט משתנה מיידית ומשתקף בקצה השני!</li>
+  <li><strong>חוטים חיצוניים (Ports):</strong> פיני הכניסה (<code dir="ltr">input</code>) והיציאה (<code dir="ltr">output</code>) של המודול הם חוטי <code dir="ltr">wire</code> המקשרים את השבב אל העולם החיצון.</li>
+  <li><strong>חוטים פנימיים (Internal Wires):</strong> בהמשך הקורס נלמד להגדיר גם חוטים פנימיים בתוך המודול (למשל <code dir="ltr">wire my_signal;</code>) כדי לחבר בין שערים ומודולים שונים בתוך השבב.</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. איך מניעים חוט? ההוראה <code dir="ltr">assign</code> 🔌</h3>
+<p>כדי ליצור חיבור רציף וקבוע בין יציאה לבין כניסה, משתמשים במילה השמורה <code dir="ltr">assign</code> (השמה רציפה - Continuous Assignment) לפי התבנית הבאה:</p>
 
 <pre dir="ltr"><code>assign destination_port = source_port;</code></pre>
 
@@ -50,13 +59,13 @@ endmodule</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>4. דוגמה מעשית (חיבור מתג לנורה) 💡</h3>
+<h3>5. דוגמה מעשית (חיבור מתג לנורה) 💡</h3>
 <p>נניח שיש לנו מתג בקיר המחובר ישירות לנורת תאורה. נתאר זאת בחומרה בעזרת מודול גנרי:</p>
 <pre dir="ltr"><code>module light_switch (
     input  switch_state,
     output bulb_power
 );
-    // חיבור המתג לנורה באופן ישיר
+    // חיבור המתג לנורה באופן ישיר דרך חוט
     assign bulb_power = switch_state;
 endmodule</code></pre>
 `,
@@ -81,9 +90,18 @@ endmodule</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. Connecting Signals: The <code dir="ltr">assign</code> Statement ⚡</h3>
-<p>The simplest connection in hardware is a wire. A wire continuously passes an incoming signal directly to an output.</p>
-<p>To create a continuous connection from a source signal to a target output port, we use the <code dir="ltr">assign</code> keyword using this pattern:</p>
+<h3>3. What is a "wire" in Verilog? ⚡</h3>
+<p>The fundamental data type and connectivity primitive in digital hardware is the <strong>wire</strong>.</p>
+<ul>
+  <li><strong>Physical Conductor Without Memory:</strong> A <code dir="ltr">wire</code> is not a software variable stored in RAM. It represents a physical trace of copper on silicon carrying continuous electrical voltage. When the driver signal changes, the wire immediately reflects the new state at zero latency in ideal simulation.</li>
+  <li><strong>External Port Wires:</strong> The <code dir="ltr">input</code> and <code dir="ltr">output</code> ports of a module are wires connecting the module to external pins.</li>
+  <li><strong>Internal Wires:</strong> Inside a module, we can declare internal wires (<code dir="ltr">wire temp_signal;</code>) to connect outputs of sub-blocks to inputs of other gates.</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. Driving a Wire: The <code dir="ltr">assign</code> Statement ⚡</h3>
+<p>To create a continuous electrical driver for a wire or output port, we use the <code dir="ltr">assign</code> keyword (Continuous Assignment):</p>
 
 <pre dir="ltr"><code>assign destination_port = source_port;</code></pre>
 
@@ -96,7 +114,7 @@ endmodule</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>4. Generic Example (Switch to Bulb Connection) 💡</h3>
+<h3>5. Practical Example (Switch to Bulb Connection) 💡</h3>
 <p>Consider a simple wall switch connected directly to a light bulb. We can model this connection as follows:</p>
 <pre dir="ltr"><code>module light_switch (
     input  switch_state,

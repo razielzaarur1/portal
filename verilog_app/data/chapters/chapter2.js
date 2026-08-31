@@ -663,49 +663,87 @@ endmodule`,
 
       explanationHe: `
 <h3>1. מהו מחבר מלא (Full Adder)? ➕➕</h3>
-<p>חצי מחבר יודע לחבר רק 2 ביטים, אך כדי לחבר מספרים רב-ביטיים אנו חייבים להעביר נשיאה (Carry) משלב לשלב. <strong>מחבר מלא (Full Adder)</strong> פותר זאת: הוא מקבל 3 כניסות של 1-ביט:</p>
+<p>בעוד שחצי מחבר (Half Adder) יודע לחבר רק 2 ביטים בודדים, מעגלי חישוב אמיתיים במעבדים נדרשים לחבר מספרים רב-ביטיים (כמו 32 או 64 ביט). כאשר מחברים עמודות ביטים, עמודה עשויה לקבל <strong>נשיאה (Carry In)</strong> מהעמודה הקודמת לה!</p>
+<p><strong>מחבר מלא (Full Adder)</strong> מקבל 3 כניסות של 1-ביט:</p>
 <ul>
-  <li><code dir="ltr">a</code> ו-<code dir="ltr">b</code>: שני ביטי הנתונים לחיבור בעמדה הנוכחית.</li>
-  <li><code dir="ltr">cin</code>: ביט הנשיאה המגיע מהחישוב של השלב הפחות משמעותי הקודם (Carry In).</li>
+  <li><code dir="ltr">a</code> ו-<code dir="ltr">b</code>: שני הביטים לחיבור בעמודה הנוכחית.</li>
+  <li><code dir="ltr">cin</code>: ביט הנשיאה שנכנס מהעמודה הפחות-משמעותית הקודמת (Carry In).</li>
 </ul>
-<p>הוא מחשב את הסכום הכולל $a + b + cin$ ומפיק את היציאות <code dir="ltr">sum</code> ו-<code dir="ltr">cout</code>.</p>
+<p>הוא מחשב את הסכום האריתמטי הכולל: $a + b + cin$ ומפיק שתי יציאות: סכום (<code dir="ltr">sum</code>) ונשיאה יוצאת (<code dir="ltr">cout</code>).</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. פילוסופיית אבני הבניין: בניית Full Adder מתוך 2 Half Adders 🧱</h3>
-<p>בתכנון חומרה מודרני אנו נמנעים מלוגיקה מונוליתית ומשתמשים ב<strong>אבני בניין היררכיות (Building Blocks)</strong>. מחבר מלא נבנה בצורה אלגנטית בעזרת <strong>2 חצי-מחברים ושער OR יחיד</strong>:</p>
+<h3>2. מהו חוט פנימי (Internal wire) ומדוע הוא נחוץ? ⚡</h3>
+<p>עד כה השתמשנו רק בפורטים החיצוניים של המודול (<code dir="ltr">input</code> ו-<code dir="ltr">output</code>). אך כאשר אנו מחברים מספר רכיבים בתוך מודול, אנו זקוקים ל<strong>חוטי ביניים פנימיים (Internal Wires)</strong> כדי להעביר את האותות ביניהם!</p>
+<ul>
+  <li><strong>הכרזת חוט פנימי:</strong> נכתבת בגוף המודול באמצעות המילה השמורה <code dir="ltr">wire</code>:
+    <pre dir="ltr"><code>wire s1, c1, c2;</code></pre>
+  </li>
+  <li><strong>תפקיד החוט:</strong> חוט פנימי מחבר פיזית בין יציאה של תת-מודול אחד לבין כניסה של תת-מודול אחר. הוא אינו שומר זיכרון, אלא מוליך מתח חשמלי באופן רציף ומיידי.</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. איך ממשים מודול בתוך מודול אחר? (Module Instantiation) 🧱</h3>
+<p>בדיוק כפי שבתוכנה אנו יוצרים מופע של מחלקה או קוראים לפונקציה, בתכנון חומרה אנו יוצרים <strong>מופע חומרתי (Instance)</strong> של מודול קיים בתוך מודול אב. תהליך זה נקרא <strong>אינסטנסיאציה</strong>.</p>
+<p>התחביר המקצועי והבטוח ביותר ב-Verilog נקרא <strong>חיבור לפי שם (Named Port Mapping)</strong>:</p>
+
+<pre dir="ltr"><code>// תבנית אינסטנסיאציה
+module_name instance_name (
+    .port_name_in_submodule (signal_in_current_module),
+    .another_port           (another_signal)
+);</code></pre>
+
+<p><strong>הסבר ארבעת המרכיבים:</strong></p>
 <ol>
-  <li><strong>שלב 1 (חצי מחבר ראשון <code dir="ltr">ha1</code>)</strong>: מחבר את <code dir="ltr">a</code> ו-<code dir="ltr">b</code> ומפיק סכום ביניים <code dir="ltr">s1 = a ^ b</code> ונשיאת ביניים <code dir="ltr">c1 = a &amp; b</code>.</li>
-  <li><strong>שלב 2 (חצי מחבר שני <code dir="ltr">ha2</code>)</strong>: מחבר את סכום הביניים <code dir="ltr">s1</code> יחד עם הנשיאה בכניסה <code dir="ltr">cin</code>, ומפיק את הסכום הסופי <code dir="ltr">sum = s1 ^ cin = a ^ b ^ cin</code> ונשיאת ביניים שנייה <code dir="ltr">c2 = s1 &amp; cin</code>.</li>
-  <li><strong>שלב 3 (שער OR לנשיאה החוצה)</strong>: נשיאה כוללת (<code dir="ltr">cout</code>) נוצרת אם השלב הראשון הפיק נשיאה (<code dir="ltr">c1</code>) <strong>או</strong> אם השלב השני הפיק נשיאה (<code dir="ltr">c2</code>): <code dir="ltr">cout = c1 | c2</code>.</li>
+  <li><strong><code dir="ltr">module_name</code> (שם המודול המקורי)</strong>: סוג הרכיב שנרצה להטמיע (לדוגמה: <code dir="ltr">half_adder</code>).</li>
+  <li><strong><code dir="ltr">instance_name</code> (שם המופע)</strong>: שם ייחודי שאתם נותנים לרכיב הספציפי על הלוח (למשל: <code dir="ltr">ha1</code>, <code dir="ltr">ha2</code>).</li>
+  <li><strong>הנקודה ושם הפורט (<code dir="ltr">.port_name</code>)</strong>: שם הפין המקורי <strong>כפי שהוגדר בתת-המודול</strong> (למשל: <code dir="ltr">.a</code>, <code dir="ltr">.b</code>, <code dir="ltr">.sum</code>, <code dir="ltr">.cout</code>). הנקודה אומרת לקומפיילר "גש לפין הזה ברכיב הפנימי".</li>
+  <li><strong>בתוך הסוגריים <code dir="ltr">(signal_name)</code></strong>: החוט, הכניסה או היציאה <strong>במודול הנוכחי שלכם</strong> שמתחבר לאותו פין.</li>
 </ol>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. דיאגרמת חיווט סכמטית (Wiring Diagram) 📐</h3>
+<h3>4. ארכיטקטורת מגדל הלבנים: מחבר מלא מ-2 חצי מחברים 🏗️</h3>
+<p>נרכיב את ה-Full Adder מתוך שני מופעים של <code dir="ltr">half_adder</code> ושער OR יחיד:</p>
+<ol>
+  <li><strong>מופע ראשון (<code dir="ltr">ha1</code>)</strong>: מחבר את <code dir="ltr">a</code> ו-<code dir="ltr">b</code> ומפיק סכום ביניים <code dir="ltr">s1</code> ונשיאת ביניים <code dir="ltr">c1</code>.
+    <pre dir="ltr"><code>half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1));</code></pre>
+  </li>
+  <li><strong>מופע שני (<code dir="ltr">ha2</code>)</strong>: מחבר את סכום הביניים <code dir="ltr">s1</code> יחד עם הנשיאה בכניסה <code dir="ltr">cin</code>, ומפיק את הסכום הסופי <code dir="ltr">sum</code> ונשיאת ביניים נוספת <code dir="ltr">c2</code>.
+    <pre dir="ltr"><code>half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2));</code></pre>
+  </li>
+  <li><strong>שער OR סופי</strong>: נשיאה סופית <code dir="ltr">cout</code> מתקבלת אם נוצרה נשיאה בשלב הראשון <strong>או</strong> בשלב השני:
+    <pre dir="ltr"><code>assign cout = c1 | c2;</code></pre>
+  </li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. תרשים חיווט סכמטי (Schematic Wiring Diagram) 📐</h3>
 <pre dir="ltr"><code>               ┌─────────────────────────────────────────────────────────────┐
                │                        full_adder                           │
                │                                                             │
                │        ┌──────────────┐                                     │
- a ────────────┼───────►│a             │                                     │
-               │        │  ha1 (Half)  ├── s1 ──────┐                        │
- b ────────────┼───────►│b        sum  │            │  ┌──────────────┐      │
-               │        │              │            └─►│a             │      │
-               │        │         cout ├── c1 ──┐      │  ha2 (Half)  ├─── sum ──► sum
-               │        └──────────────┘        │   ┌─►│b        sum  │      │
-               │                                │   │  │              │      │
- cin ──────────┼────────────────────────────────┼───┘  │         cout ├── c2 ┐
-               │                                │      └──────────────┘   │  │
-               │                                └─────────┐   ┌───────────┘  │
-               │                                          ▼   ▼              │
-               │                                        ┌───────┐            │
-               │                                        │  OR   ├──── cout ──────► cout
-               │                                        └───────┘            │
+ a ────────────┼───────►│.a            │                                     │
+               │        │  ha1 (Half)  ├── .sum (s1) ──┐                     │
+ b ────────────┼───────►│.b            │               │  ┌──────────────┐   │
+               │        │              │               └─►│.a            │   │
+               │        │        .cout ├── (c1) ──┐       │  ha2 (Half)  ├─── .sum (sum) ──► sum
+               │        └──────────────┘          │    ┌─►│.b            │   │
+               │                                  │    │  │              │   │
+ cin ──────────┼──────────────────────────────────┼────┘  │        .cout ├─── (c2) ┐
+               │                                  │       └──────────────┘     │   │
+               │                                  └─────────┐    ┌─────────────┘   │
+               │                                            ▼    ▼                 │
+               │                                          ┌────────┐               │
+               │                                          │   OR   ├───── cout ────────► cout
+               │                                          └────────┘               │
                └─────────────────────────────────────────────────────────────┘</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>4. טבלת אמת של מחבר מלא 📊</h3>
+<h3>6. טבלת אמת של מחבר מלא 📊</h3>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
     <tr><th>a</th><th>b</th><th>cin</th><th>Sum (סכום)</th><th>Cout (נשיאה)</th><th>חישוב אריתמטי</th></tr>
@@ -725,49 +763,87 @@ endmodule`,
 
       explanationEn: `
 <h3>1. What is a Full Adder? ➕➕</h3>
-<p>While a Half Adder only adds 2 bits, real-world processors must propagate carries across multi-bit words. A <strong>Full Adder</strong> adds three 1-bit inputs:</p>
+<p>While a Half Adder only adds 2 bits, real-world processors must propagate carries across multi-bit words (such as 32-bit or 64-bit ALUs). When adding bit columns, a stage receives a <strong>Carry In (<code dir="ltr">cin</code>)</strong> from the preceding column!</p>
+<p>A <strong>Full Adder</strong> has 3 1-bit inputs:</p>
 <ul>
-  <li><code dir="ltr">a</code> and <code dir="ltr">b</code>: The two data operand bits at the current bit position.</li>
-  <li><code dir="ltr">cin</code>: The incoming carry bit from the adjacent less-significant stage (Carry In).</li>
+  <li><code dir="ltr">a</code> and <code dir="ltr">b</code>: The two data operand bits at the current position.</li>
+  <li><code dir="ltr">cin</code>: The incoming carry bit from the less-significant stage (Carry In).</li>
 </ul>
-<p>It computes the total arithmetic sum $a + b + cin$ and outputs <code dir="ltr">sum</code> and <code dir="ltr">cout</code>.</p>
+<p>It computes the total arithmetic sum: $a + b + cin$ and drives two outputs: the sum bit (<code dir="ltr">sum</code>) and carry out (<code dir="ltr">cout</code>).</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. The Building Blocks Philosophy: Full Adder from 2 Half Adders 🧱</h3>
-<p>In digital design, scalable architectures are built by combining reusable modular components. A Full Adder is hierarchically constructed using <strong>two <code dir="ltr">half_adder</code> instances and one OR gate</strong>:</p>
+<h3>2. What is an Internal "wire" and Why is it Essential? ⚡</h3>
+<p>Until now, we only used the external interface ports of a module (<code dir="ltr">input</code> and <code dir="ltr">output</code>). When connecting multiple sub-components inside a module, we need <strong>Internal Wires</strong> to route intermediate signals between them!</p>
+<ul>
+  <li><strong>Declaring Internal Wires:</strong> Declared inside the module body with the <code dir="ltr">wire</code> keyword:
+    <pre dir="ltr"><code>wire s1, c1, c2;</code></pre>
+  </li>
+  <li><strong>How Wires Work:</strong> An internal wire physically routes continuous electrical voltage from the output of one sub-module to the input of another. It holds no memory.</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. How to Instantiate a Module Inside Another Module (Module Instantiation) 🧱</h3>
+<p>Just as software instantiates a class or invokes a function, hardware design instantiates a physical hardware block (an <strong>Instance</strong>) of an existing module inside a parent module. This process is called <strong>Module Instantiation</strong>.</p>
+<p>The standard, industry-recommended syntax is <strong>Named Port Connection (.port)</strong>:</p>
+
+<pre dir="ltr"><code>// Instantiation Template
+module_name instance_name (
+    .port_name_in_submodule (signal_in_current_module),
+    .another_port           (another_signal)
+);</code></pre>
+
+<p><strong>The Four Core Components:</strong></p>
 <ol>
-  <li><strong>Stage 1 (First Half Adder <code dir="ltr">ha1</code>)</strong>: Adds <code dir="ltr">a</code> and <code dir="ltr">b</code> to generate intermediate sum <code dir="ltr">s1 = a ^ b</code> and intermediate carry <code dir="ltr">c1 = a &amp; b</code>.</li>
-  <li><strong>Stage 2 (Second Half Adder <code dir="ltr">ha2</code>)</strong>: Adds intermediate sum <code dir="ltr">s1</code> with <code dir="ltr">cin</code>, yielding final sum <code dir="ltr">sum = s1 ^ cin = a ^ b ^ cin</code> and second intermediate carry <code dir="ltr">c2 = s1 &amp; cin</code>.</li>
-  <li><strong>Stage 3 (Carry Out OR Gate)</strong>: Overall carry out <code dir="ltr">cout</code> is active if either the first stage produced a carry (<code dir="ltr">c1</code>) <strong>OR</strong> the second stage produced a carry (<code dir="ltr">c2</code>): <code dir="ltr">cout = c1 | c2</code>.</li>
+  <li><strong><code dir="ltr">module_name</code></strong>: The template name of the sub-module (e.g. <code dir="ltr">half_adder</code>).</li>
+  <li><strong><code dir="ltr">instance_name</code></strong>: A unique name given to this specific copy on the board (e.g. <code dir="ltr">ha1</code>, <code dir="ltr">ha2</code>).</li>
+  <li><strong>The Dot and Port Name (<code dir="ltr">.port_name</code>)</strong>: The pin name <strong>as defined inside the sub-module</strong> (e.g. <code dir="ltr">.a</code>, <code dir="ltr">.b</code>, <code dir="ltr">.sum</code>, <code dir="ltr">.cout</code>). The dot tells the compiler "connect to this specific internal pin".</li>
+  <li><strong>Inside Parentheses <code dir="ltr">(signal_name)</code></strong>: The wire or port in your <strong>parent module</strong> that attaches to that pin.</li>
 </ol>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. Schematic Wiring Diagram 📐</h3>
+<h3>4. The Building Blocks Architecture: Full Adder from 2 Half Adders 🏗️</h3>
+<p>We build a Full Adder by instantiating two <code dir="ltr">half_adder</code> units and one OR gate:</p>
+<ol>
+  <li><strong>First Instance (<code dir="ltr">ha1</code>)</strong>: Adds <code dir="ltr">a</code> and <code dir="ltr">b</code> to produce intermediate sum <code dir="ltr">s1</code> and intermediate carry <code dir="ltr">c1</code>.
+    <pre dir="ltr"><code>half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1));</code></pre>
+  </li>
+  <li><strong>Second Instance (<code dir="ltr">ha2</code>)</strong>: Adds intermediate sum <code dir="ltr">s1</code> with carry-in <code dir="ltr">cin</code>, producing final <code dir="ltr">sum</code> and second intermediate carry <code dir="ltr">c2</code>.
+    <pre dir="ltr"><code>half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2));</code></pre>
+  </li>
+  <li><strong>Final OR Gate</strong>: Carry-out <code dir="ltr">cout</code> is active if a carry occurred in stage 1 <strong>or</strong> stage 2:
+    <pre dir="ltr"><code>assign cout = c1 | c2;</code></pre>
+  </li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. Schematic Wiring Diagram 📐</h3>
 <pre dir="ltr"><code>               ┌─────────────────────────────────────────────────────────────┐
                │                        full_adder                           │
                │                                                             │
                │        ┌──────────────┐                                     │
- a ────────────┼───────►│a             │                                     │
-               │        │  ha1 (Half)  ├── s1 ──────┐                        │
- b ────────────┼───────►│b        sum  │            │  ┌──────────────┐      │
-               │        │              │            └─►│a             │      │
-               │        │         cout ├── c1 ──┐      │  ha2 (Half)  ├─── sum ──► sum
-               │        └──────────────┘        │   ┌─►│b        sum  │      │
-               │                                │   │  │              │      │
- cin ──────────┼────────────────────────────────┼───┘  │         cout ├── c2 ┐
-               │                                │      └──────────────┘   │  │
-               │                                └─────────┐   ┌───────────┘  │
-               │                                          ▼   ▼              │
-               │                                        ┌───────┐            │
-               │                                        │  OR   ├──── cout ──────► cout
-               │                                        └───────┘            │
+ a ────────────┼───────►│.a            │                                     │
+               │        │  ha1 (Half)  ├── .sum (s1) ──┐                     │
+ b ────────────┼───────►│.b            │               │  ┌──────────────┐   │
+               │        │              │               └─►│.a            │   │
+               │        │        .cout ├── (c1) ──┐       │  ha2 (Half)  ├─── .sum (sum) ──► sum
+               │        └──────────────┘          │    ┌─►│.b            │   │
+               │                                  │    │  │              │   │
+ cin ──────────┼──────────────────────────────────┼────┘  │        .cout ├─── (c2) ┐
+               │                                  │       └──────────────┘     │   │
+               │                                  └─────────┐    ┌─────────────┘   │
+               │                                            ▼    ▼                 │
+               │                                          ┌────────┐               │
+               │                                          │   OR   ├───── cout ────────► cout
+               │                                          └────────┘               │
                └─────────────────────────────────────────────────────────────┘</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>4. Full Adder Truth Table 📊</h3>
+<h3>6. Full Adder Truth Table 📊</h3>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
     <tr><th>a</th><th>b</th><th>cin</th><th>Sum</th><th>Cout</th><th>Arithmetic Equation</th></tr>
