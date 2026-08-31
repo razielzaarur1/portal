@@ -274,57 +274,121 @@ app.patch('/api/students/:tz/verilearn', (req, res) => {
 });
 
 // VeriLearn Icarus Verilog Compiler API
-const VL_KNOWN_OUTPUT_KEYS = [
-  'out', 'q', 'sum', 'cout', 'out_bitwise', 'out_logical', 'out_and', 'out_or',
-  'pwm_out', 'tx', 'tx_busy', 'rx_data', 'rx_done', 'baud_tick', 'sclk', 'mosi',
-  'ss', 'done', 'scl', 'sda', 'sda_oe', 'busy', 'empty', 'full', 'read_data1',
-  'read_data2', 'data_out', 'data_out_b', 'fifo_cnt', 'wr_ptr', 'rd_ptr', 'sp',
-  'read_val', 'reg_ctrl', 'reg_data0', 'reg_data1', 'z', 'y'
-];
+// Parse actual input/output port names from a Verilog module declaration.
+// Handles ANSI-style ports (one per line OR comma-separated inline).
+function parseVerilogPorts(userCode) {
+  const inputs = new Set();
+  const outputs = new Set();
+
+  // Strip comments
+  const clean = userCode
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Strategy: scan every occurrence of 'input'/'output' keyword individually.
+  // After the keyword (and optional type/range), capture the SINGLE identifier that follows.
+  // This works for both:
+  //   input a, input b  (inline, one keyword per name)
+  //   input a, b        (one keyword, multiple names separated by commas)
+  // 
+  // Two-pass:
+  //  Pass 1: match 'input/output KEYWORD name' → each keyword owns exactly one name (after type/range)
+  //  Pass 2: if names are grouped (e.g. "input a, b, c;"), capture all names after one keyword
+
+  // We'll do a unified approach: for each keyword occurrence, grab up to the next keyword or line end
+  const portRe = /\b(input|output)\s+(?:wire\s+|reg\s+)?(?:\[\s*\d+\s*:\s*\d+\s*\]\s+)?([a-zA-Z_][a-zA-Z0-9_]*)/g;
+
+  let m;
+  while ((m = portRe.exec(clean)) !== null) {
+    const dir = m[1];
+    const name = m[2];
+    if (dir === 'input') inputs.add(name);
+    else outputs.add(name);
+  }
+
+  return { inputs, outputs };
+}
+
+
 
 function generateVerilogTestbench(userCode, expectedOutputs) {
   if (!expectedOutputs || expectedOutputs.length === 0) return '';
+
   const sample0 = expectedOutputs[0];
   const allKeys = Object.keys(sample0).filter(k => k !== 'time');
-  const outputKeys = allKeys.filter(k => VL_KNOWN_OUTPUT_KEYS.includes(k));
 
-  if (outputKeys.length === 0) {
-    if (allKeys.includes('q')) outputKeys.push('q');
-    else if (allKeys.includes('out')) outputKeys.push('out');
-    else outputKeys.push(allKeys[allKeys.length - 1]);
+  // Parse actual port declarations from user code
+  const { inputs: parsedInputs, outputs: parsedOutputs } = parseVerilogPorts(userCode);
+
+  let inputKeys, outputKeys;
+
+  if (parsedInputs.size > 0 || parsedOutputs.size > 0) {
+    // Use the parsed ports to classify test vector keys
+    outputKeys = allKeys.filter(k => parsedOutputs.has(k));
+    inputKeys  = allKeys.filter(k => parsedInputs.has(k));
+
+    // Any test-vector key not found in parsed ports: guess by position/name
+    const unclassified = allKeys.filter(k => !parsedInputs.has(k) && !parsedOutputs.has(k));
+    unclassified.forEach(k => {
+      // If the key looks like an output name (starts with out_, ends with _out, or is q/sum/y/z etc.)
+      if (/^out_|_out$|^(q|sum|y|z|cout|done|valid|busy|full|empty|segments|dout)$/.test(k)) {
+        outputKeys.push(k);
+      } else {
+        inputKeys.push(k);
+      }
+    });
+  } else {
+    // Fallback: no ports found in code — treat last key as output, rest as inputs
+    outputKeys = [allKeys[allKeys.length - 1]];
+    inputKeys  = allKeys.slice(0, -1);
   }
 
-  const actualInputKeys = allKeys.filter(k => !outputKeys.includes(k));
+  // Safety: if still no output keys, treat last key as output
+  if (outputKeys.length === 0 && allKeys.length > 0) {
+    outputKeys = [allKeys[allKeys.length - 1]];
+    inputKeys  = allKeys.filter(k => !outputKeys.includes(k));
+  }
+
+  // Determine bit width for each signal from user code (default 1-bit for simple signals)
+  function getWidth(sigName) {
+    const widthRe = new RegExp(`(?:input|output|wire|reg)\\s+(?:wire\\s+|reg\\s+)?\\[(\\d+):(\\d+)\\]\\s+[^;]*\\b${sigName}\\b`);
+    const wm = userCode.match(widthRe);
+    if (wm) return Math.abs(parseInt(wm[1]) - parseInt(wm[2])) + 1;
+    // Multi-bit names common in datapaths
+    if (/addr|data|imm|pc|opcode|alu_op|segments/.test(sigName)) return 32;
+    return 1; // Default: single bit
+  }
 
   let tb = `\`timescale 1ns/1ps\nmodule tb;\n`;
-  actualInputKeys.forEach(k => { tb += `  reg [31:0] ${k};\n`; });
-  outputKeys.forEach(k => { tb += `  wire [31:0] ${k};\n`; });
+  inputKeys.forEach(k  => { const w = getWidth(k);  tb += w > 1 ? `  reg [${w-1}:0] ${k};\n` : `  reg ${k};\n`; });
+  outputKeys.forEach(k => { const w = getWidth(k);  tb += w > 1 ? `  wire [${w-1}:0] ${k};\n` : `  wire ${k};\n`; });
 
   tb += `\n  top_module uut (\n`;
-  const portConnections = [...actualInputKeys, ...outputKeys].map(k => `    .${k}(${k})`).join(',\n');
-  tb += portConnections + `\n  );\n\n`;
+  tb += [...inputKeys, ...outputKeys].map(k => `    .${k}(${k})`).join(',\n');
+  tb += `\n  );\n\n`;
 
   tb += `  initial begin\n    $display("=== START_SIM ===");\n`;
   expectedOutputs.forEach((step, idx) => {
-    const delay = (idx === 0) ? 0 : 5;
+    const delay = idx === 0 ? 0 : 5;
     if (delay > 0) tb += `    #${delay};\n`;
-    actualInputKeys.forEach(k => {
+    inputKeys.forEach(k => {
       const val = step[k] !== undefined ? step[k] : 0;
-      tb += `    ${k} = 32'd${val};\n`;
+      tb += `    ${k} = ${val};\n`;
     });
     tb += `    #1;\n`;
     outputKeys.forEach(k => {
       const expVal = step[k] !== undefined ? step[k] : 0;
-      tb += `    if (${k} !== 32'd${expVal}) begin\n`;
-      tb += `      $display("MISMATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, 32'd${expVal});\n`;
+      tb += `    if (${k} !== ${expVal}) begin\n`;
+      tb += `      $display("MISMATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, ${expVal});\n`;
       tb += `    end else begin\n`;
-      tb += `      $display("MATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, 32'd${expVal});\n`;
+      tb += `      $display("MATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, ${expVal});\n`;
       tb += `    end\n`;
     });
   });
   tb += `    $display("=== END_SIM ===");\n    $finish;\n  end\nendmodule\n`;
   return tb;
 }
+
 
 app.post('/api/compile', (req, res) => {
   try {
