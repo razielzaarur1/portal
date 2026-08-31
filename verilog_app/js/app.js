@@ -334,7 +334,13 @@ class AppRouter {
       // 1. Render ModelSim / Icarus Verilog Console Output
       if (logBox) logBox.textContent = result.log || '(no console output)';
 
-      // 2. Render HDLBits Status Banner
+      // 2. Render Engine Badge & HDLBits Status Banner
+      const engineBadge = `
+        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: ${result.isWasm ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; color: ${result.isWasm ? '#10b981' : '#f59e0b'}; margin-bottom: 12px; border: 1px solid ${result.isWasm ? '#10b981' : '#f59e0b'};">
+          ${result.isWasm ? '⚡ מנוע: Icarus Verilog WebAssembly (WASM — 100% Client-Side)' : '⚠️ מנוע: Local JavaScript Evaluator (Fallback)'}
+        </div>
+      `;
+
       if (result.passed) {
         window.Progress.completeLesson(lesson.id);
         const nextLessonId = lesson.id + 1;
@@ -342,6 +348,7 @@ class AppRouter {
         const nextTarget = nextLesson ? `#lesson/${nextLessonId}` : '#lessons';
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
+            ${engineBadge}
             <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 4px;">Status: Success! ✅</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
               ${t('successMsg')}
@@ -352,6 +359,7 @@ class AppRouter {
       } else if (result.status === 'Compile Error') {
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
+            ${engineBadge}
             <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Compile Error! ⚠️</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary);">
               Please check the syntax errors reported in the compiler log above.
@@ -361,6 +369,7 @@ class AppRouter {
       } else {
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
+            ${engineBadge}
             <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Incorrect! ❌</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary);">
               Output has <strong>${result.mismatches !== undefined ? result.mismatches : 'some'}</strong> mismatches out of ${result.totalSamples || (lesson.expectedOutputs || []).length} samples. Check the timing diagram comparison below.

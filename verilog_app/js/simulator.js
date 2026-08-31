@@ -893,7 +893,7 @@ class SimulationManager {
           userCode,
           testbenchCode,
           dependencies,
-          generation: '2005'
+          generation: '2012'
         });
 
         // Set a 15-second timeout safeguard
@@ -918,64 +918,15 @@ class SimulationManager {
       }
     }
 
-    // 2. Fallback: Server API or LocalSimulator
-    try {
-      const response = await fetch('/api/compile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userCode,
-          expectedOutputs: expected,
-          lessonId: lesson.id
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const actualOutputs = result.actualOutputs || [];
-        const outputKeys = Object.keys(expected[0] || {}).filter(k => k !== 'time');
-        const mainKey = outputKeys[0] || 'q';
-
-        const comparisons = expected.map((exp, idx) => {
-          const act = actualOutputs[idx] || {};
-          let isMismatch = false;
-          for (const key of outputKeys) {
-            if (act[key] !== exp[key]) {
-              isMismatch = true;
-              break;
-            }
-          }
-          return {
-            time: exp.time || (idx * 5),
-            in: exp.in !== undefined ? exp.in : (exp.d !== undefined ? exp.d : exp.a),
-            yours: act[mainKey] !== undefined ? act[mainKey] : 0,
-            ref: exp[mainKey] !== undefined ? exp[mainKey] : 0,
-            mismatch: isMismatch ? 1 : 0
-          };
-        });
-
-        return {
-          passed: result.passed || false,
-          status: result.status || (result.compileError ? 'Compile Error' : 'Incorrect'),
-          log: result.log,
-          vcd: result.vcd || null,
-          actualOutputs,
-          comparisons,
-          mismatches: result.mismatches !== undefined ? result.mismatches : expected.length,
-          totalSamples: expected.length
-        };
-      }
-    } catch (e) {
-      console.warn('Backend API unavailable, using local JS evaluator fallback:', e);
-    }
-
-    // Fallback: LocalSimulator
+    // 2. Fallback: LocalSimulator
     if (typeof LocalSimulator !== 'undefined') {
       const localRes = LocalSimulator.evaluate(userCode, expected, lesson.id);
       return {
+        engine: 'Local JavaScript Evaluator (Fallback)',
+        isWasm: false,
         passed: !localRes.compileError && localRes.mismatches === 0,
         status: localRes.compileError ? 'Compile Error' : (localRes.mismatches === 0 ? 'Success' : 'Incorrect'),
-        log: localRes.log,
+        log: `[Engine: Local JavaScript Evaluator (Fallback)]\n--------------------------------------------------------------\n${localRes.log}`,
         vcd: null,
         actualOutputs: localRes.actualOutputs || [],
         comparisons: [],
@@ -985,6 +936,8 @@ class SimulationManager {
     }
 
     return {
+      engine: 'None',
+      isWasm: false,
       passed: false,
       status: 'Error',
       log: 'No simulation engine available.',
@@ -997,14 +950,16 @@ class SimulationManager {
   }
 
   formatSimulationResult(simResult, expected) {
-    const logs = simResult.logs || '';
+    const rawLogs = simResult.logs || '';
+    const wasmHeader = `[Engine: Icarus Verilog WebAssembly (WASM - 100% Client-Side)]\n--------------------------------------------------------------\n`;
+    const logs = wasmHeader + rawLogs;
     const actualOutputs = [];
     let mismatches = 0;
 
     // Parse SAMPLE lines from logs: SAMPLE 0: sum=0 cout=0
     const sampleRegex = /SAMPLE\s+(\d+):\s*(.*)$/gm;
     let match;
-    while ((match = sampleRegex.exec(logs)) !== null) {
+    while ((match = sampleRegex.exec(rawLogs)) !== null) {
       const idx = parseInt(match[1], 10);
       const dataStr = match[2];
       const sampleObj = {};
@@ -1043,9 +998,11 @@ class SimulationManager {
       };
     });
 
-    const passed = simResult.passed && (mismatches === 0 || logs.includes('ALL TESTS PASSED'));
+    const passed = simResult.passed && (mismatches === 0 || rawLogs.includes('ALL TESTS PASSED'));
 
     return {
+      engine: 'Icarus Verilog WebAssembly (WASM)',
+      isWasm: true,
       passed,
       status: passed ? 'Success' : (simResult.status || 'Incorrect'),
       log: logs,
