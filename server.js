@@ -78,9 +78,15 @@ db.serialize(() => {
         }
 
         // Add columns if they don't exist (migration)
-        db.run(`ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0`, () => {});
-        db.run(`ALTER TABLE students ADD COLUMN chat_blocked INTEGER DEFAULT 0`, () => {});
-        db.run(`ALTER TABLE students ADD COLUMN verilearn_progress TEXT`, () => {});
+        db.all("PRAGMA table_info(students)", [], (pErr, cols) => {
+            if (!pErr && cols) {
+                const names = cols.map(c => c.name);
+                if (!names.includes('blocked')) db.run("ALTER TABLE students ADD COLUMN blocked INTEGER DEFAULT 0", () => {});
+                if (!names.includes('chat_blocked')) db.run("ALTER TABLE students ADD COLUMN chat_blocked INTEGER DEFAULT 0", () => {});
+                if (!names.includes('verilearn_progress')) db.run("ALTER TABLE students ADD COLUMN verilearn_progress TEXT", () => {});
+                if (!names.includes('joined_at')) db.run("ALTER TABLE students ADD COLUMN joined_at INTEGER DEFAULT 0", () => {});
+            }
+        });
     
         db.run(`CREATE TABLE IF NOT EXISTS page_views (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -254,24 +260,105 @@ app.get('/api/events/:tz', (req, res) => {
 app.get('/api/students/:tz/verilearn', (req, res) => {
     const tz = req.params.tz;
     db.get("SELECT verilearn_progress FROM students WHERE tz = ?", [tz], (err, row) => {
-        if (err || !row) return res.status(404).json({ error: "Not found" });
+        if (err) return res.status(500).json({ error: "Database error" });
+        if (!row) {
+            // Return empty progress structure instead of 404 so client doesn't error out
+            return res.json({
+                completedLessons: [],
+                savedCode: {},
+                attempts: {},
+                lastActiveDate: null,
+                streakCount: 0,
+                totalPracticeSeconds: 0,
+                lastLessonId: 1
+            });
+        }
         try {
             const progress = JSON.parse(row.verilearn_progress || '{}');
-            res.json(progress);
+            res.json({
+                completedLessons: Array.isArray(progress.completedLessons) ? progress.completedLessons : [],
+                savedCode: progress.savedCode || {},
+                attempts: progress.attempts || {},
+                lastActiveDate: progress.lastActiveDate || null,
+                streakCount: progress.streakCount || 0,
+                totalPracticeSeconds: progress.totalPracticeSeconds || 0,
+                lastLessonId: progress.lastLessonId || 1
+            });
         } catch(e) {
-            res.json({});
+            res.json({
+                completedLessons: [],
+                savedCode: {},
+                attempts: {},
+                lastActiveDate: null,
+                streakCount: 0,
+                totalPracticeSeconds: 0,
+                lastLessonId: 1
+            });
         }
     });
 });
 
 app.patch('/api/students/:tz/verilearn', (req, res) => {
     const tz = req.params.tz;
-    const progressData = JSON.stringify(req.body || {});
-    db.run("UPDATE students SET verilearn_progress = ? WHERE tz = ?", [progressData, tz], function(err) {
+    const incoming = req.body || {};
+
+    db.get("SELECT verilearn_progress FROM students WHERE tz = ?", [tz], (err, row) => {
         if (err) return res.status(500).json({ error: "Database error" });
-        res.json({ success: true });
+        
+        let existing = {};
+        if (row && row.verilearn_progress) {
+            try {
+                existing = JSON.parse(row.verilearn_progress);
+            } catch(e) {}
+        }
+
+        // Multi-device safe union of completed lessons (never loses progress from any device)
+        const existingList = Array.isArray(existing.completedLessons) ? existing.completedLessons : [];
+        const incomingList = Array.isArray(incoming.completedLessons) ? incoming.completedLessons : [];
+        const mergedCompleted = Array.from(new Set([...existingList, ...incomingList])).sort((a, b) => a - b);
+
+        const mergedSavedCode = Object.assign({}, existing.savedCode || {}, incoming.savedCode || {});
+        const mergedAttempts = Object.assign({}, existing.attempts || {}, incoming.attempts || {});
+
+        const mergedData = {
+            completedLessons: mergedCompleted,
+            savedCode: mergedSavedCode,
+            attempts: mergedAttempts,
+            lastActiveDate: incoming.lastActiveDate || existing.lastActiveDate || new Date().toISOString().split('T')[0],
+            streakCount: Math.max(existing.streakCount || 0, incoming.streakCount || 0),
+            totalPracticeSeconds: Math.max(existing.totalPracticeSeconds || 0, incoming.totalPracticeSeconds || 0),
+            lastLessonId: incoming.lastLessonId || existing.lastLessonId || (mergedCompleted.length > 0 ? mergedCompleted[mergedCompleted.length - 1] : 1)
+        };
+
+        const progressStr = JSON.stringify(mergedData);
+        
+        // If student row doesn't exist yet, insert it; otherwise update it
+        if (!row) {
+            db.run("INSERT INTO students (tz, name, year, semester, verilearn_progress) VALUES (?, 'Student', '1', 'A', ?)", [tz, progressStr], function(iErr) {
+                if (iErr) return res.status(500).json({ error: "Database insert error" });
+                broadcastVerilearnProgress(tz, mergedData);
+                res.json({ success: true, progress: mergedData });
+            });
+        } else {
+            db.run("UPDATE students SET verilearn_progress = ? WHERE tz = ?", [progressStr, tz], function(uErr) {
+                if (uErr) return res.status(500).json({ error: "Database update error" });
+                broadcastVerilearnProgress(tz, mergedData);
+                res.json({ success: true, progress: mergedData });
+            });
+        }
     });
 });
+
+function broadcastVerilearnProgress(tz, progressData) {
+    if (sseClients[tz] && sseClients[tz].length > 0) {
+        const payload = JSON.stringify({ type: 'verilearn_progress_updated', progress: progressData });
+        sseClients[tz].forEach(client => {
+            try {
+                client.write(`data: ${payload}\n\n`);
+            } catch(e) {}
+        });
+    }
+}
 
 // VeriLearn Icarus Verilog Compiler API
 // Parse actual input/output port names from a Verilog module declaration.

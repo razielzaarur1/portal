@@ -36,6 +36,12 @@ class AppRouter {
     window.addEventListener('hashchange', () => this.handleHashChange());
     window.addEventListener('languageChange', () => this.renderCurrentView());
     window.addEventListener('curriculumReady', () => this.renderCurrentView());
+    // Listen to real-time live progress updates from server, other devices, or cross-tab events
+    window.addEventListener('progressUpdated', () => {
+      if (this.currentView === 'home' || this.currentView === 'lessons' || this.currentView === 'progress') {
+        this.renderCurrentView();
+      }
+    });
 
     // Initial route handle
     this.handleHashChange();
@@ -536,3 +542,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.app = new AppRouter();
   window.app.init();
 });
+
+
+window.promptStudentLogin = function() {
+  const isHe = window.i18n ? window.i18n.lang === 'he' : true;
+  const promptMsg = isHe ? 
+    'הזן מספר תעודת זהות לסנכרון ההתקדמות מכל המכשירים:' : 
+    'Enter Student ID to sync your progress across all devices:';
+  const tz = prompt(promptMsg, localStorage.getItem('student_tz') || '');
+  if (tz && tz.trim()) {
+    localStorage.setItem('student_tz', tz.trim());
+    if (window.Progress) {
+      window.Progress.initSync();
+    }
+  }
+};
