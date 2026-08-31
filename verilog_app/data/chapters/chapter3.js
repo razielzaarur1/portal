@@ -342,6 +342,7 @@ endmodule`,
     },
 
     // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Lesson 21: 2-to-4 Decoder
     // --------------------------------------------------------------------------
     {
@@ -349,38 +350,122 @@ endmodule`,
       chapter: 3,
       chapterTitleHe: "פרק 3: מרבבים, מפענחים ומקודדים",
       chapterTitleEn: "Chapter 3: Multiplexers, Decoders & Encoders",
-      titleHe: "מפענח 2 ל-4 עם אפשור (2-to-4 Decoder with Enable) 🔓",
+      titleHe: "מפענח 2 ל-4 עם כניסת אפשור (2-to-4 Decoder) 🔓",
       titleEn: "2-to-4 Decoder with Enable",
 
       explanationHe: `
-<h3>1. מהו מפענח 2 ל-4 עם כניסת אפשור (Enable)? 🔓</h3>
-<p>מפענח 2-ל-4 מקבל קוד בינארי של 2 ביטים (<code dir="ltr">in[1:0]</code>) וכניסת אפשור (<code dir="ltr">en</code>), ומפעיל בדיוק את היציאה המתאימה מתוך 4 היציאות (<code dir="ltr">out[3:0]</code>) בקידוד One-Hot.</p>
+<h3>1. מהו מפענח 2 ל-4 (2-to-4 Decoder)? 🔓</h3>
+<p>מפענח (Decoder) הוא מעגל צירופי הממיר קוד בינארי של $N$ ביטים לכדי $2^N$ קווי יציאה נפרדים בקידוד <strong>One-Hot</strong> (בכל רגע נתון, לכל היותר יציאה אחת בלבד פעילה בערך '1', ושאר היציאות הן '0').</p>
+
+<p>עבור מפענח 2 ל-4 עם כניסת כתובת <code dir="ltr">in[1:0]</code> וכניסת אפשור <code dir="ltr">en</code> (Enable):</p>
 <ul>
-  <li>אם <code dir="ltr">en = 0</code>: כל היציאות כבויות (<code dir="ltr">out = 4'b0000</code>).</li>
-  <li>אם <code dir="ltr">en = 1</code>: היציאה באינדקס של <code dir="ltr">in</code> נדלקת ל-<code dir="ltr">1</code>!</li>
+  <li>אם <code dir="ltr">en == 0</code>: המפענח מושבת, וכל 4 היציאות כבויות (<code dir="ltr">out = 4'b0000</code>).</li>
+  <li>אם <code dir="ltr">en == 1</code>: בדיוק הביט שבאינדקס של <code dir="ltr">in</code> נדלק ל-1:
+    <ul>
+      <li><code dir="ltr">in = 2'b00 (0)</code> &larr; <code dir="ltr">out[0] = 1</code> (<code dir="ltr">out = 4'b0001</code>)</li>
+      <li><code dir="ltr">in = 2'b01 (1)</code> &larr; <code dir="ltr">out[1] = 1</code> (<code dir="ltr">out = 4'b0010</code>)</li>
+      <li><code dir="ltr">in = 2'b10 (2)</code> &larr; <code dir="ltr">out[2] = 1</code> (<code dir="ltr">out = 4'b0100</code>)</li>
+      <li><code dir="ltr">in = 2'b11 (3)</code> &larr; <code dir="ltr">out[3] = 1</code> (<code dir="ltr">out = 4'b1000</code>)</li>
+    </ul>
+  </li>
 </ul>
-<p>רכיב זה הוא אבן בניין יסודית לבניית מפענח 3-ל-8 ומפענח 4-ל-16 בשיעורים הבאים!</p>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. טבלת אמת ולוגיקת שערים (Minterms) 📐</h3>
+<p>כל יציאה של המפענח מייצגת מכפלת מכפלות (Minterm) בוליאנית של אותות הכניסה יחד עם אות האפשור <code dir="ltr">en</code>:</p>
+
+<table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; text-align: center;">
+  <thead>
+    <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--border-color);">
+      <th style="padding: 6px;">en</th>
+      <th style="padding: 6px;">in[1]</th>
+      <th style="padding: 6px;">in[0]</th>
+      <th style="padding: 6px;">out[3]</th>
+      <th style="padding: 6px;">out[2]</th>
+      <th style="padding: 6px;">out[1]</th>
+      <th style="padding: 6px;">out[0]</th>
+      <th style="padding: 6px;">משוואה בוליאנית (Minterm)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td>X</td><td>X</td><td>0</td><td>0</td><td>0</td><td>0</td><td>מושבת (0)</td></tr>
+    <tr><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td><td><code dir="ltr">out[0] = en &amp; ~in[1] &amp; ~in[0]</code></td></tr>
+    <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td>0</td><td><code dir="ltr">out[1] = en &amp; ~in[1] &amp; in[0]</code></td></tr>
+    <tr><td>1</td><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td>0</td><td>0</td><td><code dir="ltr">out[2] = en &amp; in[1] &amp; ~in[0]</code></td></tr>
+    <tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td><td>0</td><td>0</td><td>0</td><td><code dir="ltr">out[3] = en &amp; in[1] &amp; in[0]</code></td></tr>
+  </tbody>
+</table>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. דרך המימוש ב-Verilog 💻</h3>
+<p>כפי שלמדנו בשיעורי השערים (AND, NOT) וחילוץ הביטים (<code dir="ltr">in[1]</code>, <code dir="ltr">in[0]</code>), נוכל לממש את המפענח בצורה ישירה וטבעית בעזרת 4 משפטי <code dir="ltr">assign</code> רציפים:</p>
+
+<pre dir="ltr"><code>assign out[0] = en &amp; (~in[1] &amp; ~in[0]);
+assign out[1] = en &amp; (~in[1] &amp;  in[0]);
+assign out[2] = en &amp; ( in[1] &amp; ~in[0]);
+assign out[3] = en &amp; ( in[1] &amp;  in[0]);</code></pre>
+
+<p><em>הערת העשרה (קיצור דרך אלגנטי):</em> ב-Verilog קיים גם אופרטור הזזה שמאלה (<code dir="ltr">&lt;&lt;</code>). הביטוי <code dir="ltr">4'b0001 &lt;&lt; in</code> מזיז את הביט הבודד שמאלה במספר צעדים השווה לערך המספרי של <code dir="ltr">in</code>, ומניב בדיוק את אותה התוצאה!</p>
 `,
 
       explanationEn: `
-<h3>1. 2-to-4 Decoder with Enable 🔓</h3>
-<p>Translates a 2-bit code (<code dir="ltr">in[1:0]</code>) into 4 One-Hot output lines (<code dir="ltr">out[3:0]</code>) when enabled by <code dir="ltr">en</code>:</p>
+<h3>1. What is a 2-to-4 Decoder? 🔓</h3>
+<p>A decoder converts an $N$-bit binary address into $2^N$ individual One-Hot output lines. At any given moment, only the selected output line is activated ('1'), while all other lines remain '0'.</p>
+
+<p>For a 2-to-4 decoder with 2-bit input <code dir="ltr">in[1:0]</code> and enable signal <code dir="ltr">en</code>:</p>
 <ul>
-  <li>If <code dir="ltr">en == 0</code>, all outputs are zero (<code dir="ltr">4'b0000</code>).</li>
-  <li>If <code dir="ltr">en == 1</code>, output bit at index <code dir="ltr">in</code> is high.</li>
+  <li>If <code dir="ltr">en == 0</code>: Decoder is disabled, all outputs are 0 (<code dir="ltr">out = 4'b0000</code>).</li>
+  <li>If <code dir="ltr">en == 1</code>: Exactly the bit at index <code dir="ltr">in</code> is set to 1:
+    <ul>
+      <li><code dir="ltr">in = 0</code> &rarr; <code dir="ltr">out[0] = 1</code> (<code dir="ltr">out = 4'b0001</code>)</li>
+      <li><code dir="ltr">in = 1</code> &rarr; <code dir="ltr">out[1] = 1</code> (<code dir="ltr">out = 4'b0010</code>)</li>
+      <li><code dir="ltr">in = 2</code> &rarr; <code dir="ltr">out[2] = 1</code> (<code dir="ltr">out = 4'b0100</code>)</li>
+      <li><code dir="ltr">in = 3</code> &rarr; <code dir="ltr">out[3] = 1</code> (<code dir="ltr">out = 4'b1000</code>)</li>
+    </ul>
+  </li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. Gate Logic & Minterms 📐</h3>
+<p>Each output line corresponds to a boolean minterm combined with the <code dir="ltr">en</code> signal:</p>
+<ul>
+  <li><code dir="ltr">out[0] = en &amp; ~in[1] &amp; ~in[0]</code></li>
+  <li><code dir="ltr">out[1] = en &amp; ~in[1] &amp; in[0]</code></li>
+  <li><code dir="ltr">out[2] = en &amp; in[1] &amp; ~in[0]</code></li>
+  <li><code dir="ltr">out[3] = en &amp; in[1] &amp; in[0]</code></li>
 </ul>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">decoder_2to4</code>. כניסות: וקטור 2-ביט <code dir="ltr">in</code> וכניסת אפשור 1-ביט <code dir="ltr">en</code>. יציאה: וקטור 4-ביט <code dir="ltr">out</code>.
-אם <code dir="ltr">en</code> הוא 1 בצעו One-Hot decoding, ואם <code dir="ltr">en</code> הוא 0 אפסו את כל היציאות.`,
-      taskEn: `Design a 2-to-4 Decoder with Enable in module <code dir="ltr">decoder_2to4</code>. Inputs: 2-bit vector <code dir="ltr">in</code>, 1-bit <code dir="ltr">en</code>; output: 4-bit vector <code dir="ltr">out</code>.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">decoder_2to4</code>.
+כניסות: וקטור 2-ביט <code dir="ltr">in</code>, כניסת אפשור 1-ביט <code dir="ltr">en</code>.
+יציאה: וקטור 4-ביט <code dir="ltr">out</code>.
+
+ממשו את 4 היציאות <code dir="ltr">out[0]..out[3]</code> על פי משוואות השערים (Minterms) והאפשור <code dir="ltr">en</code>:
+- <code dir="ltr">out[0]</code> פעיל כאשר <code dir="ltr">in == 2'b00</code> ו-<code dir="ltr">en == 1</code>
+- <code dir="ltr">out[1]</code> פעיל כאשר <code dir="ltr">in == 2'b01</code> ו-<code dir="ltr">en == 1</code>
+- <code dir="ltr">out[2]</code> פעיל כאשר <code dir="ltr">in == 2'b10</code> ו-<code dir="ltr">en == 1</code>
+- <code dir="ltr">out[3]</code> פעיל כאשר <code dir="ltr">in == 2'b11</code> ו-<code dir="ltr">en == 1</code>`,
+
+      taskEn: `Design a 2-to-4 Decoder with Enable in module <code dir="ltr">decoder_2to4</code>.
+Inputs: 2-bit vector <code dir="ltr">in</code>, 1-bit enable <code dir="ltr">en</code>.
+Output: 4-bit vector <code dir="ltr">out</code>.
+
+Implement each output bit <code dir="ltr">out[0]..out[3]</code> using boolean minterms gated by <code dir="ltr">en</code>:
+- <code dir="ltr">out[0]</code> active when <code dir="ltr">in == 2'b00</code> and <code dir="ltr">en == 1</code>
+- <code dir="ltr">out[1]</code> active when <code dir="ltr">in == 2'b01</code> and <code dir="ltr">en == 1</code>
+- <code dir="ltr">out[2]</code> active when <code dir="ltr">in == 2'b10</code> and <code dir="ltr">en == 1</code>
+- <code dir="ltr">out[3]</code> active when <code dir="ltr">in == 2'b11</code> and <code dir="ltr">en == 1</code>`,
 
       starterCode: `module decoder_2to4 (
     input [1:0] in,
     input en,
     output [3:0] out
 );
-    // כתבו את הפתרון כאן / Write your solution here
+    // כתבו את השמות השערים עבור כל אחד מ-4 הביטים של out
+    // Write your continuous assignments for out[0], out[1], out[2], out[3]
 
 endmodule`,
 
@@ -389,7 +474,10 @@ endmodule`,
     input en,
     output [3:0] out
 );
-    assign out = en ? (4'b0001 << in) : 4'b0000;
+    assign out[0] = en & (~in[1] & ~in[0]);
+    assign out[1] = en & (~in[1] &  in[0]);
+    assign out[2] = en & ( in[1] & ~in[0]);
+    assign out[3] = en & ( in[1] &  in[0]);
 endmodule`,
 
       expectedOutputs: [
@@ -402,8 +490,8 @@ endmodule`,
       ],
 
       hints: {
-        he: "השתמשו באופרטור מותנה: assign out = en ? (4'b0001 << in) : 4'b0000;",
-        en: "Use a ternary operator: assign out = en ? (4'b0001 << in) : 4'b0000;"
+        he: "השתמשו ב-4 משפטי assign נפרדים עבור out[0], out[1], out[2], out[3]. לכל ביט, שלבו את שער ה-AND עם אות האפשור en והיפוכי הכניסות in[1] ו-in[0]. למשל: assign out[0] = en & (~in[1] & ~in[0]);",
+        en: "Write 4 separate assign statements for out[0], out[1], out[2], out[3]. For each bit, AND the enable signal en with the corresponding inverted/non-inverted in[1] and in[0] bits. For example: assign out[0] = en & (~in[1] & ~in[0]);"
       }
     },
 
