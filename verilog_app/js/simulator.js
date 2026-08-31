@@ -104,6 +104,23 @@ class LocalSimulator {
       return resultJs;
     });
 
+    // Convert bit slicing in expressions: var[3:0]
+    js = js.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\[(\d+):(\d+)\]/g, (m, varName, uStr, lStr) => {
+      const u = parseInt(uStr, 10);
+      const l = parseInt(lStr, 10);
+      const high = Math.max(u, l);
+      const low = Math.min(u, l);
+      const width = high - low + 1;
+      const mask = (1 << width) - 1;
+      return `(((${varName}) >> ${low}) & ${mask})`;
+    });
+
+    // Convert single bit indexing: var[3]
+    js = js.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\[(\d+)\](?!\s*=)/g, (m, varName, idxStr) => {
+      const idx = parseInt(idxStr, 10);
+      return `(((${varName}) >> ${idx}) & 1)`;
+    });
+
     // Convert blocking assignments: var = expr; (avoiding <=, >=, ==, ===)
     js = js.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\[[^\]]+\])?)\s*=\s*(?![=<])([^;]+);/g, 'context["$1"] = $2;');
     
@@ -118,7 +135,7 @@ class LocalSimulator {
    */
   static getSignalWidths(code) {
     const widths = {};
-    const regex = /(?:input|output|reg|wire)\s+(?:reg|wire)?\s*\[(\d+):(\d+)\]\s*([a-zA-Z0-9_,\s]+)/g;
+    const regex = /(?:input|output|reg|wire)\s+(?:reg\s+|wire\s+)?\[(\d+):(\d+)\]\s*([^,;)\n]+)/g;
     let match;
     while ((match = regex.exec(code)) !== null) {
       const high = parseInt(match[1], 10);
@@ -186,14 +203,30 @@ class LocalSimulator {
     const alwaysBlocks = this.getAlwaysBlocks(cleanCode);
     const widths = this.getSignalWidths(cleanCode);
 
-    // Extract continuous assignments: assign out = expr;
-    const assignMatches = [...cleanCode.matchAll(/assign\s+([a-zA-Z0-9_]+(?:\s*\[[^\]]+\])?)\s*=\s*([^;]+);/g)];
+    // Extract continuous assignments: assign out = expr; and wire [x:y] out = expr;
+    const assignMatches = [...cleanCode.matchAll(/(?:assign|wire(?:\s*\[\d+:\d+\])?)\s+([a-zA-Z0-9_]+(?:\s*\[[^\]]+\])?)\s*=\s*([^;]+);/g)];
     const assignments = {};
     assignMatches.forEach(match => {
       const varName = match[1].trim();
       const expr = match[2].trim();
       assignments[varName] = expr;
     });
+
+    // Extract d_flip_flop instances if any
+    const dffInstances = [];
+    const dffRegex = /\bd_flip_flop\s+([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\);/g;
+    let dffMatch;
+    while ((dffMatch = dffRegex.exec(cleanCode)) !== null) {
+      const instName = dffMatch[1];
+      const portsStr = dffMatch[2];
+      const portMap = {};
+      const portRegex = /\.([a-zA-Z0-9_]+)\s*\(([^)]+)\)/g;
+      let pMatch;
+      while ((pMatch = portRegex.exec(portsStr)) !== null) {
+        portMap[pMatch[1].trim()] = pMatch[2].trim();
+      }
+      dffInstances.push({ instName, portMap });
+    }
 
     const state = {};
     let lastClk = 0;
@@ -213,6 +246,37 @@ class LocalSimulator {
 
       // Run sequential clocked blocks on rising edge (posedge clk)
       if (isRisingEdge) {
+        if (dffInstances.length > 0) {
+          dffInstances.forEach(inst => {
+            const { portMap } = inst;
+            const rstSignal = portMap['reset'] || 'reset';
+            const isRst = context[rstSignal] !== undefined ? context[rstSignal] : (state[rstSignal] || 0);
+            const qPort = portMap['q'];
+            const dExpr = portMap['d'];
+
+            let nextBit = 0;
+            if (!isRst && dExpr) {
+              nextBit = this.evaluateExpression(dExpr, { ...context, ...state }) & 1;
+            }
+
+            const sliceMatch = qPort ? qPort.match(/^([a-zA-Z0-9_]+)\[(\d+)\]$/) : null;
+            if (sliceMatch) {
+              const vecName = sliceMatch[1];
+              const bitIdx = parseInt(sliceMatch[2], 10);
+              if (nextState[vecName] === undefined) {
+                nextState[vecName] = state[vecName] !== undefined ? state[vecName] : 0;
+              }
+              if (nextBit) {
+                nextState[vecName] |= (1 << bitIdx);
+              } else {
+                nextState[vecName] &= ~(1 << bitIdx);
+              }
+            } else if (qPort) {
+              nextState[qPort] = nextBit;
+            }
+          });
+        }
+
         alwaysBlocks.forEach(block => {
           if (block.list.includes('posedge clk') || block.list.includes('posedge')) {
             try {
@@ -233,6 +297,18 @@ class LocalSimulator {
         state[k] = (nextState[k] >>> 0) & ((1 << width) - 1);
       });
 
+      // Run continuous assignments first (e.g. intermediate wires, res_add = a + b)
+      Object.keys(assignments).forEach(varName => {
+        try {
+          const expr = assignments[varName];
+          const val = this.evaluateExpression(expr, { ...context, ...state });
+          context[varName] = val;
+        } catch (e) {
+          console.warn(`Evaluation error for ${varName}:`, e);
+          context[varName] = 0;
+        }
+      });
+
       // Run combinational always blocks: always @(*) or always @(inputs)
       alwaysBlocks.forEach(block => {
         if (block.list.includes('*') || (!block.list.includes('clk') && !block.list.includes('posedge'))) {
@@ -242,7 +318,13 @@ class LocalSimulator {
             const run = new Function('context', 'nextState', 'state', `with(context) { ${js} }`);
             run(runContext, nextState, state);
             Object.keys(runContext).forEach(k => {
-              context[k] = runContext[k];
+              const width = widths[k];
+              if (width && typeof runContext[k] === 'number') {
+                const mask = width === 32 ? 0xFFFFFFFF : ((1 << width) - 1);
+                context[k] = (runContext[k] >>> 0) & mask;
+              } else {
+                context[k] = runContext[k];
+              }
             });
           } catch (e) {
             console.warn('Combinational always block evaluation error:', e);
@@ -250,14 +332,13 @@ class LocalSimulator {
         }
       });
 
-      // Run continuous assignments (assign out = expr;)
+      // Re-run continuous assignments for outputs driven by combinational always blocks
       Object.keys(assignments).forEach(varName => {
         try {
           const expr = assignments[varName];
           const val = this.evaluateExpression(expr, { ...context, ...state });
           context[varName] = val;
         } catch (e) {
-          console.warn(`Evaluation error for ${varName}:`, e);
           context[varName] = 0;
         }
       });
@@ -448,7 +529,7 @@ class SimulationManager {
     let mismatches = 0;
 
     // Determine target output keys to check
-    const outputKeys = Object.keys(expected[0]).filter(k => k !== 'time' && k !== 'in' && k !== 'd' && k !== 'a' && k !== 'b' && k !== 'sel' && k !== 'clk' && k !== 'reset' && k !== 'rst' && k !== 'rst_n' && k !== 'load' && k !== 'data' && k !== 'timer_done' && k !== 'write_en' && k !== 'write_reg' && k !== 'write_data' && k !== 'read_reg1' && k !== 'read_reg2' && k !== 'we' && k !== 'addr' && k !== 'data_in' && k !== 'we_a' && k !== 'addr_a' && k !== 'data_in_a' && k !== 'addr_b' && k !== 'wr_en' && k !== 'rd_en' && k !== 'wr' && k !== 'rd' && k !== 'push' && k !== 'pop' && k !== 'duty' && k !== 'tx_start' && k !== 'tx_data' && k !== 'rx' && k !== 'start' && k !== 'stop' && k !== 'read_write' && k !== 'in_val' && k !== 'x' && k !== 'syn_rst' && k !== 'd_in' && k !== 'async_rst' && k !== 'enable' && k !== 't' && k !== 'j' && k !== 'k');
+    const outputKeys = Object.keys(expected[0]).filter(k => k !== 'time' && k !== 'in' && k !== 'd' && k !== 'a' && k !== 'b' && k !== 'sel' && k !== 'clk' && k !== 'reset' && k !== 'rst' && k !== 'rst_n' && k !== 'load' && k !== 'data' && k !== 'en' && k !== 'si' && k !== 'timer_done' && k !== 'write_en' && k !== 'write_reg' && k !== 'write_data' && k !== 'read_reg1' && k !== 'read_reg2' && k !== 'we' && k !== 'addr' && k !== 'data_in' && k !== 'we_a' && k !== 'addr_a' && k !== 'data_in_a' && k !== 'addr_b' && k !== 'wr_en' && k !== 'rd_en' && k !== 'wr' && k !== 'rd' && k !== 'push' && k !== 'pop' && k !== 'duty' && k !== 'tx_start' && k !== 'tx_data' && k !== 'rx' && k !== 'start' && k !== 'stop' && k !== 'read_write' && k !== 'in_val' && k !== 'x' && k !== 'syn_rst' && k !== 'd_in' && k !== 'async_rst' && k !== 'enable' && k !== 't' && k !== 'j' && k !== 'k');
 
     // Calculate HDLBits Mismatch vector
     const comparisons = expected.map((exp, idx) => {

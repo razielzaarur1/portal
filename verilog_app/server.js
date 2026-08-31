@@ -9,11 +9,13 @@ const PUBLIC_DIR = __dirname;
 
 // List of known output keys in test vectors
 const KNOWN_OUTPUT_KEYS = [
-  'out', 'q', 'sum', 'cout', 'out_bitwise', 'out_logical', 'out_and', 'out_or',
+  'out', 'q', 'so', 'sum', 'cout', 'out_bitwise', 'out_logical', 'out_and', 'out_or',
   'pwm_out', 'tx', 'tx_busy', 'rx_data', 'rx_done', 'baud_tick', 'sclk', 'mosi',
   'ss', 'done', 'scl', 'sda', 'sda_oe', 'busy', 'empty', 'full', 'read_data1',
   'read_data2', 'data_out', 'data_out_b', 'fifo_cnt', 'wr_ptr', 'rd_ptr', 'sp',
-  'read_val', 'reg_ctrl', 'reg_data0', 'reg_data1', 'z', 'y'
+  'read_val', 'reg_ctrl', 'reg_data0', 'reg_data1', 'z', 'y',
+  'out0', 'out1', 'out2', 'out3', 'valid', 'segments', 'out_nand', 'out_nor',
+  'out_xor', 'out_xnor', 'out_val', 'max', 'min', 'overflow', 'zero', 'parity', 'active'
 ];
 
 /**
@@ -31,12 +33,17 @@ function generateTestbench(userCode, expectedOutputs) {
   // If outputKeys is empty, fallback to assuming 'out' or 'q' or the last key is output
   if (outputKeys.length === 0) {
     if (allKeys.includes('q')) outputKeys.push('q');
+    else if (allKeys.includes('y')) outputKeys.push('y');
     else if (allKeys.includes('out')) outputKeys.push('out');
     else outputKeys.push(allKeys[allKeys.length - 1]);
   }
 
   // Input keys are everything else
   const actualInputKeys = allKeys.filter(k => !outputKeys.includes(k));
+
+  // Extract top-level module name (the last module declared in userCode, or fallback to 'top_module')
+  const moduleMatches = [...userCode.matchAll(/\bmodule\s+([a-zA-Z0-9_]+)/g)];
+  const topModuleName = moduleMatches.length > 0 ? moduleMatches[moduleMatches.length - 1][1] : 'top_module';
 
   let tb = `\`timescale 1ns/1ps\nmodule tb;\n`;
 
@@ -48,8 +55,8 @@ function generateTestbench(userCode, expectedOutputs) {
     tb += `  wire [31:0] ${k};\n`;
   });
 
-  // Instantiate top_module
-  tb += `\n  top_module uut (\n`;
+  // Instantiate top module
+  tb += `\n  ${topModuleName} uut (\n`;
   const portConnections = [...actualInputKeys, ...outputKeys].map(k => `    .${k}(${k})`).join(',\n');
   tb += portConnections + `\n  );\n\n`;
 

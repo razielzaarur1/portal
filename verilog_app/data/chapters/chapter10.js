@@ -413,93 +413,262 @@ endmodule`,
       chapter: 10,
       chapterTitleHe: "פרק 10: תכנונים מתקדמים ונושאים מיוחדים",
       chapterTitleEn: "Chapter 10: Advanced Designs & Special Topics",
-      titleHe: "יחידה אלגברית-לוגית (Full 16-bit ALU) 🎛️",
+      titleHe: "יחידה אריתמטית-לוגית מלאה (Full 16-bit ALU) 🎛️",
       titleEn: "Full 16-bit ALU",
 
       explanationHe: `
-<h3>1. יחידה אלגברית-לוגית (ALU) 🎛️</h3>
-<p>ה-<strong>ALU (Arithmetic Logic Unit)</strong> היא הלב המחשב של המעבד (CPU). תפקידה לבצע את כל פעולות החשבון והלוגיקה הנדרשות על ידי הפקודות השונות במעבד.</p>
-<p>ה-ALU מקבלת בדרך כלל שני אופרנדים (A ו-B) וקוד פעולה (Opcode או Control code), ומוציאה תוצאה יחידה.</p>
+<h3>1. מהי יחידה אריתמטית-לוגית (ALU)? 🎛️</h3>
+<p>ה-<strong>ALU (Arithmetic Logic Unit - יחידה אריתמטית-לוגית)</strong> היא הלב החישובי המרכזי של כל מעבד (CPU), יחידת עיבוד גרפית (GPU) ובקר ספרתי. תפקידה לקבל שני אופרנדים נתונים (אופרנד $A$ ואופרנד $B$), לבצע עליהם פעולה חשבונית או לוגית בהתאם לקוד בקרה (Opcode / Operation Selector), ולהפיק את תוצאת החישוב ביציאה.</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. מידול ALU ב-Verilog 💻</h3>
-<p>ב-Verilog, הדרך הנוחה והקריאה ביותר לתכנן ALU קומבינטורי היא באמצעות בלוק <code>always @(*)</code> ובתוכו משפט <code>case</code> המנתח את קוד הפעולה. כל ענף ב-<code>case</code> מייצג פעולה אחרת.</p>
+<h3>2. ארכיטקטורת אבני הבניין של ה-ALU 🏗️</h3>
+<p>בתכנון שבבים מקצועי, ה-ALU אינה נבנית כגוש קוד מונוליטי אחיד, אלא מורכבת מ<strong>תת-יחידות חומרתיות מודולריות (Building Blocks)</strong> שלמדנו בפרקים הקודמים:</p>
 
-<p>דוגמה כללית של ALU פשוט בגודל 8 ביט התומך ב-4 פעולות בלבד:</p>
-<pre dir="ltr"><code>module generic_alu (
-    input [7:0] data_a,
-    input [7:0] data_b,
-    input [1:0] select_op,
-    output reg [7:0] alu_result
+<ol>
+  <li><strong>היחידה האריתמטית (Arithmetic Unit):</strong>
+    <p>נשענת על מודולי המסיפים (Full Adders ו-Ripple Carry Adders מפרקים 2, 3 ו-4). היחידה מחשבת במקביל תוצאת <strong>חיבור ($A + B$)</strong> ותוצאת <strong>חיסור ($A - B$)</strong>. כזכור, חיסור מבוצע באמצעות ייצוג משלים ל-2: הפיכת הביטים של $B$ והוספת נשיאה בכניסה ($A + \sim B + 1$).</p>
+  </li>
+  <li><strong>היחידה הלוגית (Logic Unit):</strong>
+    <p>נשענת על מערכי שערים לוגיים בסיסיים (שנלמדו בפרק 1). היחידה מחשבת במקביל פעולות סיביות על כל 16 הביטים: <strong>AND</strong> (<code dir="ltr">a &amp; b</code>), <strong>OR</strong> (<code dir="ltr">a | b</code>), <strong>XOR</strong> (<code dir="ltr">a ^ b</code>), ו-<strong>NOR</strong> (<code dir="ltr">~(a | b)</code>).</p>
+  </li>
+  <li><strong>יחידת ההזזה (Shift Unit):</strong>
+    <p>נשענת על עקרונות ה-Barrel Shifter (משיעור 76). מבצעת הזזה לוגית שמאלה (<strong>SLL</strong> - <code dir="ltr">a &lt;&lt; b[3:0]</code>) והזזה לוגית ימינה (<strong>SRL</strong> - <code dir="ltr">a &gt;&gt; b[3:0]</code>) במספר סיביות המוגדר על ידי 4 הביטים הנמוכים של $B$.</p>
+  </li>
+  <li><strong>מרבב בחירת התוצאה (Multiplexer Selection Unit):</strong>
+    <p>נשען על מרבב 8 ל-1 רב-ביטי (Multiplexer מפרק 3). המרבב מקבל את כל 8 התוצאות המוכנות מראש מהיחידות השונות, ובורר את התוצאה המבוקשת ליציאת ה-ALU בהתאם לקוד הבקרה <code dir="ltr">op[2:0]</code>.</p>
+  </li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. תרשים בלוקים וחיווט היררכי 📐</h3>
+<p>התרשים הבא ממחיש את זרימת הנתונים בתוך ה-ALU: הנתונים <code dir="ltr">a</code> ו-<code dir="ltr">b</code> מוזנים במקביל לכל יחידות החישוב, והמרבב בורר את המוצא לפי <code dir="ltr">op</code>:</p>
+
+<pre dir="ltr"><code>                    ┌────────────────────────────────────────────────────────┐
+                    │                      16-bit ALU                        │
+                    │                                                        │
+ a[15:0], b[15:0] ──┼─┬──────────────┬──────────────┬──────────────────────┐ │
+                    │ │              │              │                      │ │
+                    │ ▼              ▼              ▼                      ▼ │
+                    │┌─────────────┐┌─────────────┐┌────────────────────┐ ┌───────────────┐
+                    ││ Adder Block ││ Sub Block   ││ Bitwise Logic Unit │ │ Shifter Unit  │
+                    ││ (a + b)     ││ (a - b)     ││ (AND, OR, XOR, NOR)│ │ (SLL, SRL)    │
+                    │└──────┬──────┘└──────┬──────┘└──┬───┬───┬───┬─────┘ └───┬───────┬───┘
+                    │       │res_add       │res_sub   │   │   │   │res_nor    │res_sll│res_srl
+                    │       │              │          │   │   └───┼───────────┼───┐   │
+                    │       │              │   res_and│   │res_or │res_xor    │   │   │
+                    │       │              │          │   │   ┌───┘           │   │   │
+                    │       ▼              ▼          ▼   ▼   ▼               ▼   ▼   ▼
+                    │   ┌───────────────────────────────────────────────────────────────┐
+                    │   │              8-to-1 Multiplexer (Mux Unit)                    │
+  op[2:0] ──────────┼──►│  [000:ADD, 001:SUB, 010:AND, 011:OR, 100:XOR, 101:NOR, ...]   │
+                    │   └───────────────────────────────┬───────────────────────────────┘
+                    │                                   │
+                    │                                   ▼
+                    │                               out[15:0]
+                    └────────────────────────────────────────────────────────┘</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. טבלת קודי הפעולה של ה-ALU 📊</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
+  <thead style="background: var(--bg-tertiary);">
+    <tr><th>op[2:0]</th><th>סוג יחידה</th><th>פעולה</th><th>ביטוי ב-Verilog</th><th>תיאור</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>3'b000</code></td><td>Arithmetic</td><td>ADD</td><td><code>a + b</code></td><td>חיבור בינארי של 16 ביט</td></tr>
+    <tr><td><code>3'b001</code></td><td>Arithmetic</td><td>SUB</td><td><code>a - b</code></td><td>חיסור בינארי בשיטת המשלים ל-2</td></tr>
+    <tr><td><code>3'b010</code></td><td>Logic</td><td>AND</td><td><code>a &amp; b</code></td><td>וגם לוגי ביט-ביט (Bitwise AND)</td></tr>
+    <tr><td><code>3'b011</code></td><td>Logic</td><td>OR</td><td><code>a | b</code></td><td>או לוגי ביט-ביט (Bitwise OR)</td></tr>
+    <tr><td><code>3'b100</code></td><td>Logic</td><td>XOR</td><td><code>a ^ b</code></td><td>או-בלעדי לוגי ביט-ביט (Bitwise XOR)</td></tr>
+    <tr><td><code>3'b101</code></td><td>Logic</td><td>NOR</td><td><code>~(a | b)</code></td><td>לא-או לוגי ביט-ביט (Bitwise NOR)</td></tr>
+    <tr><td><code>3'b110</code></td><td>Shift</td><td>SLL</td><td><code>a &lt;&lt; b[3:0]</code></td><td>הזזה לוגית שמאלה לפי 4 ביטים נמוכים</td></tr>
+    <tr><td><code>3'b111</code></td><td>Shift</td><td>SRL</td><td><code>a &gt;&gt; b[3:0]</code></td><td>הזזה לוגית ימינה לפי 4 ביטים נמוכים</td></tr>
+  </tbody>
+</table>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. דוגמת מידול ב-Verilog 💻</h3>
+<p>להלן מבנה מודולרי נקי המפריד בין יחידות החישוב השונות לבין מרבב בחירת הפעולה:</p>
+
+<pre dir="ltr"><code>module modular_alu_example (
+    input  [15:0] a,
+    input  [15:0] b,
+    input  [2:0]  op,
+    output reg [15:0] out
 );
+    // אבני בניין: חישוב מראש של תוצאות היחידות השונות
+    wire [15:0] res_add = a + b;
+    wire [15:0] res_sub = a - b;
+    wire [15:0] res_and = a & b;
+    wire [15:0] res_or  = a | b;
+    wire [15:0] res_xor = a ^ b;
+    wire [15:0] res_nor = ~(a | b);
+    wire [15:0] res_sll = a << b[3:0];
+    wire [15:0] res_srl = a >> b[3:0];
+
+    // מרבב 8-ל-1 לבחירת המוצא
     always @(*) begin
-        case (select_op)
-            2'b00: alu_result = data_a + data_b;  // חיבור
-            2'b01: alu_result = data_a - data_b;  // חיסור
-            2'b10: alu_result = data_a & data_b;  // AND
-            2'b11: alu_result = data_a | data_b;  // OR
-            default: alu_result = 8'b0;
+        case (op)
+            3'b000: out = res_add;
+            3'b001: out = res_sub;
+            3'b010: out = res_and;
+            3'b011: out = res_or;
+            3'b100: out = res_xor;
+            3'b101: out = res_nor;
+            3'b110: out = res_sll;
+            3'b111: out = res_srl;
+            default: out = 16'h0000;
         endcase
     end
 endmodule</code></pre>
 `,
 
       explanationEn: `
-<h3>1. The Arithmetic Logic Unit (ALU) 🎛️</h3>
-<p>The <strong>ALU (Arithmetic Logic Unit)</strong> is the computational core of any CPU. It performs all basic arithmetic (addition, subtraction) and logical (bitwise AND, OR, XOR) operations required by program instructions.</p>
-<p>An ALU typically processes two data operands (A and B) under the control of an operation selector (Opcode) to produce a single result.</p>
+<h3>1. What is an Arithmetic Logic Unit (ALU)? 🎛️</h3>
+<p>The <strong>ALU (Arithmetic Logic Unit)</strong> is the fundamental computational engine at the core of every CPU (RISC-V, ARM, x86), GPU, and digital signal processor. It takes two operand words ($A$ and $B$), executes an arithmetic or logical operation instructed by an operation code (Opcode / Control Code), and outputs the resulting calculation.</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Modeling ALUs in Verilog 💻</h3>
-<p>In Verilog, the most efficient and readable way to model a combinational ALU is using a procedural <code>always @(*)</code> block with a <code>case</code> statement. Each branch of the case statement executes a different operation depending on the opcode.</p>
+<h3>2. The Building Blocks Architecture of an ALU 🏗️</h3>
+<p>In modern digital design, an ALU is never created as an unstructured monolith. Instead, it is partitioned cleanly into <strong>modular hardware sub-blocks</strong> built upon previous concepts:</p>
 
-<p>Generic example of an 8-bit ALU supporting 4 operations:</p>
-<pre dir="ltr"><code>module generic_alu (
-    input [7:0] data_a,
-    input [7:0] data_b,
-    input [1:0] select_op,
-    output reg [7:0] alu_result
+<ol>
+  <li><strong>Arithmetic Unit (AU):</strong>
+    <p>Built upon adder/subtractor circuits (hierarchically composed of Full Adders and Ripple Carry Adder chains from Chapters 2, 3, and 4). Computes both <strong>Addition ($A + B$)</strong> and <strong>Subtraction ($A - B$)</strong> in parallel. Subtraction is performed via two's complement inversion: ($A + \sim B + 1$).</p>
+  </li>
+  <li><strong>Logic Unit (LU):</strong>
+    <p>Built upon bitwise parallel logic gates (from Chapter 1). Computes 16-bit bitwise boolean operations simultaneously: <strong>AND</strong> (<code dir="ltr">a &amp; b</code>), <strong>OR</strong> (<code dir="ltr">a | b</code>), <strong>XOR</strong> (<code dir="ltr">a ^ b</code>), and <strong>NOR</strong> (<code dir="ltr">~(a | b)</code>).</p>
+  </li>
+  <li><strong>Shift Unit (SU):</strong>
+    <p>Built upon Barrel Shifter logarithmic stages (from Lesson 76). Computes Logical Shift Left (<strong>SLL</strong> - <code dir="ltr">a &lt;&lt; b[3:0]</code>) and Logical Shift Right (<strong>SRL</strong> - <code dir="ltr">a &gt;&gt; b[3:0]</code>) using the lower 4 bits of $B$ as the shift amount.</p>
+  </li>
+  <li><strong>Multiplexer Selection Unit (MUX):</strong>
+    <p>Built upon an 8-to-1 multi-bit Multiplexer (from Chapter 3). Collects the candidate outputs calculated by the Arithmetic, Logic, and Shift units, routing the selected result to the output bus <code dir="ltr">out[15:0]</code> according to <code dir="ltr">op[2:0]</code>.</p>
+  </li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. Hierarchical Block and Wiring Diagram 📐</h3>
+<p>The following diagram shows the internal dataflow: operands <code dir="ltr">a</code> and <code dir="ltr">b</code> are routed in parallel to all functional units, and the 8-to-1 MUX selects the active operation based on <code dir="ltr">op</code>:</p>
+
+<pre dir="ltr"><code>                    ┌────────────────────────────────────────────────────────┐
+                    │                      16-bit ALU                        │
+                    │                                                        │
+ a[15:0], b[15:0] ──┼─┬──────────────┬──────────────┬──────────────────────┐ │
+                    │ │              │              │                      │ │
+                    │ ▼              ▼              ▼                      ▼ │
+                    │┌─────────────┐┌─────────────┐┌────────────────────┐ ┌───────────────┐
+                    ││ Adder Block ││ Sub Block   ││ Bitwise Logic Unit │ │ Shifter Unit  │
+                    ││ (a + b)     ││ (a - b)     ││ (AND, OR, XOR, NOR)│ │ (SLL, SRL)    │
+                    │└──────┬──────┘└──────┬──────┘└──┬───┬───┬───┬─────┘ └───┬───────┬───┘
+                    │       │res_add       │res_sub   │   │   │   │res_nor    │res_sll│res_srl
+                    │       │              │          │   │   └───┼───────────┼───┐   │
+                    │       │              │   res_and│   │res_or │res_xor    │   │   │
+                    │       │              │          │   │   ┌───┘           │   │   │
+                    │       ▼              ▼          ▼   ▼   ▼               ▼   ▼   ▼
+                    │   ┌───────────────────────────────────────────────────────────────┐
+                    │   │              8-to-1 Multiplexer (Mux Unit)                    │
+  op[2:0] ──────────┼──►│  [000:ADD, 001:SUB, 010:AND, 011:OR, 100:XOR, 101:NOR, ...]   │
+                    │   └───────────────────────────────┬───────────────────────────────┘
+                    │                                   │
+                    │                                   ▼
+                    │                               out[15:0]
+                    └────────────────────────────────────────────────────────┘</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. ALU Opcode Mapping Table 📊</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
+  <thead style="background: var(--bg-tertiary);">
+    <tr><th>op[2:0]</th><th>Unit Block</th><th>Operation</th><th>Verilog Expression</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>3'b000</code></td><td>Arithmetic</td><td>ADD</td><td><code>a + b</code></td><td>16-bit Binary Addition</td></tr>
+    <tr><td><code>3'b001</code></td><td>Arithmetic</td><td>SUB</td><td><code>a - b</code></td><td>16-bit Two's Complement Subtraction</td></tr>
+    <tr><td><code>3'b010</code></td><td>Logic</td><td>AND</td><td><code>a &amp; b</code></td><td>16-bit Bitwise AND</td></tr>
+    <tr><td><code>3'b011</code></td><td>Logic</td><td>OR</td><td><code>a | b</code></td><td>16-bit Bitwise OR</td></tr>
+    <tr><td><code>3'b100</code></td><td>Logic</td><td>XOR</td><td><code>a ^ b</code></td><td>16-bit Bitwise XOR</td></tr>
+    <tr><td><code>3'b101</code></td><td>Logic</td><td>NOR</td><td><code>~(a | b)</code></td><td>16-bit Bitwise NOR</td></tr>
+    <tr><td><code>3'b110</code></td><td>Shift</td><td>SLL</td><td><code>a &lt;&lt; b[3:0]</code></td><td>Logical Shift Left by lower 4 bits of b</td></tr>
+    <tr><td><code>3'b111</code></td><td>Shift</td><td>SRL</td><td><code>a &gt;&gt; b[3:0]</code></td><td>Logical Shift Right by lower 4 bits of b</td></tr>
+  </tbody>
+</table>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. Verilog Modeling Example 💻</h3>
+<p>Here is a clean modular structure decoupling the computational blocks from the output selection multiplexer:</p>
+
+<pre dir="ltr"><code>module modular_alu_example (
+    input  [15:0] a,
+    input  [15:0] b,
+    input  [2:0]  op,
+    output reg [15:0] out
 );
+    // Building blocks: Sub-unit pre-computations
+    wire [15:0] res_add = a + b;
+    wire [15:0] res_sub = a - b;
+    wire [15:0] res_and = a & b;
+    wire [15:0] res_or  = a | b;
+    wire [15:0] res_xor = a ^ b;
+    wire [15:0] res_nor = ~(a | b);
+    wire [15:0] res_sll = a << b[3:0];
+    wire [15:0] res_srl = a >> b[3:0];
+
+    // 8-to-1 Output Multiplexer
     always @(*) begin
-        case (select_op)
-            2'b00: alu_result = data_a + data_b;  // ADD
-            2'b01: alu_result = data_a - data_b;  // SUB
-            2'b10: alu_result = data_a & data_b;  // AND
-            2'b11: alu_result = data_a | data_b;  // OR
-            default: alu_result = 8'b0;
+        case (op)
+            3'b000: out = res_add;
+            3'b001: out = res_sub;
+            3'b010: out = res_and;
+            3'b011: out = res_or;
+            3'b100: out = res_xor;
+            3'b101: out = res_nor;
+            3'b110: out = res_sll;
+            3'b111: out = res_srl;
+            default: out = 16'h0000;
         endcase
     end
 endmodule</code></pre>
 `,
 
-      taskHe: `ממשו יחידה אלגברית-לוגית (ALU) בגודל 16 ביט.
-כניסות: <code>[15:0] a</code>, <code>[15:0] b</code>, <code>[2:0] op</code>.
-יציאה: <code>[15:0] out</code> (מוגדרת כ-<code>reg</code>).
+      taskHe: `בנו יחידה אריתמטית-לוגית (ALU) מלאה בגודל 16 ביט במודול <code dir="ltr">top_module</code>:
+1. כניסות המודול:
+   - <code dir="ltr">input [15:0] a</code>: אופרנד ראשון (16 ביט).
+   - <code dir="ltr">input [15:0] b</code>: אופרנד שני (16 ביט).
+   - <code dir="ltr">input [2:0] op</code>: קוד בחירת פעולה (3 ביט).
+2. יציאת המודול:
+   - <code dir="ltr">output reg [15:0] out</code>: תוצאת החישוב (16 ביט).
+3. ממשו את 8 הפעולות הבאות לפי קוד ה-<code dir="ltr">op</code>:
+   - <code dir="ltr">3'b000</code>: חיבור אריתמטי (<code dir="ltr">a + b</code>)
+   - <code dir="ltr">3'b001</code>: חיסור אריתמטי (<code dir="ltr">a - b</code>)
+   - <code dir="ltr">3'b010</code>: וגם לוגי סיביות (<code dir="ltr">a &amp; b</code>)
+   - <code dir="ltr">3'b011</code>: או לוגי סיביות (<code dir="ltr">a | b</code>)
+   - <code dir="ltr">3'b100</code>: קסור לוגי סיביות (<code dir="ltr">a ^ b</code>)
+   - <code dir="ltr">3'b101</code>: נור לוגי סיביות (<code dir="ltr">~(a | b)</code>)
+   - <code dir="ltr">3'b110</code>: הזזה לוגית שמאלה של <code dir="ltr">a</code> לפי 4 הביטים הנמוכים של <code dir="ltr">b</code> (<code dir="ltr">a &lt;&lt; b[3:0]</code>)
+   - <code dir="ltr">3'b111</code>: הזזה לוגית ימינה של <code dir="ltr">a</code> לפי 4 הביטים הנמוכים של <code dir="ltr">b</code> (<code dir="ltr">a &gt;&gt; b[3:0]</code>)`,
 
-ממשו את הפעולות הבאות לפי קוד ה-op:
-- <code>3'b000</code>: חיבור (<code>a + b</code>)
-- <code>3'b001</code>: חיסור (<code>a - b</code>)
-- <code>3'b010</code>: וגם לוגי סיביות (<code>a & b</code>)
-- <code>3'b011</code>: או לוגי סיביות (<code>a | b</code>)
-- <code>3'b100</code>: קסור לוגי סיביות (<code>a ^ b</code>)
-- <code>3'b101</code>: נור לוגי סיביות (<code>~(a | b)</code>)
-- <code>3'b110</code>: הזזה לוגית שמאלה של a לפי 4 הביטים הנמוכים של b (<code>a << b[3:0]</code>)
-- <code>3'b111</code>: הזזה לוגית ימינה של a לפי 4 הביטים הנמוכים של b (<code>a >> b[3:0]</code>)`,
-      taskEn: `Design a 16-bit ALU.
-Inputs: <code>[15:0] a</code>, <code>[15:0] b</code>, <code>[2:0] op</code>.
-Output: <code>[15:0] out</code> (declared as <code>reg</code>).
-
-Implement the following operations based on the control code <code>op</code>:
-- <code>3'b000</code>: Addition (<code>a + b</code>)
-- <code>3'b001</code>: Subtraction (<code>a - b</code>)
-- <code>3'b010</code>: Bitwise AND (<code>a & b</code>)
-- <code>3'b011</code>: Bitwise OR (<code>a | b</code>)
-- <code>3'b100</code>: Bitwise XOR (<code>a ^ b</code>)
-- <code>3'b101</code>: Bitwise NOR (<code>~(a | b)</code>)
-- <code>3'b110</code>: Logical Shift Left (<code>a << b[3:0]</code>)
-- <code>3'b111</code>: Logical Shift Right (<code>a >> b[3:0]</code>)`,
+      taskEn: `Design a complete 16-bit Arithmetic Logic Unit (ALU) inside <code dir="ltr">top_module</code>:
+1. Module Inputs:
+   - <code dir="ltr">input [15:0] a</code>: First 16-bit operand.
+   - <code dir="ltr">input [15:0] b</code>: Second 16-bit operand.
+   - <code dir="ltr">input [2:0] op</code>: 3-bit operation selector code.
+2. Module Output:
+   - <code dir="ltr">output reg [15:0] out</code>: 16-bit ALU output result.
+3. Implement the following 8 operations mapped to <code dir="ltr">op</code>:
+   - <code dir="ltr">3'b000</code>: Arithmetic Addition (<code dir="ltr">a + b</code>)
+   - <code dir="ltr">3'b001</code>: Arithmetic Subtraction (<code dir="ltr">a - b</code>)
+   - <code dir="ltr">3'b010</code>: Bitwise AND (<code dir="ltr">a &amp; b</code>)
+   - <code dir="ltr">3'b011</code>: Bitwise OR (<code dir="ltr">a | b</code>)
+   - <code dir="ltr">3'b100</code>: Bitwise XOR (<code dir="ltr">a ^ b</code>)
+   - <code dir="ltr">3'b101</code>: Bitwise NOR (<code dir="ltr">~(a | b)</code>)
+   - <code dir="ltr">3'b110</code>: Logical Shift Left of <code dir="ltr">a</code> by lower 4 bits of <code dir="ltr">b</code> (<code dir="ltr">a &lt;&lt; b[3:0]</code>)
+   - <code dir="ltr">3'b111</code>: Logical Shift Right of <code dir="ltr">a</code> by lower 4 bits of <code dir="ltr">b</code> (<code dir="ltr">a &gt;&gt; b[3:0]</code>)`,
 
       starterCode: `module top_module (
     input [15:0] a,
@@ -507,7 +676,10 @@ Implement the following operations based on the control code <code>op</code>:
     input [2:0] op,
     output reg [15:0] out
 );
-    // כתבו את לוגיקת ה-ALU כאן / Implement the ALU logic here
+    // אבני בניין: חלוקה ליחידה אריתמטית, יחידה לוגית, יחידת הזזה ומרבב
+    // Building blocks: Arithmetic Unit, Logic Unit, Shift Unit & Multiplexer
+
+    // ממשו את לוגיקת ה-ALU כאן / Implement the ALU logic here
 
 endmodule`,
 
@@ -517,17 +689,32 @@ endmodule`,
     input [2:0] op,
     output reg [15:0] out
 );
+    // 1. היחידה האריתמטית (חיבור וחיסור) / Arithmetic Unit (ADD & SUB)
+    wire [15:0] res_add = a + b;
+    wire [15:0] res_sub = a - b;
+
+    // 2. היחידה הלוגית (AND, OR, XOR, NOR) / Logic Unit
+    wire [15:0] res_and = a & b;
+    wire [15:0] res_or  = a | b;
+    wire [15:0] res_xor = a ^ b;
+    wire [15:0] res_nor = ~(a | b);
+
+    // 3. יחידת ההזזה (SLL, SRL) / Shift Unit
+    wire [15:0] res_sll = a << b[3:0];
+    wire [15:0] res_srl = a >> b[3:0];
+
+    // 4. מרבב בחירת הפעולה (8-to-1 Multiplexer Selection Unit)
     always @(*) begin
         case (op)
-            3'b000: out = a + b;
-            3'b001: out = a - b;
-            3'b010: out = a & b;
-            3'b011: out = a | b;
-            3'b100: out = a ^ b;
-            3'b101: out = ~(a | b);
-            3'b110: out = a << b[3:0];
-            3'b111: out = a >> b[3:0];
-            default: out = 16'b0;
+            3'b000: out = res_add;
+            3'b001: out = res_sub;
+            3'b010: out = res_and;
+            3'b011: out = res_or;
+            3'b100: out = res_xor;
+            3'b101: out = res_nor;
+            3'b110: out = res_sll;
+            3'b111: out = res_srl;
+            default: out = 16'h0000;
         endcase
     end
 endmodule`,
@@ -544,8 +731,8 @@ endmodule`,
       ],
 
       hints: {
-        he: "השתמשו בבלוק always @(*) ובמשפט case הבודק את op.",
-        en: "Use an always @(*) block and a case statement checking op."
+        he: "הגדירו חוטי עזר עבור תוצאות היחידה האריתמטית (res_add, res_sub), היחידה הלוגית (res_and, res_or, res_xor, res_nor) ויחידת ההזזה (res_sll, res_srl), ולאחר מכן השתמשו ב-case(op) כמרבב 8 ל-1.",
+        en: "Define intermediate wires for the Arithmetic Unit (res_add, res_sub), Logic Unit (res_and, res_or, res_xor, res_nor), and Shift Unit (res_sll, res_srl), then use case(op) as an 8-to-1 Multiplexer."
       }
     },
 

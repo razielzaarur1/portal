@@ -16,122 +16,66 @@
 <p>מרבב הוא רכיב לוגי צירופי הפועל כנתב או בורר אותות. יש לו מספר כניסות מידע, יציאה אחת, וכניסת בקרה (בורר - Selector).</p>
 <p>חשבו על מרבב כעל <strong>מסוט של רכבת</strong>: בהתאם למצב הבורר, כיוון התנועה נקבע ונתיב אחד בלבד מחובר ליציאה. במרבב 2-ל-1:</p>
 <ul>
-  <li>אם כניסת הבורר (<code dir="ltr">sel</code>) היא <code dir="ltr">0</code>, היציאה תתחבר לכניסה הראשונה.</li>
-  <li>אם כניסת הבורר (<code dir="ltr">sel</code>) היא <code dir="ltr">1</code>, היציאה תתחבר לכניסה השנייה.</li>
+  <li>אם כניסת הבורר (<code dir="ltr">sel</code>) היא <code dir="ltr">0</code>, היציאה <code dir="ltr">y</code> תתחבר לכניסה הראשונה (<code dir="ltr">a</code>).</li>
+  <li>אם כניסת הבורר (<code dir="ltr">sel</code>) היא <code dir="ltr">1</code>, היציאה <code dir="ltr">y</code> תתחבר לכניסה השנייה (<code dir="ltr">b</code>).</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. טבלת אמת ומשוואה לוגית 📊</h3>
-<p>נניח שהכניסות הן $A$ ו-$B$, והבורר הוא $S$. טבלת האמת של המרבב היא:</p>
-<table border="1" style="border-collapse: collapse; width: 100%; text-align: center; margin: 10px 0;">
-  <thead>
-    <tr style="background-color: var(--background-secondary);">
-      <th>S (sel)</th>
-      <th>Output (out)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>0</td>
-      <td>A</td>
-    </tr>
-    <tr>
-      <td>1</td>
-      <td>B</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>המשוואה הלוגית המייצגת פעולה זו היא:</p>
-<p align="center"><code dir="ltr">out = (sel & B) | (~sel & A)</code></p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. מימוש ב-Verilog בעזרת האופרטור המותנה 📐</h3>
-<p>למרות שניתן לממש מרבב באמצעות שערים לוגיים בסיסיים, הדרך המקובלת והקריאה ביותר ב-Verilog עבור מודולים צירופיים קטנים היא שימוש ב-<strong>אופרטור מותנה (Ternary Operator)</strong>:</p>
-<pre dir="ltr"><code>assign out_signal = control_select ? input_if_true : input_if_false;</code></pre>
-<p>מנועי סינתזה מזהים דפוס זה באופן מיידי ומייצרים חומרה ייעודית של מרבב מהיר.</p>
+<h3>2. מימוש ב-Verilog באמצעות האופרטור המותנה 📐</h3>
+<p>הדרך המקובלת והקריאה ביותר ב-Verilog עבור מרבב 2-ל-1 היא שימוש ב-<strong>אופרטור מותנה (Ternary Operator)</strong>:</p>
+<pre dir="ltr"><code>assign y = sel ? b : a;</code></pre>
+<p>רכיב זה ישמש אותנו כאבן בניין לבניית מרבב 4-ל-1 ומרבב 8-ל-1 בשיעורים הבאים!</p>
 `,
 
       explanationEn: `
 <h3>1. What is a Multiplexer (MUX)? 🎛️</h3>
 <p>A multiplexer is a combinational logic circuit that functions as a data selector or switch. It has multiple data inputs, a single output, and a control input called the select line (<code dir="ltr">sel</code>).</p>
-<p>Think of it as a <strong>railroad switch</strong>: depending on the select signal, only one specific input path is routed to the output. In a 2-to-1 MUX:</p>
+<p>In a 2-to-1 MUX:</p>
 <ul>
-  <li>If the select signal (<code dir="ltr">sel</code>) is <code dir="ltr">0</code>, the output connects to the first input.</li>
-  <li>If the select signal (<code dir="ltr">sel</code>) is <code dir="ltr">1</code>, the output connects to the second input.</li>
+  <li>If <code dir="ltr">sel == 0</code>, output <code dir="ltr">y</code> connects to <code dir="ltr">a</code>.</li>
+  <li>If <code dir="ltr">sel == 1</code>, output <code dir="ltr">y</code> connects to <code dir="ltr">b</code>.</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Truth Table & Logical Representation 📊</h3>
-<p>If we have inputs $A$ and $B$, and select line $S$, the truth table is:</p>
-<table border="1" style="border-collapse: collapse; width: 100%; text-align: center; margin: 10px 0;">
-  <thead>
-    <tr style="background-color: var(--background-secondary);">
-      <th>S (sel)</th>
-      <th>Output (out)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>0</td>
-      <td>A</td>
-    </tr>
-    <tr>
-      <td>1</td>
-      <td>B</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>The boolean equation is:</p>
-<p align="center"><code dir="ltr">out = (sel & B) | (~sel & A)</code></p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. Multiplexer in Verilog using the Ternary Operator 📐</h3>
-<p>While a MUX can be built using logic gates, the standard and most readable way in Verilog for combinational logic is using the <strong>Ternary Operator (Conditional Operator)</strong>:</p>
-<pre dir="ltr"><code>assign out_signal = control_select ? input_if_true : input_if_false;</code></pre>
-<p>Synthesis tools automatically detect this pattern and map it to dedicated multiplexer hardware primitives.</p>
+<h3>2. Ternary Operator Implementation 📐</h3>
+<pre dir="ltr"><code>assign y = sel ? b : a;</code></pre>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המייצג מרבב 2-ל-1. למודול כניסות של 1-ביט בשם <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, כניסת בקרה של 1-ביט בשם <code dir="ltr">sel</code> ויציאה של 1-ביט בשם <code dir="ltr">out</code>.
-חברו את היציאה <code dir="ltr">out</code> כך שאם <code dir="ltr">sel</code> הוא <code dir="ltr">0</code> היא תקבל את <code dir="ltr">a</code>, ואם <code dir="ltr">sel</code> הוא <code dir="ltr">1</code> היא תקבל את <code dir="ltr">b</code>.`,
-      taskEn: `Create a module named <code dir="ltr">top_module</code> implementing a 2-to-1 Multiplexer. The module has 1-bit inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, a 1-bit select control <code dir="ltr">sel</code>, and a 1-bit output <code dir="ltr">out</code>.
-Connect <code dir="ltr">out</code> such that it outputs <code dir="ltr">a</code> when <code dir="ltr">sel</code> is <code dir="ltr">0</code>, and <code dir="ltr">b</code> when <code dir="ltr">sel</code> is <code dir="ltr">1</code>.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">mux_2to1</code> המייצג מרבב 2-ל-1. למודול כניסות של 1-ביט בשם <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, כניסת בקרה של 1-ביט בשם <code dir="ltr">sel</code> ויציאה של 1-ביט בשם <code dir="ltr">y</code>.`,
+      taskEn: `Design a 2-to-1 Multiplexer module named <code dir="ltr">mux_2to1</code> with inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> and output <code dir="ltr">y</code>.`,
 
-      starterCode: `module top_module (
+      starterCode: `module mux_2to1 (
     input a,
     input b,
     input sel,
-    output out
+    output y
 );
     // כתבו את הפתרון כאן / Write your solution here
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `module mux_2to1 (
     input a,
     input b,
     input sel,
-    output out
+    output y
 );
-    assign out = sel ? b : a;
+    assign y = sel ? b : a;
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, a: 0, b: 0, sel: 0, out: 0 },
-        { time: 5, a: 1, b: 0, sel: 0, out: 1 },
-        { time: 10, a: 1, b: 0, sel: 1, out: 0 },
-        { time: 15, a: 1, b: 1, sel: 1, out: 1 },
-        { time: 20, a: 0, b: 1, sel: 0, out: 0 }
+        { time: 0, a: 0, b: 0, sel: 0, y: 0 },
+        { time: 5, a: 1, b: 0, sel: 0, y: 1 },
+        { time: 10, a: 1, b: 0, sel: 1, y: 0 },
+        { time: 15, a: 1, b: 1, sel: 1, y: 1 },
+        { time: 20, a: 0, b: 1, sel: 0, y: 0 }
       ],
 
       hints: {
-        he: "השתמשו באופרטור המותנה (Ternary Operator) ב-Verilog: assign out = sel ? b : a;",
-        en: "Use the Verilog ternary operator: assign out = sel ? b : a;"
+        he: "השתמשו באופרטור המותנה ב-Verilog: assign y = sel ? b : a;",
+        en: "Use the Verilog ternary operator: assign y = sel ? b : a;"
       }
     },
 
@@ -143,88 +87,89 @@ endmodule`,
       chapter: 3,
       chapterTitleHe: "פרק 3: מרבבים, מפענחים ומקודדים",
       chapterTitleEn: "Chapter 3: Multiplexers, Decoders & Encoders",
-      titleHe: "מרבב 4 ל-1 (4-to-1 MUX) 🎚️",
-      titleEn: "4-to-1 MUX",
+      titleHe: "מרבב 4 ל-1 — הרכבה מ-3 מרבבי 2 ל-1 🎚️",
+      titleEn: "4-to-1 MUX (Hierarchical)",
 
       explanationHe: `
-<h3>1. מרבב 4 ל-1 (4-to-1 MUX) 🎚️</h3>
-<p>כאשר יש לנו 4 מקורות מידע ונרצה לבחור אחד מהם, נצטרך מרבב 4 ל-1. כיוון שישנן 4 אפשרויות בחירה, אנו זקוקים ל-<strong>2 ביטי בקרה (Selector)</strong>, מכיוון ש-$2^2 = 4$.</p>
-<p>נניח שיש לנו כניסות <code dir="ltr">in0, in1, in2, in3</code> ובורר דו-ביטי <code dir="ltr">sel[1:0]</code>:</p>
-<ul>
-  <li>כאשר <code dir="ltr">sel = 2'b00</code> (ערך עשרוני 0), היציאה שווה ל-<code dir="ltr">in0</code>.</li>
-  <li>כאשר <code dir="ltr">sel = 2'b01</code> (ערך עשרוני 1), היציאה שווה ל-<code dir="ltr">in1</code>.</li>
-  <li>כאשר <code dir="ltr">sel = 2'b10</code> (ערך עשרוני 2), היציאה שווה ל-<code dir="ltr">in2</code>.</li>
-  <li>כאשר <code dir="ltr">sel = 2'b11</code> (ערך עשרוני 3), היציאה שווה ל-<code dir="ltr">in3</code>.</li>
-</ul>
+<h3>1. עץ מרבבים: הרכבת מרבב 4 ל-1 מתוך 3 מרבבי 2 ל-1 🧱</h3>
+<p>במקום לכתוב לוגיקה מורכבת ושטוחה, אנו מרכיבים מרבב 4-ל-1 באמצעות עץ היררכי המורכב מ-3 יחידות של <strong><code dir="ltr">mux_2to1</code></strong> שבנינו בשיעור 17:</p>
+
+<pre dir="ltr"><code>in[0] ────┐
+          ├─►[ mux_2to1 u0 ]── m0 ──┐
+in[1] ────┘        ▲                │
+                   │ sel[0]         ├─►[ mux_2to1 u2 ]──── y
+in[2] ────┐                         │        ▲
+          ├─►[ mux_2to1 u1 ]── m1 ──┘        │ sel[1]
+in[3] ────┘        ▲
+                   │ sel[0]</code></pre>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. מימוש ב-Verilog באמצעות אופרטורים מותנים משורשרים 📐</h3>
-<p>ניתן לשרשר (Nest) אופרטורים מותנים <code dir="ltr">? :</code> אחד בתוך השני כדי לקבל התנהגות של בחירה מרובה. לדוגמה, נניח שיש לנו בורר <code dir="ltr">select</code> וכניסות <code dir="ltr">x, y, z</code>:</p>
-<pre dir="ltr"><code>assign out_val = (select == 0) ? x :
-                 (select == 1) ? y : z;</code></pre>
-<p>שיטה נוספת היא לבדוק ביט אחר ביט מתוך הבורר:</p>
-<pre dir="ltr"><code>assign out_val = select[1] ? (select[0] ? val3 : val2) : (select[0] ? val1 : val0);</code></pre>
+<h3>2. איך זה עובד? 💡</h3>
+<ul>
+  <li>השלב הראשון בורר בין זוגות באמצעות <code dir="ltr">sel[0]</code>:
+    <br><code dir="ltr">u0</code> בורר בין <code dir="ltr">in[0]</code> ל-<code dir="ltr">in[1]</code> ומפיק את <code dir="ltr">m0</code>.
+    <br><code dir="ltr">u1</code> בורר בין <code dir="ltr">in[2]</code> ל-<code dir="ltr">in[3]</code> ומפיק את <code dir="ltr">m1</code>.
+  </li>
+  <li>השלב השני (<code dir="ltr">u2</code>) בורר בין <code dir="ltr">m0</code> ל-<code dir="ltr">m1</code> באמצעות <code dir="ltr">sel[1]</code>!</li>
+</ul>
 `,
 
       explanationEn: `
-<h3>1. 4-to-1 Multiplexer (4-to-1 MUX) 🎚️</h3>
-<p>When selecting from 4 different data sources, we need a 4-to-1 Multiplexer. Since there are 4 unique paths, we need <strong>2 select bits</strong>, because $2^2 = 4$.</p>
-<p>Let's assume we have inputs <code dir="ltr">in0, in1, in2, in3</code> and a 2-bit select vector <code dir="ltr">sel[1:0]</code>:</p>
-<ul>
-  <li>When <code dir="ltr">sel = 2'b00</code> (decimal 0), the output is <code dir="ltr">in0</code>.</li>
-  <li>When <code dir="ltr">sel = 2'b01</code> (decimal 1), the output is <code dir="ltr">in1</code>.</li>
-  <li>When <code dir="ltr">sel = 2'b10</code> (decimal 2), the output is <code dir="ltr">in2</code>.</li>
-  <li>When <code dir="ltr">sel = 2'b11</code> (decimal 3), the output is <code dir="ltr">in3</code>.</li>
-</ul>
+<h3>1. MUX Tree: 4-to-1 MUX from 3 2-to-1 MUXes 🧱</h3>
+<p>A 4-to-1 multiplexer can be constructed hierarchically using a tree of three <strong><code dir="ltr">mux_2to1</code></strong> instances:</p>
 
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. Nesting Ternary Operators in Verilog 📐</h3>
-<p>We can nest multiple ternary operators <code dir="ltr">? :</code> to handle multiple choices. For example, if we have a select signal and inputs <code dir="ltr">x, y, z</code>:</p>
-<pre dir="ltr"><code>assign out_val = (select == 0) ? x :
-                 (select == 1) ? y : z;</code></pre>
-<p>Alternatively, we can index individual bits of the select vector:</p>
-<pre dir="ltr"><code>assign out_val = select[1] ? (select[0] ? val3 : val2) : (select[0] ? val1 : val0);</code></pre>
+<pre dir="ltr"><code>in[0] ────┐
+          ├─►[ mux_2to1 u0 ]── m0 ──┐
+in[1] ────┘        ▲                │
+                   │ sel[0]         ├─►[ mux_2to1 u2 ]──── y
+in[2] ────┐                         │        ▲
+          ├─►[ mux_2to1 u1 ]── m1 ──┘        │ sel[1]
+in[3] ────┘        ▲
+                   │ sel[0]</code></pre>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המייצג מרבב 4-ל-1. למודול 4 כניסות בגודל 1-ביט בשם <code dir="ltr">in0, in1, in2, in3</code>, כניסת בחירה של 2-ביט בשם <code dir="ltr">sel</code> ויציאה יחידה בשם <code dir="ltr">out</code>. חברו את היציאה לכניסה המתאימה בהתאם לערך של <code dir="ltr">sel</code>.`,
-      taskEn: `Design a 4-to-1 multiplexer module named <code dir="ltr">top_module</code>. The module has four 1-bit inputs <code dir="ltr">in0, in1, in2, in3</code>, a 2-bit select vector <code dir="ltr">sel</code>, and a single output <code dir="ltr">out</code>. Route the selected input to the output based on the value of <code dir="ltr">sel</code>.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">mux_4to1</code> המייצג מרבב 4-ל-1 על ידי חיבור <strong>3 מופעים של <code dir="ltr">mux_2to1</code></strong>.
+<br><br>
+למודול כניסת וקטור של 4-ביט בשם <code dir="ltr">in</code>, כניסת בחירה של 2-ביט בשם <code dir="ltr">sel</code> ויציאה של 1-ביט בשם <code dir="ltr">y</code>.
+<br><br>
+תת-המודול <code dir="ltr">mux_2to1</code> מוגדר במערכת עם הממשק:
+<code dir="ltr">module mux_2to1 (input a, input b, input sel, output y);</code>`,
+      taskEn: `Build a 4-to-1 Multiplexer in module <code dir="ltr">mux_4to1</code> by instantiating <strong>3 copies of <code dir="ltr">mux_2to1</code></strong>.
+Inputs: 4-bit vector <code dir="ltr">in</code>, 2-bit selector <code dir="ltr">sel</code>; output: <code dir="ltr">y</code>.`,
 
-      starterCode: `module top_module (
-    input in0,
-    input in1,
-    input in2,
-    input in3,
+      starterCode: `module mux_4to1 (
+    input [3:0] in,
     input [1:0] sel,
-    output out
+    output y
 );
-    // כתוב את הפתרון כאן / Write your solution here
+    // הגדירו חוטים פנימיים וחברו 3 מופעי mux_2to1 כאן / Declare wires and instantiate 3 mux_2to1 instances here
 
 endmodule`,
 
-      solutionCode: `module top_module (
-    input in0,
-    input in1,
-    input in2,
-    input in3,
+      solutionCode: `module mux_4to1 (
+    input [3:0] in,
     input [1:0] sel,
-    output out
+    output y
 );
-    assign out = sel[1] ? (sel[0] ? in3 : in2) : (sel[0] ? in1 : in0);
+    wire m0, m1;
+
+    mux_2to1 u0 (.a(in[0]), .b(in[1]), .sel(sel[0]), .y(m0));
+    mux_2to1 u1 (.a(in[2]), .b(in[3]), .sel(sel[0]), .y(m1));
+    mux_2to1 u2 (.a(m0),   .b(m1),    .sel(sel[1]), .y(y));
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, in0: 0, in1: 1, in2: 0, in3: 1, sel: 0, out: 0 },
-        { time: 5, in0: 0, in1: 1, in2: 0, in3: 1, sel: 1, out: 1 },
-        { time: 10, in0: 0, in1: 1, in2: 0, in3: 1, sel: 2, out: 0 },
-        { time: 15, in0: 0, in1: 1, in2: 0, in3: 1, sel: 3, out: 1 },
-        { time: 20, in0: 1, in1: 0, in2: 1, in3: 0, sel: 0, out: 1 }
+        { time: 0, in: 10, sel: 0, y: 0 },
+        { time: 5, in: 10, sel: 1, y: 1 },
+        { time: 10, in: 10, sel: 2, y: 0 },
+        { time: 15, in: 10, sel: 3, y: 1 },
+        { time: 20, in: 5,  sel: 0, y: 1 }
       ],
 
       hints: {
-        he: "שרשרו אופרטורים מותנים הבודקים את ביטי ה-sel. לדוגמה: sel[1] ? (sel[0] ? in3 : in2) : (sel[0] ? in1 : in0)",
-        en: "Nest ternary operators evaluating select bits: sel[1] ? (sel[0] ? in3 : in2) : (sel[0] ? in1 : in0)"
+        he: "הגדירו חוטים פנימיים: wire m0, m1; חברו את u0 ל-in[0], in[1] עם sel[0], את u1 ל-in[2], in[3] עם sel[0], ואת u2 ל-m0, m1 עם sel[1].",
+        en: "Declare internal wires: wire m0, m1; instantiate u0 and u1 selected by sel[0], then u2 selected by sel[1]."
       }
     },
 
@@ -236,75 +181,66 @@ endmodule`,
       chapter: 3,
       chapterTitleHe: "פרק 3: מרבבים, מפענחים ומקודדים",
       chapterTitleEn: "Chapter 3: Multiplexers, Decoders & Encoders",
-      titleHe: "מרבב 8 ל-1 (8-to-1 MUX) 🎛️",
-      titleEn: "8-to-1 MUX",
+      titleHe: "מרבב 8 ל-1 — הרכבה מ-2 מרבבי 4 ל-1 ומרבב 2 ל-1 🎛️",
+      titleEn: "8-to-1 MUX (Hierarchical)",
 
       explanationHe: `
-<h3>1. מרבב 8 ל-1 (8-to-1 MUX) 🎛️</h3>
-<p>מרבב 8 ל-1 בוחר אחד מתוך 8 ערוצי כניסה שונים. היות שישנן 8 כניסות, אנו זקוקים ל-<strong>3 ביטי בקרה (Select)</strong>, מכיוון ש-$2^3 = 8$.</p>
-<p>במערכות דיגיטליות, כניסות המידע מוגדרות פעמים רבות כוקטור רחב (<code dir="ltr">input [7:0] in</code>) במקום 8 חוטים נפרדים. זה מאפשר לנו לנצל יתרון עצום של שפת Verilog.</p>
+<h3>1. הרכבת מרבב 8 ל-1 מתוך מודולים קודמים 🧱</h3>
+<p>ממשיכים לבנות את מגדל הלבנים! מרבב 8-ל-1 מורכב ישירות מ-<strong>שני מרבבי 4-ל-1 (<code dir="ltr">mux_4to1</code>)</strong> עבור 8 הכניסות, ו-<strong>מרבב 2-ל-1 (<code dir="ltr">mux_2to1</code>)</strong> אחד שבורר בין שני החצאים באמצעות ביט ה-MSB של הבורר (<code dir="ltr">sel[2]</code>):</p>
 
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. כוחו של אינדקס דינמי ב-Verilog 🚀</h3>
-<p>במפתח קוד Verilog תקני, ניתן להשתמש במשתנה או אות שלם כאינדקס ישיר לחילוץ ביט מתוך וקטור:</p>
-<pre dir="ltr"><code>assign output_val = bus[addr];</code></pre>
-<p>מנוע הסינתזה מתרגם ביטוי זה אוטומטית למרבב מתאים. עם זאת, בסימולטור המקומי שלנו, אנו משתמשים במעריך ביטויים סדרתי פשוט. כדי להבטיח מעבר תקין של הסימולציה ביישומון, נממש את הבחירה באופן מפורש על ידי השוואת הבורר לכל אחד מהערכים העשרוניים (0 עד 7) וחילוץ הביט המתאים מהוקטור באמצעות אופרטורים מותנים.</p>
+<pre dir="ltr"><code>in[3:0] ────►[ mux_4to1 u0 ]── m0 ──┐
+                 ▲ sel[1:0]         │
+                                    ├─►[ mux_2to1 u2 ]──── y
+in[7:4] ────►[ mux_4to1 u1 ]── m1 ──┘        ▲ sel[2]
+                 ▲ sel[1:0]</code></pre>
 `,
 
       explanationEn: `
-<h3>1. 8-to-1 Multiplexer (8-to-1 MUX) 🎛️</h3>
-<p>An 8-to-1 Multiplexer selects one of 8 input lines and routes it to the output. Since there are 8 inputs, we need <strong>3 select bits</strong>, because $2^3 = 8$.</p>
-<p>In digital design, these inputs are often packed together into a single multi-bit vector (<code dir="ltr">input [7:0] in</code>) instead of 8 individual wires, which allows us to simplify our code.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. Dynamic Indexing in Verilog 🚀</h3>
-<p>In standard Verilog, you can use a variable as an index to access a specific bit of a vector:</p>
-<pre dir="ltr"><code>assign output_val = bus[addr];</code></pre>
-<p>The compiler automatically creates a multiplexer. However, in our client-side simulator, expressions are evaluated sequentially. To guarantee compatibility, we can explicitly compare our selector to each decimal address value (0 to 7) and extract the corresponding bit from the vector using ternary conditionals.</p>
+<h3>1. 8-to-1 MUX from 2 4-to-1 MUXes and 1 2-to-1 MUX 🧱</h3>
+<p>An 8-to-1 Multiplexer is composed of <strong>two <code dir="ltr">mux_4to1</code></strong> instances handling 4 inputs each (selected by <code dir="ltr">sel[1:0]</code>), and <strong>one <code dir="ltr">mux_2to1</code></strong> selecting between the two halves using <code dir="ltr">sel[2]</code>.</p>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המייצג מרבב 8-ל-1. למודול כניסת וקטור רחב של 8-ביט בשם <code dir="ltr">in</code>, כניסת בקרה של 3-ביט בשם <code dir="ltr">sel</code> ויציאה יחידה בשם <code dir="ltr">out</code>. השתמשו באופרטור מותנה משורשר כדי לבחור את הביט המתאים מתוך הוקטור <code dir="ltr">in</code> בהתאם לערך הבורר (למשל, עבור sel שווה ל-0 בחרו את in[0] וכו').`,
-      taskEn: `Build an 8-to-1 multiplexer named <code dir="ltr">top_module</code>. The module has an 8-bit input vector <code dir="ltr">in</code>, a 3-bit select input <code dir="ltr">sel</code>, and a single output <code dir="ltr">out</code>. Use a chained conditional operator to select the appropriate bit of the vector <code dir="ltr">in</code> based on the selector value (e.g. choose in[0] when sel is 0, etc.).`,
+      taskHe: `בנו מודול בשם <code dir="ltr">mux_8to1</code> המייצג מרבב 8-ל-1 על ידי שילוב <strong>2 מופעים של <code dir="ltr">mux_4to1</code></strong> ו-<strong>מופע יחיד של <code dir="ltr">mux_2to1</code></strong>.
+<br><br>
+למודול כניסת וקטור 8-ביט בשם <code dir="ltr">in</code>, כניסת בחירה 3-ביט בשם <code dir="ltr">sel</code>, ויציאה 1-ביט בשם <code dir="ltr">y</code>.`,
+      taskEn: `Build an 8-to-1 Multiplexer in module <code dir="ltr">mux_8to1</code> by combining <strong>2 instances of <code dir="ltr">mux_4to1</code></strong> and <strong>1 instance of <code dir="ltr">mux_2to1</code></strong>.
+Inputs: 8-bit vector <code dir="ltr">in</code>, 3-bit selector <code dir="ltr">sel</code>; output: <code dir="ltr">y</code>.`,
 
-      starterCode: `module top_module (
+      starterCode: `module mux_8to1 (
     input [7:0] in,
     input [2:0] sel,
-    output out
+    output y
 );
-    // כתבו את הפתרון כאן / Write your solution here
+    // הגדירו חוטים פנימיים וחברו 2 מופעי mux_4to1 ומופע mux_2to1 / Declare wires and instantiate sub-modules
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `module mux_8to1 (
     input [7:0] in,
     input [2:0] sel,
-    output out
+    output y
 );
-    assign out = (sel == 0) ? in[0] :
-                 (sel == 1) ? in[1] :
-                 (sel == 2) ? in[2] :
-                 (sel == 3) ? in[3] :
-                 (sel == 4) ? in[4] :
-                 (sel == 5) ? in[5] :
-                 (sel == 6) ? in[6] : in[7];
+    wire m0, m1;
+
+    mux_4to1 u0 (.in(in[3:0]), .sel(sel[1:0]), .y(m0));
+    mux_4to1 u1 (.in(in[7:4]), .sel(sel[1:0]), .y(m1));
+    mux_2to1 u2 (.a(m0), .b(m1), .sel(sel[2]), .y(y));
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, in: 170, sel: 0, out: 0 },
-        { time: 5, in: 170, sel: 1, out: 1 },
-        { time: 10, in: 170, sel: 2, out: 0 },
-        { time: 15, in: 170, sel: 3, out: 1 },
-        { time: 20, in: 170, sel: 4, out: 0 },
-        { time: 25, in: 170, sel: 5, out: 1 },
-        { time: 30, in: 170, sel: 6, out: 0 },
-        { time: 35, in: 170, sel: 7, out: 1 }
+        { time: 0, in: 170, sel: 0, y: 0 },
+        { time: 5, in: 170, sel: 1, y: 1 },
+        { time: 10, in: 170, sel: 2, y: 0 },
+        { time: 15, in: 170, sel: 3, y: 1 },
+        { time: 20, in: 170, sel: 4, y: 0 },
+        { time: 25, in: 170, sel: 5, y: 1 },
+        { time: 30, in: 170, sel: 6, y: 0 },
+        { time: 35, in: 170, sel: 7, y: 1 }
       ],
 
       hints: {
-        he: "כתבו שרשרת תנאים המשווה את sel למספרים 0 עד 6, ומחזירה את in[0] עד in[6] בהתאמה, ואחרת מחזירה את in[7].",
-        en: "Write a chain of conditional operators comparing sel to numbers 0 to 6, returning in[0] to in[6] respectively, otherwise returning in[7]."
+        he: "חברו את u0 ל-in[3:0] עם sel[1:0], את u1 ל-in[7:4] עם sel[1:0], ואת u2 ל-m0,m1 עם sel[2].",
+        en: "Instantiate u0 with in[3:0] and sel[1:0], u1 with in[7:4] and sel[1:0], and u2 with m0,m1 and sel[2]."
       }
     },
 
@@ -413,87 +349,61 @@ endmodule`,
       chapter: 3,
       chapterTitleHe: "פרק 3: מרבבים, מפענחים ומקודדים",
       chapterTitleEn: "Chapter 3: Multiplexers, Decoders & Encoders",
-      titleHe: "מפענח 2 ל-4 (2-to-4 Decoder) 🔓",
-      titleEn: "2-to-4 Decoder",
+      titleHe: "מפענח 2 ל-4 עם אפשור (2-to-4 Decoder with Enable) 🔓",
+      titleEn: "2-to-4 Decoder with Enable",
 
       explanationHe: `
-<h3>1. מהו מפענח (Decoder)? 🔓</h3>
-<p>מפענח הוא רכיב לוגי צירופי המקבל קוד בינארי של $N$ ביטים ומפעיל את אחת מתוך $2^N$ היציאות שלו (כלומר, הופך אותה ל-<code dir="ltr">1</code>, בעוד שאר היציאות נשארות <code dir="ltr">0</code>).</p>
-<p>סוג זה של פלט נקרא קידוד <strong>One-Hot (סיבית חמה יחידה)</strong>, מכיוון שבכל רגע נתון רק ביט אחד בדיוק פעיל.</p>
-<p>שימושים נפוצים: בחירת רכיבי זיכרון (Chip Select), פענוח פקודות במעבד, ניתוח כתובות חומרה.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. מפענח 2 ל-4 📐</h3>
-<p>למפענח 2 ל-4 יש כניסה דו-ביטית <code dir="ltr">in[1:0]</code> ויציאה בת 4 ביטים <code dir="ltr">out[3:0]</code>:</p>
+<h3>1. מהו מפענח 2 ל-4 עם כניסת אפשור (Enable)? 🔓</h3>
+<p>מפענח 2-ל-4 מקבל קוד בינארי של 2 ביטים (<code dir="ltr">in[1:0]</code>) וכניסת אפשור (<code dir="ltr">en</code>), ומפעיל בדיוק את היציאה המתאימה מתוך 4 היציאות (<code dir="ltr">out[3:0]</code>) בקידוד One-Hot.</p>
 <ul>
-  <li>אם הכניסה היא <code dir="ltr">0</code> (בינארי 00), היציאה היא <code dir="ltr">0001</code> (רק ביט 0 פעיל).</li>
-  <li>אם הכניסה היא <code dir="ltr">1</code> (בינארי 01), היציאה היא <code dir="ltr">0010</code> (רק ביט 1 פעיל).</li>
-  <li>אם הכניסה היא <code dir="ltr">2</code> (בינארי 10), היציאה היא <code dir="ltr">0100</code> (רק ביט 2 פעיל).</li>
-  <li>אם הכניסה היא <code dir="ltr">3</code> (בינארי 11), היציאה היא <code dir="ltr">1000</code> (רק ביט 3 פעיל).</li>
+  <li>אם <code dir="ltr">en = 0</code>: כל היציאות כבויות (<code dir="ltr">out = 4'b0000</code>).</li>
+  <li>אם <code dir="ltr">en = 1</code>: היציאה באינדקס של <code dir="ltr">in</code> נדלקת ל-<code dir="ltr">1</code>!</li>
 </ul>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. טריק ההזזה שמאלה (Left Shift) 🚀</h3>
-<p>במקום לכתוב תנאים מורכבים עבור כל ביט, ניתן לנצל את אופרטור ההזזה שמאלה (<code dir="ltr">&lt;&lt;</code>) ב-Verilog בצורה מבריקה:</p>
-<pre dir="ltr"><code>assign out = 1 &lt;&lt; in;</code></pre>
-<p>כאשר אנו מזיזים את המספר 1 שמאלה לפי הערך של הכניסה, אנו מקבלים בדיוק את הביט הפעיל בעמדה הנכונה! למשל, אם <code dir="ltr">in = 2</code>, אנו מזיזים את הביט 1 שתי עמדות שמאלה ומקבלים <code dir="ltr">4</code> (בינארי <code dir="ltr">0100</code>).</p>
+<p>רכיב זה הוא אבן בניין יסודית לבניית מפענח 3-ל-8 ומפענח 4-ל-16 בשיעורים הבאים!</p>
 `,
 
       explanationEn: `
-<h3>1. What is a Decoder? 🔓</h3>
-<p>A decoder is a combinational logic circuit that translates an $N$-bit binary input code into $2^N$ outputs, activating exactly one of them (driving it to <code dir="ltr">1</code>, while keeping all others at <code dir="ltr">0</code>).</p>
-<p>This representation is called <strong>One-Hot encoding</strong>, since only a single bit is active at any given time.</p>
-<p>Decoders are widely used in hardware address decoding, instruction decoders in CPUs, and chip select logic.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. 2-to-4 Decoder Logic 📐</h3>
-<p>A 2-to-4 decoder has a 2-bit input <code dir="ltr">in[1:0]</code> and a 4-bit output vector <code dir="ltr">out[3:0]</code>:</p>
+<h3>1. 2-to-4 Decoder with Enable 🔓</h3>
+<p>Translates a 2-bit code (<code dir="ltr">in[1:0]</code>) into 4 One-Hot output lines (<code dir="ltr">out[3:0]</code>) when enabled by <code dir="ltr">en</code>:</p>
 <ul>
-  <li>If the input is <code dir="ltr">0</code> (binary 00), the output is <code dir="ltr">0001</code> (bit 0 active).</li>
-  <li>If the input is <code dir="ltr">1</code> (binary 01), the output is <code dir="ltr">0010</code> (bit 1 active).</li>
-  <li>If the input is <code dir="ltr">2</code> (binary 10), the output is <code dir="ltr">0100</code> (bit 2 active).</li>
-  <li>If the input is <code dir="ltr">3</code> (binary 11), the output is <code dir="ltr">1000</code> (bit 3 active).</li>
+  <li>If <code dir="ltr">en == 0</code>, all outputs are zero (<code dir="ltr">4'b0000</code>).</li>
+  <li>If <code dir="ltr">en == 1</code>, output bit at index <code dir="ltr">in</code> is high.</li>
 </ul>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. The Left-Shift Decoder Trick 🚀</h3>
-<p>Instead of writing separate boolean equations for each bit, we can use the Verilog left-shift operator (<code dir="ltr">&lt;&lt;</code>) in an elegant way:</p>
-<pre dir="ltr"><code>assign out = 1 &lt;&lt; in;</code></pre>
-<p>By shifting the number 1 left by the decimal value of the input, we activate exactly the bit at that index! For example, if <code dir="ltr">in = 2</code>, we shift 1 by 2 positions to get <code dir="ltr">4</code> (binary <code dir="ltr">0100</code>).</p>
 `,
 
-      taskHe: `בנו מפענח 2-ל-4 בשם <code dir="ltr">top_module</code>. כניסת המפענח היא וקטור של 2-ביט בשם <code dir="ltr">in</code>, ויציאתו היא וקטור של 4-ביט בשם <code dir="ltr">out</code>. היציאה צריכה לפעול בצורה של One-Hot (רק ביט אחד דולק בהתאם לערך הכניסה).`,
-      taskEn: `Create a 2-to-4 decoder named <code dir="ltr">top_module</code>. The input is a 2-bit vector <code dir="ltr">in</code> and the output is a 4-bit vector <code dir="ltr">out</code>. The output must be One-Hot encoded, where only the bit at the index specified by the binary input is high.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">decoder_2to4</code>. כניסות: וקטור 2-ביט <code dir="ltr">in</code> וכניסת אפשור 1-ביט <code dir="ltr">en</code>. יציאה: וקטור 4-ביט <code dir="ltr">out</code>.
+אם <code dir="ltr">en</code> הוא 1 בצעו One-Hot decoding, ואם <code dir="ltr">en</code> הוא 0 אפסו את כל היציאות.`,
+      taskEn: `Design a 2-to-4 Decoder with Enable in module <code dir="ltr">decoder_2to4</code>. Inputs: 2-bit vector <code dir="ltr">in</code>, 1-bit <code dir="ltr">en</code>; output: 4-bit vector <code dir="ltr">out</code>.`,
 
-      starterCode: `module top_module (
+      starterCode: `module decoder_2to4 (
     input [1:0] in,
+    input en,
     output [3:0] out
 );
     // כתבו את הפתרון כאן / Write your solution here
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `module decoder_2to4 (
     input [1:0] in,
+    input en,
     output [3:0] out
 );
-    assign out = 1 << in;
+    assign out = en ? (4'b0001 << in) : 4'b0000;
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, in: 0, out: 1 },
-        { time: 5, in: 1, out: 2 },
-        { time: 10, in: 2, out: 4 },
-        { time: 15, in: 3, out: 8 }
+        { time: 0, in: 0, en: 0, out: 0 },
+        { time: 5, in: 0, en: 1, out: 1 },
+        { time: 10, in: 1, en: 1, out: 2 },
+        { time: 15, in: 2, en: 1, out: 4 },
+        { time: 20, in: 3, en: 1, out: 8 },
+        { time: 25, in: 3, en: 0, out: 0 }
       ],
 
       hints: {
-        he: "השתמשו באופרטור הזזה שמאלה: assign out = 1 << in;",
-        en: "Use the left shift operator: assign out = 1 << in;"
+        he: "השתמשו באופרטור מותנה: assign out = en ? (4'b0001 << in) : 4'b0000;",
+        en: "Use a ternary operator: assign out = en ? (4'b0001 << in) : 4'b0000;"
       }
     },
 
@@ -505,84 +415,76 @@ endmodule`,
       chapter: 3,
       chapterTitleHe: "פרק 3: מרבבים, מפענחים ומקודדים",
       chapterTitleEn: "Chapter 3: Multiplexers, Decoders & Encoders",
-      titleHe: "מפענח 3 ל-8 (3-to-8 Decoder) 🔓",
-      titleEn: "3-to-8 Decoder",
+      titleHe: "מפענח 3 ל-8 — הרכבה מ-2 מפענחי 2 ל-4 🔓",
+      titleEn: "3-to-8 Decoder (Hierarchical)",
 
       explanationHe: `
-<h3>1. מפענח 3 ל-8 (3-to-8 Decoder) 🔓</h3>
-<p>מפענח 3 ל-8 מרחיב את מושג הפענוח ל-3 כניסות ו-8 יציאות. כאשר הוא מאופשר, הוא מקבל כניסה בת 3 ביטים ומפעיל את היציאה המתאימה מתוך ה-8 (מ-0 עד 7).</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. חשיבות כניסת האפשור (Enable) 🔌</h3>
-<p>ברכיבי חומרה אמיתיים, מפענחים כוללים לרוב פין בקרה נוסף בשם <strong>Enable (אפשור)</strong>. פין זה מאפשר לשתק את הרכיב כולו:</p>
+<h3>1. הרכבת מפענח 3 ל-8 מתוך 2 מפענחי 2 ל-4 🧱</h3>
+<p>נמשיך בבניית מגדל הלבנים! מפענח 3-ל-8 מורכב משני מופעים של <strong><code dir="ltr">decoder_2to4</code></strong>:</p>
 <ul>
-  <li>אם כניסת ה-<strong>Enable</strong> היא <code dir="ltr">0</code>, המפענח כבוי, וכל 8 היציאות שלו יהיו שוות ל-<code dir="ltr">0</code>.</li>
-  <li>אם כניסת ה-<strong>Enable</strong> היא <code dir="ltr">1</code>, המפענח פועל כרגיל ומבצע את הפענוח.</li>
+  <li>הביטים הנמוכים <code dir="ltr">in[1:0]</code> מחוברים לכניסת הכתובת של שני המפענחים.</li>
+  <li>ביט ה-MSB (<code dir="ltr">in[2]</code>) קובע איזה מפענח יאופשר:
+    <ul>
+      <li>כאשר <code dir="ltr">in[2] = 0</code>: המפענח התחתון <code dir="ltr">d0</code> מקבל <code dir="ltr">en &amp; ~in[2]</code> ומפעיל יציאות 0-3 (<code dir="ltr">low</code>).</li>
+      <li>כאשר <code dir="ltr">in[2] = 1</code>: המפענח העליון <code dir="ltr">d1</code> מקבל <code dir="ltr">en &amp; in[2]</code> ומפעיל יציאות 4-7 (<code dir="ltr">high</code>).</li>
+    </ul>
+  </li>
+  <li>איחוד היציאות: <code dir="ltr">assign out = {high, low};</code></li>
 </ul>
-<p>פין האפשור קריטי בחיבור רכיבים מרובים לאותו אוטובוס נתונים משותף, כדי למנוע התנגשויות בחומרה.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. שילוב Enable ב-Verilog 📐</h3>
-<p>ניתן לשלב את אות האפשור עם לוגיקת ההזזה בעזרת אופרטור מותנה:</p>
-<pre dir="ltr"><code>assign out_bus = en_signal ? (1 &lt;&lt; address) : 0;</code></pre>
-<p>במידה ו-\`en_signal\` פעיל, מתבצעת ההזזה שמאלה ומקבלים קוד One-Hot, אחרת כל היציאות מאופסות.</p>
 `,
 
       explanationEn: `
-<h3>1. 3-to-8 Decoder 🔓</h3>
-<p>A 3-to-8 decoder maps a 3-bit binary input to one of 8 outputs (indexed 0 to 7). When active, it turns on exactly the output line indicated by the binary input value.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. The Role of the Enable Signal 🔌</h3>
-<p>In physical hardware, decoders often include an extra control input called <strong>Enable</strong>. This signal acts as a master switch:</p>
+<h3>1. Hierarchical 3-to-8 Decoder from 2 2-to-4 Decoders 🧱</h3>
+<p>We build a 3-to-8 decoder by instantiating two <strong><code dir="ltr">decoder_2to4</code></strong> blocks:</p>
 <ul>
-  <li>If the <strong>Enable</strong> input is <code dir="ltr">0</code>, the decoder is disabled, forcing all 8 outputs to <code dir="ltr">0</code> regardless of the input code.</li>
-  <li>If the <strong>Enable</strong> input is <code dir="ltr">1</code>, the decoder is active and functions normally.</li>
+  <li>Address bits <code dir="ltr">in[1:0]</code> connect to both sub-decoders.</li>
+  <li>MSB <code dir="ltr">in[2]</code> enables the lower decoder <code dir="ltr">d0</code> when 0, and the upper decoder <code dir="ltr">d1</code> when 1.</li>
+  <li>Outputs concatenate: <code dir="ltr">assign out = {high, low};</code></li>
 </ul>
-<p>Enable pins are crucial when sharing a bus among multiple devices, preventing hardware contention by ensuring only one device is active at a time.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. Incorporating Enable in Verilog 📐</h3>
-<p>You can easily incorporate an enable signal into your left-shift decoding logic using a ternary operator:</p>
-<pre dir="ltr"><code>assign out_bus = en_signal ? (1 &lt;&lt; address) : 0;</code></pre>
-<p>If \`en_signal\` is active, the left shift executes, yielding a One-Hot code. Otherwise, the output is driven to all zeros.</p>
 `,
 
-      taskHe: `בנו מפענח 3-ל-8 בעל כניסת אפשור (Enable) בשם <code dir="ltr">top_module</code>. למודול כניסת נתונים של 3-ביט בשם <code dir="ltr">in</code>, כניסת אפשור של 1-ביט בשם <code dir="ltr">enable</code> ויציאת וקטור של 8-ביט בשם <code dir="ltr">out</code>. אם <code dir="ltr">enable</code> הוא 0, כל היציאות צריכות להיות 0. אם <code dir="ltr">enable</code> הוא 1, המודול יפענח את הכניסה כרגיל.`,
-      taskEn: `Build a 3-to-8 decoder with an enable pin named <code dir="ltr">top_module</code>. It has a 3-bit input <code dir="ltr">in</code>, a 1-bit input <code dir="ltr">enable</code>, and an 8-bit output vector <code dir="ltr">out</code>. If <code dir="ltr">enable</code> is 0, all outputs must be 0. If <code dir="ltr">enable</code> is 1, the module should perform normal 3-to-8 decoding.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">decoder_3to8</code> על ידי שילוב <strong>2 מופעים של <code dir="ltr">decoder_2to4</code></strong>.
+<br><br>
+כניסות: וקטור 3-ביט <code dir="ltr">in</code> ואות אפשור <code dir="ltr">en</code>. יציאה: וקטור 8-ביט <code dir="ltr">out</code>.
+<br><br>
+הממשק של <code dir="ltr">decoder_2to4</code> הוא:
+<code dir="ltr">module decoder_2to4 (input [1:0] in, input en, output [3:0] out);</code>`,
+      taskEn: `Build a 3-to-8 Decoder in module <code dir="ltr">decoder_3to8</code> by instantiating <strong>2 copies of <code dir="ltr">decoder_2to4</code></strong>.
+Inputs: 3-bit vector <code dir="ltr">in</code>, 1-bit <code dir="ltr">en</code>; output: 8-bit vector <code dir="ltr">out</code>.`,
 
-      starterCode: `module top_module (
+      starterCode: `module decoder_3to8 (
     input [2:0] in,
-    input enable,
+    input en,
     output [7:0] out
 );
-    // כתבו את הפתרון כאן / Write your solution here
+    // הגדירו חוטים פנימיים וחברו 2 מופעי decoder_2to4 כאן / Declare wires and instantiate 2 decoder_2to4 modules
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `module decoder_3to8 (
     input [2:0] in,
-    input enable,
+    input en,
     output [7:0] out
 );
-    assign out = enable ? (1 << in) : 0;
+    wire [3:0] low, high;
+
+    decoder_2to4 d0 (.in(in[1:0]), .en(en & ~in[2]), .out(low));
+    decoder_2to4 d1 (.in(in[1:0]), .en(en &  in[2]), .out(high));
+
+    assign out = {high, low};
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, in: 3, enable: 0, out: 0 },
-        { time: 5, in: 0, enable: 1, out: 1 },
-        { time: 10, in: 3, enable: 1, out: 8 },
-        { time: 15, in: 7, enable: 1, out: 128 },
-        { time: 20, in: 7, enable: 0, out: 0 }
+        { time: 0, in: 3, en: 0, out: 0 },
+        { time: 5, in: 0, en: 1, out: 1 },
+        { time: 10, in: 3, en: 1, out: 8 },
+        { time: 15, in: 7, en: 1, out: 128 },
+        { time: 20, in: 7, en: 0, out: 0 }
       ],
 
       hints: {
-        he: "שלבו את אות ה-enable בעזרת אופרטור מותנה. אם הוא 1, בצעו הזזה של (1 << in), אחרת החזירו 0.",
-        en: "Combine the enable signal using a conditional operator. If active, shift (1 << in), otherwise return 0."
+        he: "הגדירו wire [3:0] low, high; חברו את d0 עם en & ~in[2], את d1 עם en & in[2], ואחדו ב-assign out = {high, low};",
+        en: "Declare wire [3:0] low, high; instantiate d0 with en & ~in[2], d1 with en & in[2], and concatenate assign out = {high, low};"
       }
     },
 

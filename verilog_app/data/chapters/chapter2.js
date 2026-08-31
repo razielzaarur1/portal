@@ -555,17 +555,16 @@ endmodule`,
 
       explanationHe: `
 <h3>1. מהו חצי מחבר (Half Adder)? ➕</h3>
-<p>חצי מחבר הוא המבנה האריתמטי הבסיסי ביותר בחומרה דיגיטלית. תפקידו לקבל שתי כניסות של 1-ביט (נקרא להן <code dir="ltr">a</code> ו-<code dir="ltr">b</code>), ולחשב את החיבור האריתמטי ביניהן.</p>
-<p>פעולת החיבור מפיקה שתי תוצאות:</p>
+<p>חצי מחבר הוא אבן הבניין האריתמטית הבסיסית ביותר בחומרה דיגיטלית. הוא מקבל שתי כניסות של 1-ביט (<code dir="ltr">a</code> ו-<code dir="ltr">b</code>) ומחשב את החיבור הבינארי ביניהן.</p>
+<p>החיבור מפיק שתי יציאות:</p>
 <ul>
-  <li><strong>סכום (Sum)</strong>: התוצאה של החיבור בעמודה הנוכחית.</li>
-  <li><strong>נשיאה החוצה (Carry Out)</strong>: הביט שגולש לעמודה הבאה במקרה ששני המשתנים הם 1 (כלומר <code dir="ltr">1 + 1 = 2</code> בבסיס 10, שהם <code dir="ltr">10</code> בבינארי).</li>
+  <li><strong>Sum</strong>: ביט הסכום במיקום הנוכחי (<code dir="ltr">a ^ b</code>).</li>
+  <li><strong>Cout</strong>: ביט הנשיאה החוצה לעמודה הבאה (<code dir="ltr">a &amp; b</code>).</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
 <h3>2. טבלת אמת של חצי מחבר 📊</h3>
-<p>הבה נסתכל על כל השילובים האפשריים:</p>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
     <tr><th>a</th><th>b</th><th>Sum (סכום)</th><th>Cout (נשיאה)</th></tr>
@@ -580,28 +579,21 @@ endmodule`,
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. משוואות לוגיות של חצי מחבר 📐</h3>
-<p>מתוך טבלת האמת נוכל לראות ש:</p>
-<ul>
-  <li>עמודת ה-Sum מקבלת 1 רק כאשר הכניסות שונות. זוהי בדיוק לוגיקת <strong>XOR</strong> (<code dir="ltr">sum = a ^ b</code>).</li>
-  <li>עמודת ה-Cout מקבלת 1 רק כאשר שתי הכניסות הן 1. זוהי בדיוק לוגיקת <strong>AND</strong> (<code dir="ltr">cout = a &amp; b</code>).</li>
-</ul>
-<p><strong>למה זה נקרא "חצי" מחבר?</strong> מפני שהוא לא תומך בקבלת נשיאה משלבים קודמים (אין לו כניסת Carry In). לכן לא ניתן לשרשר אותו ישירות לבניית מחברים רחבים (כמו מחבר 16 ביט).</p>
+<h3>3. למה "חצי" מחבר? 💡</h3>
+<p>מפני שאין לו כניסת Carry-In, לא ניתן לחבר אליו ישירות נשיאה משלבים קודמים. אך בשיעור הבא נשתמש ב-<strong>שני חצאי מחברים</strong> כדי לבנות מחבר מלא (Full Adder)!</p>
 `,
 
       explanationEn: `
 <h3>1. What is a Half Adder? ➕</h3>
-<p>A Half Adder is the most fundamental arithmetic block in digital circuit design. It adds two 1-bit inputs (typically named <code dir="ltr">a</code> and <code dir="ltr">b</code>) and computes their binary arithmetic sum.</p>
-<p>This addition yields two distinct outputs:</p>
+<p>A Half Adder is the fundamental building block of digital arithmetic. It accepts two 1-bit inputs (<code dir="ltr">a</code> and <code dir="ltr">b</code>) and produces two outputs:</p>
 <ul>
-  <li><strong>Sum</strong>: The result of the addition in the current bit position.</li>
-  <li><strong>Carry Out (Cout)</strong>: The overflow bit that propagates to the next higher significance column (since <code dir="ltr">1 + 1 = 2</code> in decimal, which is written as binary <code dir="ltr">10</code>).</li>
+  <li><strong>Sum</strong>: The sum bit (<code dir="ltr">a ^ b</code>).</li>
+  <li><strong>Cout</strong>: The carry-out bit (<code dir="ltr">a &amp; b</code>).</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Half Adder Truth Table 📊</h3>
-<p>Let's map all input combinations to find the logic gates required:</p>
+<h3>2. Truth Table 📊</h3>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
     <tr><th>a</th><th>b</th><th>Sum</th><th>Cout</th></tr>
@@ -616,21 +608,14 @@ endmodule`,
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. Half Adder Boolean Equations 📐</h3>
-<p>From the truth table, we can derive the boolean relationships:</p>
-<ul>
-  <li>The Sum bit is high only when inputs are different. This corresponds to the <strong>XOR</strong> gate (<code dir="ltr">sum = a ^ b</code>).</li>
-  <li>The Cout bit is high only when both inputs are high. This corresponds to the <strong>AND</strong> gate (<code dir="ltr">cout = a &amp; b</code>).</li>
-</ul>
-<p><strong>Why is it called a "Half" Adder?</strong> Because it lacks a carry-in port from lower significance stages. To add multi-bit numbers, we need a "Full Adder" that can accept an incoming carry bit.</p>
+<h3>3. Why "Half" Adder? 💡</h3>
+<p>Because it lacks a Carry-In input. In the next lesson, we will instantiate <strong>two Half Adders</strong> to construct a Full Adder!</p>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המממש חצי מחבר (Half Adder).
-המודול יקבל שתי כניסות של 1-ביט בשם <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, ויפיק שתי יציאות של 1-ביט בשם <code dir="ltr">sum</code> ו-<code dir="ltr">cout</code>.`,
-      taskEn: `Design a module named <code dir="ltr">top_module</code> that implements a Half Adder.
-The module should have two 1-bit inputs <code dir="ltr">a</code> and <code dir="ltr">b</code>, and two 1-bit outputs <code dir="ltr">sum</code> and <code dir="ltr">cout</code>.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">half_adder</code> (או <code dir="ltr">top_module</code>) בעל שתי כניסות 1-ביט <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, ושתי יציאות 1-ביט <code dir="ltr">sum</code> ו-<code dir="ltr">cout</code>.`,
+      taskEn: `Design a 1-bit Half Adder in module <code dir="ltr">half_adder</code> (or <code dir="ltr">top_module</code>). Inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>; outputs <code dir="ltr">sum</code>, <code dir="ltr">cout</code>.`,
 
-      starterCode: `module top_module (
+      starterCode: `module half_adder (
     input a,
     input b,
     output sum,
@@ -640,7 +625,7 @@ The module should have two 1-bit inputs <code dir="ltr">a</code> and <code dir="
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `module half_adder (
     input a,
     input b,
     output sum,
@@ -654,12 +639,14 @@ endmodule`,
         { time: 0, a: 0, b: 0, sum: 0, cout: 0 },
         { time: 5, a: 1, b: 0, sum: 1, cout: 0 },
         { time: 10, a: 0, b: 1, sum: 1, cout: 0 },
+        { time: 5, a: 0, b: 1, sum: 1, cout: 0 },
+        { time: 10, a: 1, b: 0, sum: 1, cout: 0 },
         { time: 15, a: 1, b: 1, sum: 0, cout: 1 }
       ],
 
       hints: {
-        he: "השתמשו באופרטור ה-XOR (^) לחישוב sum, ובאופרטור AND (&) לחישוב cout.",
-        en: "Use the XOR operator (^) to calculate sum and the AND operator (&) to calculate cout."
+        he: "השתמשו ב-assign sum = a ^ b; עבור תוצאת הסכום, וב-assign cout = a & b; עבור הנשיאה החוצה.",
+        en: "Use assign sum = a ^ b; for the sum bit, and assign cout = a & b; for the carry-out bit."
       }
     },
 
@@ -671,126 +658,223 @@ endmodule`,
       chapter: 2,
       chapterTitleHe: "פרק 2: Vectors ו-Bit Manipulation",
       chapterTitleEn: "Chapter 2: Vectors & Bit Manipulation",
-      titleHe: "מחבר מלא (Full Adder) ➕➕",
-      titleEn: "Full Adder",
+      titleHe: "מחבר מלא (Full Adder מתוך 2 חצי מחברים) ➕➕",
+      titleEn: "Full Adder (from 2 Half Adders)",
 
       explanationHe: `
 <h3>1. מהו מחבר מלא (Full Adder)? ➕➕</h3>
-<p>מחבר מלא פותר את המגבלה של חצי המחבר. בנוסף לשתי כניסות הנתונים (<code dir="ltr">a</code> ו-<code dir="ltr">b</code>), הוא מקבל כניסה שלישית: <strong>נשיאה בכניסה (Carry In - <code dir="ltr">cin</code>)</strong>, המגיעה מהחישוב של השלב הקודם (הביט הפחות משמעותי).</p>
-<p>הודות לכך, ניתן לשרשר מספר מחברים מלאים זה אחר זה כדי לבצע חיבור של מספרים בכל רוחב ביטים שנרצה.</p>
+<p>חצי מחבר יודע לחבר רק 2 ביטים, אך כדי לחבר מספרים רב-ביטיים אנו חייבים להעביר נשיאה (Carry) משלב לשלב. <strong>מחבר מלא (Full Adder)</strong> פותר זאת: הוא מקבל 3 כניסות של 1-ביט:</p>
+<ul>
+  <li><code dir="ltr">a</code> ו-<code dir="ltr">b</code>: שני ביטי הנתונים לחיבור בעמדה הנוכחית.</li>
+  <li><code dir="ltr">cin</code>: ביט הנשיאה המגיע מהחישוב של השלב הפחות משמעותי הקודם (Carry In).</li>
+</ul>
+<p>הוא מחשב את הסכום הכולל $a + b + cin$ ומפיק את היציאות <code dir="ltr">sum</code> ו-<code dir="ltr">cout</code>.</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. טבלת אמת של מחבר מלא 📊</h3>
-<p>נבחן את שמונת הצירופים האפשריים עבור שלוש כניסות ה-1-ביט:</p>
+<h3>2. פילוסופיית אבני הבניין: בניית Full Adder מתוך 2 Half Adders 🧱</h3>
+<p>בתכנון חומרה מודרני אנו נמנעים מלוגיקה מונוליתית ומשתמשים ב<strong>אבני בניין היררכיות (Building Blocks)</strong>. מחבר מלא נבנה בצורה אלגנטית בעזרת <strong>2 חצי-מחברים ושער OR יחיד</strong>:</p>
+<ol>
+  <li><strong>שלב 1 (חצי מחבר ראשון <code dir="ltr">ha1</code>)</strong>: מחבר את <code dir="ltr">a</code> ו-<code dir="ltr">b</code> ומפיק סכום ביניים <code dir="ltr">s1 = a ^ b</code> ונשיאת ביניים <code dir="ltr">c1 = a &amp; b</code>.</li>
+  <li><strong>שלב 2 (חצי מחבר שני <code dir="ltr">ha2</code>)</strong>: מחבר את סכום הביניים <code dir="ltr">s1</code> יחד עם הנשיאה בכניסה <code dir="ltr">cin</code>, ומפיק את הסכום הסופי <code dir="ltr">sum = s1 ^ cin = a ^ b ^ cin</code> ונשיאת ביניים שנייה <code dir="ltr">c2 = s1 &amp; cin</code>.</li>
+  <li><strong>שלב 3 (שער OR לנשיאה החוצה)</strong>: נשיאה כוללת (<code dir="ltr">cout</code>) נוצרת אם השלב הראשון הפיק נשיאה (<code dir="ltr">c1</code>) <strong>או</strong> אם השלב השני הפיק נשיאה (<code dir="ltr">c2</code>): <code dir="ltr">cout = c1 | c2</code>.</li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. דיאגרמת חיווט סכמטית (Wiring Diagram) 📐</h3>
+<pre dir="ltr"><code>               ┌─────────────────────────────────────────────────────────────┐
+               │                        full_adder                           │
+               │                                                             │
+               │        ┌──────────────┐                                     │
+ a ────────────┼───────►│a             │                                     │
+               │        │  ha1 (Half)  ├── s1 ──────┐                        │
+ b ────────────┼───────►│b        sum  │            │  ┌──────────────┐      │
+               │        │              │            └─►│a             │      │
+               │        │         cout ├── c1 ──┐      │  ha2 (Half)  ├─── sum ──► sum
+               │        └──────────────┘        │   ┌─►│b        sum  │      │
+               │                                │   │  │              │      │
+ cin ──────────┼────────────────────────────────┼───┘  │         cout ├── c2 ┐
+               │                                │      └──────────────┘   │  │
+               │                                └─────────┐   ┌───────────┘  │
+               │                                          ▼   ▼              │
+               │                                        ┌───────┐            │
+               │                                        │  OR   ├──── cout ──────► cout
+               │                                        └───────┘            │
+               └─────────────────────────────────────────────────────────────┘</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. טבלת אמת של מחבר מלא 📊</h3>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
-    <tr><th>a</th><th>b</th><th>cin</th><th>Sum (סכום)</th><th>Cout (נשיאה)</th></tr>
+    <tr><th>a</th><th>b</th><th>cin</th><th>Sum (סכום)</th><th>Cout (נשיאה)</th><th>חישוב אריתמטי</th></tr>
   </thead>
   <tbody>
-    <tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td><td><strong>1</strong></td></tr>
+    <tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td><td><strong>0</strong></td><td>0 + 0 + 0 = 00₂</td></tr>
+    <tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td><td><strong>0</strong></td><td>0 + 0 + 1 = 01₂</td></tr>
+    <tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td><td>0 + 1 + 0 = 01₂</td></tr>
+    <tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td><td>0 + 1 + 1 = 10₂</td></tr>
+    <tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td><td>1 + 0 + 0 = 01₂</td></tr>
+    <tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td><td>1 + 0 + 1 = 10₂</td></tr>
+    <tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td><td><strong>1</strong></td><td>1 + 1 + 0 = 10₂</td></tr>
+    <tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td><td><strong>1</strong></td><td>1 + 1 + 1 = 11₂</td></tr>
   </tbody>
 </table>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. המשוואות הלוגיות למחבר מלא 📐</h3>
-<ul>
-  <li><strong>Sum</strong>: הביט Sum יהיה 1 כאשר מספר אי-זוגי של כניסות שווה ל-1. המשוואה מבוצעת על ידי שרשור פעולות XOR:
-    <code dir="ltr">sum = a ^ b ^ cin;</code>
-  </li>
-  <li><strong>Cout (נשיאה החוצה)</strong>: ביט הנשיאה יהיה 1 כאשר לפחות שתיים מהכניסות הן 1. נוכל לנסח זאת כחיבור לוגי (OR) של כל הזוגות האפשריים:
-    <code dir="ltr">cout = (a &amp; b) | (b &amp; cin) | (a &amp; cin);</code>
-  </li>
-</ul>
 `,
 
       explanationEn: `
 <h3>1. What is a Full Adder? ➕➕</h3>
-<p>A Full Adder overcomes the limitation of the Half Adder. In addition to the two data inputs (<code dir="ltr">a</code> and <code dir="ltr">b</code>), it accepts a third input: <strong>Carry In (<code dir="ltr">cin</code>)</strong>, which represents an overflow carry bit propagated from the previous, less-significant stage.</p>
-<p>This carry-in capability makes Full Adders chainable, allowing us to build arithmetic units capable of adding binary numbers of any bit-width.</p>
+<p>While a Half Adder only adds 2 bits, real-world processors must propagate carries across multi-bit words. A <strong>Full Adder</strong> adds three 1-bit inputs:</p>
+<ul>
+  <li><code dir="ltr">a</code> and <code dir="ltr">b</code>: The two data operand bits at the current bit position.</li>
+  <li><code dir="ltr">cin</code>: The incoming carry bit from the adjacent less-significant stage (Carry In).</li>
+</ul>
+<p>It computes the total arithmetic sum $a + b + cin$ and outputs <code dir="ltr">sum</code> and <code dir="ltr">cout</code>.</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Full Adder Truth Table 📊</h3>
-<p>Let's map all 8 combinations of the three 1-bit inputs:</p>
+<h3>2. The Building Blocks Philosophy: Full Adder from 2 Half Adders 🧱</h3>
+<p>In digital design, scalable architectures are built by combining reusable modular components. A Full Adder is hierarchically constructed using <strong>two <code dir="ltr">half_adder</code> instances and one OR gate</strong>:</p>
+<ol>
+  <li><strong>Stage 1 (First Half Adder <code dir="ltr">ha1</code>)</strong>: Adds <code dir="ltr">a</code> and <code dir="ltr">b</code> to generate intermediate sum <code dir="ltr">s1 = a ^ b</code> and intermediate carry <code dir="ltr">c1 = a &amp; b</code>.</li>
+  <li><strong>Stage 2 (Second Half Adder <code dir="ltr">ha2</code>)</strong>: Adds intermediate sum <code dir="ltr">s1</code> with <code dir="ltr">cin</code>, yielding final sum <code dir="ltr">sum = s1 ^ cin = a ^ b ^ cin</code> and second intermediate carry <code dir="ltr">c2 = s1 &amp; cin</code>.</li>
+  <li><strong>Stage 3 (Carry Out OR Gate)</strong>: Overall carry out <code dir="ltr">cout</code> is active if either the first stage produced a carry (<code dir="ltr">c1</code>) <strong>OR</strong> the second stage produced a carry (<code dir="ltr">c2</code>): <code dir="ltr">cout = c1 | c2</code>.</li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. Schematic Wiring Diagram 📐</h3>
+<pre dir="ltr"><code>               ┌─────────────────────────────────────────────────────────────┐
+               │                        full_adder                           │
+               │                                                             │
+               │        ┌──────────────┐                                     │
+ a ────────────┼───────►│a             │                                     │
+               │        │  ha1 (Half)  ├── s1 ──────┐                        │
+ b ────────────┼───────►│b        sum  │            │  ┌──────────────┐      │
+               │        │              │            └─►│a             │      │
+               │        │         cout ├── c1 ──┐      │  ha2 (Half)  ├─── sum ──► sum
+               │        └──────────────┘        │   ┌─►│b        sum  │      │
+               │                                │   │  │              │      │
+ cin ──────────┼────────────────────────────────┼───┘  │         cout ├── c2 ┐
+               │                                │      └──────────────┘   │  │
+               │                                └─────────┐   ┌───────────┘  │
+               │                                          ▼   ▼              │
+               │                                        ┌───────┐            │
+               │                                        │  OR   ├──── cout ──────► cout
+               │                                        └───────┘            │
+               └─────────────────────────────────────────────────────────────┘</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. Full Adder Truth Table 📊</h3>
 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-family: var(--font-family-mono); font-size: 0.85rem; text-align: center;" border="1">
   <thead style="background: var(--bg-tertiary);">
-    <tr><th>a</th><th>b</th><th>cin</th><th>Sum</th><th>Cout</th></tr>
+    <tr><th>a</th><th>b</th><th>cin</th><th>Sum</th><th>Cout</th><th>Arithmetic Equation</th></tr>
   </thead>
   <tbody>
-    <tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td></tr>
-    <tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
-    <tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td><td><strong>1</strong></td></tr>
+    <tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td><td><strong>0</strong></td><td>0 + 0 + 0 = 00₂</td></tr>
+    <tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td><td><strong>0</strong></td><td>0 + 0 + 1 = 01₂</td></tr>
+    <tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td><td>0 + 1 + 0 = 01₂</td></tr>
+    <tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td><td>0 + 1 + 1 = 10₂</td></tr>
+    <tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td><td><strong>0</strong></td><td>1 + 0 + 0 = 01₂</td></tr>
+    <tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td><td>1 + 0 + 1 = 10₂</td></tr>
+    <tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td><td><strong>1</strong></td><td>1 + 1 + 0 = 10₂</td></tr>
+    <tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td><td><strong>1</strong></td><td>1 + 1 + 1 = 11₂</td></tr>
   </tbody>
 </table>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. Full Adder Boolean Logic 📐</h3>
-<ul>
-  <li><strong>Sum</strong>: The Sum output is high whenever an odd number of inputs are high. This is implemented by cascading XOR operations:
-    <code dir="ltr">sum = a ^ b ^ cin;</code>
-  </li>
-  <li><strong>Cout (Carry Out)</strong>: The Carry Out output is high whenever at least two of the inputs are high. We can implement this by ORing all pairwise AND combinations:
-    <code dir="ltr">cout = (a &amp; b) | (b &amp; cin) | (a &amp; cin);</code>
-  </li>
-</ul>
 `,
 
-      taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המממש מחבר מלא (Full Adder) בן ביט יחיד.
-המודול יקבל שלוש כניסות 1-ביט בשם <code dir="ltr">a</code>, <code dir="ltr">b</code>, ו-<code dir="ltr">cin</code>, ויפיק שתי יציאות 1-ביט בשם <code dir="ltr">sum</code> ו-<code dir="ltr">cout</code>.`,
-      taskEn: `Create a module named <code dir="ltr">top_module</code> that implements a 1-bit Full Adder.
-The module has three 1-bit inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, and <code dir="ltr">cin</code>, and two 1-bit outputs <code dir="ltr">sum</code> and <code dir="ltr">cout</code>.`,
+      taskHe: `בנו מודול בשם <code dir="ltr">full_adder</code> המממש מחבר מלא בן 1-ביט בעל כניסות <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">cin</code> ויציאות <code dir="ltr">sum</code>, <code dir="ltr">cout</code>.
+<br><br>
+<strong>דרישת תכנון (חובה):</strong> עליכם לממש את המחבר המלא בעזרת <strong>אינסטנסיאציה של 2 עותקים של תת-המודול <code dir="ltr">half_adder</code></strong> (המוגדר עבורכם בקובץ) ושער OR יחיד עבור הנשיאה החוצה:
+<ul>
+  <li>הגדירו חוטים פנימיים: <code dir="ltr">wire s1, c1, c2;</code></li>
+  <li>צרו מופע ראשון <code dir="ltr">ha1</code>: חברו את הכניסות <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, והפיקו את <code dir="ltr">s1</code> ואת <code dir="ltr">c1</code>.</li>
+  <li>צרו מופע שני <code dir="ltr">ha2</code>: חברו את סכום הביניים <code dir="ltr">s1</code> ואת <code dir="ltr">cin</code>, והפיקו את <code dir="ltr">sum</code> ואת <code dir="ltr">c2</code>.</li>
+  <li>חברו את הנשיאה הסופית עם שער OR: <code dir="ltr">assign cout = c1 | c2;</code></li>
+</ul>`,
 
-      starterCode: `module top_module (
+      taskEn: `Design a module named <code dir="ltr">full_adder</code> implementing a 1-bit Full Adder with inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">cin</code> and outputs <code dir="ltr">sum</code>, <code dir="ltr">cout</code>.
+<br><br>
+<strong>Design Requirement (Mandatory):</strong> Construct the Full Adder hierarchically by <strong>instantiating 2 copies of the <code dir="ltr">half_adder</code> sub-module</strong> (provided in the template) and 1 OR gate for the carry-out:
+<ul>
+  <li>Declare intermediate wires: <code dir="ltr">wire s1, c1, c2;</code></li>
+  <li>Instantiate <code dir="ltr">ha1</code>: Connect <code dir="ltr">a</code> and <code dir="ltr">b</code>, outputting intermediate sum <code dir="ltr">s1</code> and carry <code dir="ltr">c1</code>.</li>
+  <li>Instantiate <code dir="ltr">ha2</code>: Connect intermediate sum <code dir="ltr">s1</code> and <code dir="ltr">cin</code>, outputting final <code dir="ltr">sum</code> and carry <code dir="ltr">c2</code>.</li>
+  <li>Drive the final carry-out with an OR gate: <code dir="ltr">assign cout = c1 | c2;</code></li>
+</ul>`,
+
+      starterCode: `// תת-מודול: חצי מחבר / Sub-module: Half Adder (Built in Lesson 14)
+module half_adder (
+    input a,
+    input b,
+    output sum,
+    output cout
+);
+    assign sum = a ^ b;
+    assign cout = a & b;
+endmodule
+
+// מודול מחבר מלא ראשי / Full Adder Top Module
+module full_adder (
     input a,
     input b,
     input cin,
     output sum,
     output cout
 );
-    // כתוב את לוגיקת המחבר המלא כאן / Write your full adder logic here
+    // 1. הגדירו חוטים פנימיים / Declare internal wires: wire s1, c1, c2;
+
+    // 2. צרו מופע ראשון של half_adder (ha1) / Instantiate first half_adder (ha1)
+
+    // 3. צרו מופע שני של half_adder (ha2) / Instantiate second half_adder (ha2)
+
+    // 4. חברו את cout בעזרת שער OR / Drive cout using an OR gate
 
 endmodule`,
 
-      solutionCode: `module top_module (
+      solutionCode: `// תת-מודול: חצי מחבר / Sub-module: Half Adder (Built in Lesson 14)
+module half_adder (
+    input a,
+    input b,
+    output sum,
+    output cout
+);
+    assign sum = a ^ b;
+    assign cout = a & b;
+endmodule
+
+// מחבר מלא הבנוי היררכית מ-2 חצי מחברים ושער OR
+// Full Adder built hierarchically from 2 Half Adders and an OR gate
+module full_adder (
     input a,
     input b,
     input cin,
     output sum,
     output cout
 );
-    assign sum = a ^ b ^ cin;
-    assign cout = (a & b) | (b & cin) | (a & cin);
+    wire s1, c1, c2;
+
+    half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1));
+    half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2));
+    assign cout = c1 | c2;
 endmodule`,
 
       expectedOutputs: [
         { time: 0, a: 0, b: 0, cin: 0, sum: 0, cout: 0 },
-        { time: 5, a: 1, b: 0, cin: 0, sum: 1, cout: 0 },
+        { time: 5, a: 0, b: 0, cin: 1, sum: 1, cout: 0 },
         { time: 10, a: 0, b: 1, cin: 0, sum: 1, cout: 0 },
-        { time: 15, a: 1, b: 1, cin: 0, sum: 0, cout: 1 },
-        { time: 20, a: 0, b: 0, cin: 1, sum: 1, cout: 0 },
+        { time: 15, a: 0, b: 1, cin: 1, sum: 0, cout: 1 },
+        { time: 20, a: 1, b: 0, cin: 0, sum: 1, cout: 0 },
         { time: 25, a: 1, b: 0, cin: 1, sum: 0, cout: 1 },
-        { time: 30, a: 0, b: 1, cin: 1, sum: 0, cout: 1 },
+        { time: 30, a: 1, b: 1, cin: 0, sum: 0, cout: 1 },
         { time: 35, a: 1, b: 1, cin: 1, sum: 1, cout: 1 }
       ],
 
       hints: {
-        he: "חשבו את sum באמצעות XOR משולש: a ^ b ^ cin. חשבו את cout באמצעות OR של שילובי הזוגות: (a & b) | (b & cin) | (a & cin).",
-        en: "Calculate sum using triple XOR: a ^ b ^ cin. Calculate cout by ORing the pairwise products: (a & b) | (b & cin) | (a & cin)."
+        he: "הגדירו: wire s1, c1, c2; וחברו: half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1)); ו-half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2)); ולבסוף: assign cout = c1 | c2;",
+        en: "Declare: wire s1, c1, c2; and instantiate: half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1)); and half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2)); then write: assign cout = c1 | c2;"
       }
     },
 
@@ -802,37 +886,11 @@ endmodule`,
       chapter: 2,
       chapterTitleHe: "פרק 2: Vectors ו-Bit Manipulation",
       chapterTitleEn: "Chapter 2: Vectors & Bit Manipulation",
-      titleHe: "מחבר זוחל 4-ביט (4-bit Ripple Carry Adder) ⛓️",
-      titleEn: "4-bit Ripple Carry Adder",
+      titleHe: "מחבר זוחל 4-ביט (4-bit Ripple Carry Adder מתוך 4 מחברים מלאים) ⛓️",
+      titleEn: "4-bit Ripple Carry Adder (from 4 Full Adders)",
 
       explanationHe: `
 <h3>1. מחבר זוחל 4-ביט (4-bit Ripple Carry Adder) ⛓️</h3>
-<p>כאשר ברצוננו לחבר שני מספרים רב-ביטיים (למשל, שני מספרים בני 4 ביטים: <code dir="ltr">a[3:0]</code> ו-<code dir="ltr">b[3:0]</code>), עלינו לחקות את הדרך בה אנו פותרים תרגילי חיבור על דף ("חיבור ארוך" עם נשיאה).</p>
-<p>השיטה הבסיסית ביותר לעשות זאת בחומרה נקראת <strong>מחבר זוחל (Ripple Carry Adder)</strong>. אנו מחברים 4 שלבים של מחברים מלאים (Full Adders) בשרשרת, כך שמוצא הנשיאה (<code dir="ltr">cout</code>) של כל ביט מוזן ישירות ככניסת הנשיאה (<code dir="ltr">cin</code>) של הביט הבא אחריו.</p>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>2. דיאגרמת המעגל 📊</h3>
-<p>התרשים הבא מציג כיצד אותות הנשיאה "זוחלים" לאורך השרשרת מימין (הביט הפחות משמעותי) לשמאל (הביט הכי משמעותי):</p>
-<pre dir="ltr"><code>a[3] b[3]      a[2] b[2]      a[1] b[1]      a[0] b[0]
-   │   │          │   │          │   │          │   │
- ┌─▼───▼─┐      ┌─▼───▼─┐      ┌─▼───▼─┐      ┌─▼───▼─┐
- │  FA3  │◄─────┤  FA2  │◄─────┤  FA1  │◄─────┤  FA0  │◄── cin (התחלתית)
- └─┬───┬─┘  c3  └─┬───┬─┘  c2  └─┬───┬─┘  c1  └─┬───┬─┘
-   │   │          │   │          │   │          │   │
-   ▼   ▼          ▼   ▼          ▼   ▼          ▼   ▼
- cout sum[3]     sum[2]         sum[1]         sum[0]</code></pre>
-
-<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
-
-<h3>3. מהם חוטים פנימיים? המילה השמורה <code dir="ltr">wire</code> 📐</h3>
-<p>על מנת לקשר בין מוצא של שער או יחידה אחת לכניסה של יחידה אחרת, עלינו להשתמש בחוטים פנימיים. חוטים אלו אינם חלק מפורטי הכניסה או היציאה של המודול הראשי, אלא קיימים רק בתוך המעגל.</p>
-<p>ב-Verilog אנו מגדירים חוטים אלו באמצעות המילה השמורה <code dir="ltr">wire</code>:</p>
-<pre dir="ltr"><code>// הגדרת שלושה חוטים פנימיים לחיבור הנשיאות
-wire c1, c2, c3;</code></pre>
-<p>כעת נוכל להשתמש בהם כדי להעביר את אותות הנשיאה בין השלבים:</p>
-<pre dir="ltr"><code>// שלב 0 (הביט LSB)
-assign sum[0] = a[0] ^ b[0] ^ cin;
 assign c1     = (a[0] &amp; b[0]) | (cin &amp; (a[0] ^ b[0]));
 
 // שלב 1
@@ -880,11 +938,15 @@ assign c2     = (a[1] &amp; b[1]) | (c1 &amp; (a[1] ^ b[1]));</code></pre>
 `,
 
       taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המממש מחבר זוחל 4-ביט (4-bit Ripple Carry Adder).
-המודול יקבל שתי כניסות 4-ביט בשם <code dir="ltr">a</code> ו-<code dir="ltr">b</code>, כניסת נשיאה <code dir="ltr">cin</code> של 1-ביט, ויפיק יציאת סכום <code dir="ltr">sum</code> של 4-ביט ויציאת נשיאה סופית <code dir="ltr">cout</code> של 1-ביט.
-הגדירו חוטים פנימיים (<code dir="ltr">wire c1, c2, c3;</code>) וכתבו משוואות לוגיות לכל אחד מארבעת שלבי המחבר המלא.`,
-      taskEn: `Create a module named <code dir="ltr">top_module</code> that implements a 4-bit Ripple Carry Adder.
-The module has two 4-bit inputs <code dir="ltr">a</code> and <code dir="ltr">b</code>, a 1-bit carry-in <code dir="ltr">cin</code>, a 4-bit sum output <code dir="ltr">sum</code>, and a 1-bit carry-out <code dir="ltr">cout</code>.
-Declare internal intermediate wires (<code dir="ltr">wire c1, c2, c3;</code>) and write inline boolean equations for each of the 4 full adder stages.`,
+לשם כך, השתמשו ב-4 מופעים של תת-המודול המוגדר במערכת:
+<code dir="ltr">module full_adder (input a, input b, input cin, output sum, output cout);</code>
+<br><br>
+הגדירו חוטים פנימיים (<code dir="ltr">wire c1, c2, c3;</code>) כדי לקשר בין הנשיאות (Carries) של ארבעת שלבי ה-Full Adder.`,
+      taskEn: `Build a 4-bit Ripple Carry Adder inside <code dir="ltr">top_module</code>.
+To do this, instantiate 4 copies of the pre-defined sub-module:
+<code dir="ltr">module full_adder (input a, input b, input cin, output sum, output cout);</code>
+<br><br>
+Declare internal intermediate wires (<code dir="ltr">wire c1, c2, c3;</code>) to connect the carry-outs to the carry-ins of the adjacent full adders.`,
 
       starterCode: `module top_module (
     input [3:0] a,
@@ -895,7 +957,7 @@ Declare internal intermediate wires (<code dir="ltr">wire c1, c2, c3;</code>) an
 );
     // הגדר חוטים פנימיים לנשיאות כאן / Declare intermediate carry wires here
 
-    // כתוב את לוגיקת ארבעת השלבים כאן / Write the logic for the four stages here
+    // צרו 4 מופעים של full_adder כאן / Instantiate 4 copies of full_adder here
 
 endmodule`,
 
@@ -908,17 +970,10 @@ endmodule`,
 );
     wire c1, c2, c3;
 
-    assign sum[0] = a[0] ^ b[0] ^ cin;
-    assign c1 = (a[0] & b[0]) | (cin & (a[0] ^ b[0]));
-
-    assign sum[1] = a[1] ^ b[1] ^ c1;
-    assign c2 = (a[1] & b[1]) | (c1 & (a[1] ^ b[1]));
-
-    assign sum[2] = a[2] ^ b[2] ^ c2;
-    assign c3 = (a[2] & b[2]) | (c2 & (a[2] ^ b[2]));
-
-    assign sum[3] = a[3] ^ b[3] ^ c3;
-    assign cout = (a[3] & b[3]) | (c3 & (a[3] ^ b[3]));
+    full_adder fa0 (a[0], b[0], cin, sum[0], c1);
+    full_adder fa1 (a[1], b[1], c1, sum[1], c2);
+    full_adder fa2 (a[2], b[2], c2, sum[2], c3);
+    full_adder fa3 (a[3], b[3], c3, sum[3], cout);
 endmodule`,
 
       expectedOutputs: [
@@ -931,8 +986,8 @@ endmodule`,
       ],
 
       hints: {
-        he: "הגדירו שלושה חוטים פנימיים: wire c1, c2, c3; כדי להעביר את הנשיאה מביט לביט. רשמו לוגיקת מחבר מלא עבור כל ביט בנפרד (0 עד 3), כאשר שלב 0 משתמש ב-cin ומוציא את c1, שלב 1 משתמש ב-c1 ומוציא את c2, וכן הלאה, עד ששלב 3 מוציא את cout.",
-        en: "Declare three internal wires: wire c1, c2, c3; to propagate the carries. Write the full adder logic for each bit index (0 to 3) sequentially, where stage 0 uses cin and outputs c1, stage 1 uses c1 and outputs c2, and so on, until stage 3 outputs cout."
+        he: "הגדירו שלושה חוטים פנימיים: wire c1, c2, c3; כדי להעביר את הנשיאה מביט לביט. רשמו 4 מופעים של full_adder (לדוגמה: full_adder fa0 (a[0], b[0], cin, sum[0], c1); עבור הביט הראשון, וכן הלאה).",
+        en: "Declare three internal wires: wire c1, c2, c3; to propagate the carries. Write 4 instances of full_adder (for example: full_adder fa0 (a[0], b[0], cin, sum[0], c1); for the first bit, and so on)."
       }
     }
   ];

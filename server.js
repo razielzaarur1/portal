@@ -311,26 +311,221 @@ function parseVerilogPorts(userCode) {
 
 
 
-// Helper modules to append for Chapter 4 / hierarchy lessons
+// Global Library of Pre-built Verilog Modules (Building Blocks for Hierarchy)
+const MODULE_LIBRARY = {
+  half_adder: `module half_adder (
+    input a,
+    input b,
+    output sum,
+    output cout
+);
+    assign sum = a ^ b;
+    assign cout = a & b;
+endmodule`,
+
+  full_adder: `module full_adder (
+    input a,
+    input b,
+    input cin,
+    output sum,
+    output cout
+);
+    wire s1, c1, c2;
+    half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1));
+    half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2));
+    assign cout = c1 | c2;
+endmodule`,
+
+  ripple_carry_adder_4bit: `module ripple_carry_adder_4bit (
+    input [3:0] a,
+    input [3:0] b,
+    input cin,
+    output [3:0] sum,
+    output cout
+);
+    wire c1, c2, c3;
+    full_adder fa0 (.a(a[0]), .b(b[0]), .cin(cin), .sum(sum[0]), .cout(c1));
+    full_adder fa1 (.a(a[1]), .b(b[1]), .cin(c1),  .sum(sum[1]), .cout(c2));
+    full_adder fa2 (.a(a[2]), .b(b[2]), .cin(c2),  .sum(sum[2]), .cout(c3));
+    full_adder fa3 (.a(a[3]), .b(b[3]), .cin(c3),  .sum(sum[3]), .cout(cout));
+endmodule`,
+
+  adder_subtractor_4bit: `module adder_subtractor_4bit (
+    input [3:0] a,
+    input [3:0] b,
+    input sub,
+    output [3:0] result,
+    output cout
+);
+    wire [3:0] b_mod;
+    assign b_mod = b ^ {4{sub}};
+    ripple_carry_adder_4bit rca (
+        .a(a),
+        .b(b_mod),
+        .cin(sub),
+        .sum(result),
+        .cout(cout)
+    );
+endmodule`,
+
+  mux_2to1: `module mux_2to1 (
+    input a,
+    input b,
+    input sel,
+    output y
+);
+    assign y = sel ? b : a;
+endmodule`,
+
+  mux_4to1: `module mux_4to1 (
+    input [3:0] in,
+    input [1:0] sel,
+    output y
+);
+    wire m0, m1;
+    mux_2to1 u0 (.a(in[0]), .b(in[1]), .sel(sel[0]), .y(m0));
+    mux_2to1 u1 (.a(in[2]), .b(in[3]), .sel(sel[0]), .y(m1));
+    mux_2to1 u2 (.a(m0),   .b(m1),    .sel(sel[1]), .y(y));
+endmodule`,
+
+  mux_8to1: `module mux_8to1 (
+    input [7:0] in,
+    input [2:0] sel,
+    output y
+);
+    wire m0, m1;
+    mux_4to1 u0 (.in(in[3:0]), .sel(sel[1:0]), .y(m0));
+    mux_4to1 u1 (.in(in[7:4]), .sel(sel[1:0]), .y(m1));
+    mux_2to1 u2 (.a(m0), .b(m1), .sel(sel[2]), .y(y));
+endmodule`,
+
+  decoder_2to4: `module decoder_2to4 (
+    input [1:0] in,
+    input en,
+    output [3:0] out
+);
+    assign out = en ? (4'b0001 << in) : 4'b0000;
+endmodule`,
+
+  decoder_3to8: `module decoder_3to8 (
+    input [2:0] in,
+    input en,
+    output [7:0] out
+);
+    wire [3:0] low, high;
+    decoder_2to4 d0 (.in(in[1:0]), .en(en & ~in[2]), .out(low));
+    decoder_2to4 d1 (.in(in[1:0]), .en(en &  in[2]), .out(high));
+    assign out = {high, low};
+endmodule`,
+
+  d_flip_flop: `module d_flip_flop (
+    input clk,
+    input reset,
+    input d,
+    output reg q
+);
+    always @(posedge clk) begin
+        if (reset)
+            q <= 1'b0;
+        else
+            q <= d;
+    end
+endmodule`,
+
+  register_4bit: `module register_4bit (
+    input clk,
+    input reset,
+    input en,
+    input [3:0] d,
+    output [3:0] q
+);
+    d_flip_flop ff0 (.clk(clk), .reset(reset), .d(en ? d[0] : q[0]), .q(q[0]));
+    d_flip_flop ff1 (.clk(clk), .reset(reset), .d(en ? d[1] : q[1]), .q(q[1]));
+    d_flip_flop ff2 (.clk(clk), .reset(reset), .d(en ? d[2] : q[2]), .q(q[2]));
+    d_flip_flop ff3 (.clk(clk), .reset(reset), .d(en ? d[3] : q[3]), .q(q[3]));
+endmodule`,
+
+  shift_register_4bit: `module shift_register_4bit (
+    input clk,
+    input reset,
+    input si,
+    output so,
+    output [3:0] q
+);
+    d_flip_flop ff0 (.clk(clk), .reset(reset), .d(si),   .q(q[0]));
+    d_flip_flop ff1 (.clk(clk), .reset(reset), .d(q[0]), .q(q[1]));
+    d_flip_flop ff2 (.clk(clk), .reset(reset), .d(q[1]), .q(q[2]));
+    d_flip_flop ff3 (.clk(clk), .reset(reset), .d(q[2]), .q(q[3]));
+    assign so = q[3];
+endmodule`,
+
+  mod_a: `module mod_a (input in1, input in2, output out_xor);\n  assign out_xor = in1 ^ in2;\nendmodule`,
+  inverter_block: `module inverter_block (input in_sig, output out_sig);\n  assign out_sig = ~in_sig;\nendmodule`,
+  ram_block: `module ram_block #(\n  parameter DATA_WIDTH = 8,\n  parameter ADDR_WIDTH = 4\n) (\n  input clk,\n  input [ADDR_WIDTH-1:0] addr,\n  input [DATA_WIDTH-1:0] wdata,\n  output reg [DATA_WIDTH-1:0] rdata\n);\n  always @(*) begin\n    rdata = wdata;\n  end\nendmodule`,
+  add8: `module add8 (\n  input [7:0] a,\n  input [7:0] b,\n  input cin,\n  output [7:0] sum,\n  output cout\n);\n  assign {cout, sum} = a + b + cin;\nendmodule`
+};
+
+function getTopModuleName(userCode) {
+  const clean = userCode.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const matches = [...clean.matchAll(/\bmodule\s+([a-zA-Z_][a-zA-Z0-9_]*)/g)];
+  if (!matches || matches.length === 0) return 'top_module';
+  const hasTop = matches.find(m => m[1] === 'top_module');
+  if (hasTop) return 'top_module';
+  return matches[matches.length - 1][1];
+}
+
 function getHelperModules(userCode) {
-  let helpers = '';
-  if (userCode.includes('mod_a')) {
-    if (userCode.includes('.out_and') || userCode.includes('out_and')) {
-      helpers += `\nmodule mod_a (input in1, input in2, output out_and);\n  assign out_and = in1 & in2;\nendmodule\n`;
-    } else {
-      helpers += `\nmodule mod_a (input in1, input in2, output out_xor);\n  assign out_xor = in1 ^ in2;\nendmodule\n`;
+  const clean = userCode.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const definedModules = new Set();
+  const defRe = /\bmodule\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  let dm;
+  while ((dm = defRe.exec(clean)) !== null) {
+    definedModules.add(dm[1]);
+  }
+
+  const added = new Set();
+  let accumulated = '';
+
+  let customModA = null;
+  if (userCode.includes('mod_a') && (userCode.includes('.out_and') || userCode.includes('out_and'))) {
+    customModA = `module mod_a (input in1, input in2, output out_and);\n  assign out_and = in1 & in2;\nendmodule`;
+  }
+
+  function scanForNeeded(code) {
+    const instRe = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s+(?:#\s*\([\s\S]*?\)\s*)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(/g;
+    let im;
+    const found = [];
+    const keywords = new Set(['module', 'always', 'initial', 'assign', 'if', 'else', 'case', 'casex', 'casez', 'for', 'while', 'begin', 'end', 'function', 'task', 'wire', 'reg', 'input', 'output', 'inout']);
+    while ((im = instRe.exec(code)) !== null) {
+      const modName = im[1];
+      if (!keywords.has(modName) && !definedModules.has(modName) && !added.has(modName)) {
+        found.push(modName);
+      }
+    }
+    return found;
+  }
+
+  let queue = scanForNeeded(clean);
+  while (queue.length > 0) {
+    const modName = queue.shift();
+    if (added.has(modName) || definedModules.has(modName)) continue;
+    
+    let modCode = null;
+    if (modName === 'mod_a' && customModA) {
+      modCode = customModA;
+    } else if (MODULE_LIBRARY[modName]) {
+      modCode = MODULE_LIBRARY[modName];
+    }
+
+    if (modCode) {
+      added.add(modName);
+      accumulated += '\n' + modCode + '\n';
+      const subNeeded = scanForNeeded(modCode);
+      queue.push(...subNeeded);
     }
   }
-  if (userCode.includes('inverter_block')) {
-    helpers += `\nmodule inverter_block (input in_sig, output out_sig);\n  assign out_sig = ~in_sig;\nendmodule\n`;
-  }
-  if (userCode.includes('ram_block')) {
-    helpers += `\nmodule ram_block #(\n  parameter DATA_WIDTH = 8,\n  parameter ADDR_WIDTH = 4\n) (\n  input clk,\n  input [ADDR_WIDTH-1:0] addr,\n  input [DATA_WIDTH-1:0] wdata,\n  output reg [DATA_WIDTH-1:0] rdata\n);\n  always @(*) begin\n    rdata = wdata;\n  end\nendmodule\n`;
-  }
-  if (userCode.includes('add8')) {
-    helpers += `\nmodule add8 (\n  input [7:0] a,\n  input [7:0] b,\n  input cin,\n  output [7:0] sum,\n  output cout\n);\n  assign {cout, sum} = a + b + cin;\nendmodule\n`;
-  }
-  return helpers;
+
+  return accumulated;
 }
 
 function generateVerilogTestbench(userCode, expectedOutputs) {
@@ -338,6 +533,7 @@ function generateVerilogTestbench(userCode, expectedOutputs) {
   const sample0 = expectedOutputs[0];
   const allKeys = Object.keys(sample0).filter(k => k !== 'time');
   const { inputs: parsedInputs, outputs: parsedOutputs } = parseVerilogPorts(userCode);
+  const topModName = getTopModuleName(userCode);
 
   let inputKeys = allKeys.filter(k => parsedInputs.has(k));
   let outputKeys = allKeys.filter(k => parsedOutputs.has(k));
@@ -368,7 +564,7 @@ function generateVerilogTestbench(userCode, expectedOutputs) {
   inputKeys.forEach(k  => { const w = getWidth(k);  tb += w > 1 ? `  reg [${w-1}:0] ${k};\n` : `  reg ${k};\n`; });
   outputKeys.forEach(k => { const w = getWidth(k);  tb += w > 1 ? `  wire [${w-1}:0] ${k};\n` : `  wire ${k};\n`; });
 
-  tb += `\n  top_module uut (\n`;
+  tb += `\n  ${topModName} uut (\n`;
   tb += [...inputKeys, ...outputKeys].map(k => `    .${k}(${k})`).join(',\n');
   tb += `\n  );\n\n`;
 

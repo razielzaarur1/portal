@@ -5,7 +5,7 @@
 (function() {
   const chapterLessons = [
     // --------------------------------------------------------------------------
-    // Lesson 25: Module Instantiation (Positional)
+    // Lesson 25: Module Instantiation (Positional Port Mapping)
     // --------------------------------------------------------------------------
     {
       id: 25,
@@ -16,80 +16,124 @@
       titleEn: "Module Instantiation (Positional Port Mapping)",
 
       explanationHe: `
-<h3>1. היררכיה בתכנון שבבים 🏗️</h3>
-<p>בתעשיית המיקרו-אלקטרוניקה, מעבדים ומעגלים משולבים מורכבים מכילים מיליארדי טרנזיסטורים. לא ניתן לכתוב את כל הלוגיקה בקובץ יחיד או במודול שטוח אחד. בדיוק כמו בתכנות תוכנה (שבה אנו מחלקים קוד לפונקציות ומחלקות), בתכנון חומרה אנו בונים מודולים קטנים המבצעים פעולות פשוטות (כמו שערים, מפענחים או יחידות אריתמטיות), ואז משלבים אותם בתוך מודול ראשי (Top Module).</p>
-<p>תהליך זה של שילוב מודול פנימי בתוך מודול אב נקרא <strong>Module Instantiation</strong> (אינסטנסיאציה של מודול).</p>
+<h3>1. היררכיה בתכנון שבבים ופילוסופיית "אבני הבניין" 🏗️</h3>
+<p>בתעשיית המיקרו-אלקטרוניקה, מעבדים מודרניים ומעגלים משולבים (ASIC/FPGA) מכילים מיליארדי טרנזיסטורים. בלתי אפשרי לכתוב מעגל כזה כקובץ יחיד או במודול שטוח אחד.</p>
+<p>בפרקים 2 ו-3 בנינו את אבני הבניין היסודיות של עולם החומרה:</p>
+<ul>
+  <li><strong>חצי מחבר (<code dir="ltr">half_adder</code>)</strong> – שחיבר שני ביטים בודדים (שיעור 14).</li>
+  <li><strong>מחבר מלא (<code dir="ltr">full_adder</code>)</strong> – שחיבר שני ביטים עם נשיאה בכניסה (שיעור 15).</li>
+  <li><strong>מרבב 2-ל-1 (<code dir="ltr">mux_2to1</code>)</strong> – ששימש כבורר נתונים מהיר (שיעור 17).</li>
+</ul>
+<p>בדיוק כפי שבתוכנה אנו מחלקים קוד לפונקציות ולמחלקות, בתכנון חומרה אנו בונים מודולים עצמאיים ובדוקים, ולאחר מכן משלבים אותם בתוך מודול ראשי (Top Module). תהליך שילוב מודול פנימי נקרא <strong>Module Instantiation</strong> (אינסטנסיאציה של מודול).</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. חיבור לפי מיקום (Positional Mapping) 📐</h3>
-<p>הדרך הבסיסית ביותר לחבר מודול פנימי היא לפי <strong>סדר הפורטים</strong> שלו. בסגנון זה, אנו מעבירים את האותות מהמודול הראשי אל תת-המודול בתוך סוגריים, בדיוק לפי הסדר שבו הם הוגדרו במקור.</p>
-<p>התחביר הכללי הוא:</p>
-<pre dir="ltr"><code>sub_module_name instance_name (signal_a, signal_b, signal_c);</code></pre>
+<h3>2. חיבור לפי מיקום (Positional Port Mapping) 📐</h3>
+<p>הדרך הבסיסית ביותר לחבר תת-מודול היא לפי <strong>סדר הפורטים המקורי</strong> שלו. אנו מעבירים את שמות האותות בתוך סוגריים, בדיוק לפי הסדר שבו הוגדרו במודול הפנימי.</p>
 
-<p>נניח שקבוע במערכת תת-מודול של שער לוגי פשוט:</p>
-<pre dir="ltr"><code>module custom_and (
+<p>התחביר הכללי:</p>
+<pre dir="ltr"><code>sub_module_name instance_name (signal_1, signal_2, signal_3, ...);</code></pre>
+
+<p>ניזכר בהגדרת חצי המחבר (<code dir="ltr">half_adder</code>) משיעור 14:</p>
+<pre dir="ltr"><code>module half_adder (
+    input  a,
+    input  b,
+    output sum,
+    output cout
+);
+    assign sum  = a ^ b;
+    assign cout = a & b;
+endmodule</code></pre>
+
+<p>כדי להשתמש ב-<code dir="ltr">half_adder</code> בתוך מודול אב ולחבר אליו אותות בשמות שונים (<code dir="ltr">x</code>, <code dir="ltr">y</code>, <code dir="ltr">s</code>, <code dir="ltr">c</code>):</p>
+<pre dir="ltr"><code>module arithmetic_unit (
     input  x,
     input  y,
-    output z
+    output s,
+    output c
 );
-    assign z = x & y;
+    // חיבור לפי מיקום: x מתחבר ל-a, y מתחבר ל-b, s מתחבר ל-sum, ו-c מתחבר ל-cout
+    half_adder u_ha (x, y, s, c);
 endmodule</code></pre>
 
-<p>כדי להשתמש במודול זה בתוך מודול אב ולחבר אליו אותות בשמות אחרים, נכתוב:</p>
-<pre dir="ltr"><code>module parent_design (
-    input  clk_in,
-    input  data_in,
-    output flag_out
-);
-    // חיבור לפי מיקום: x מתחבר ל-clk_in, y ל-data_in, ו-z ל-flag_out
-    custom_and u_and (clk_in, data_in, flag_out);
-endmodule</code></pre>
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<p><strong>שימו לב:</strong> בשיטה זו, סדר האותות בסוגריים קריטי לחלוטין! אם נחליף את המיקום של האותות, החיבור הפיזי בשבב ישתנה ועלול לגרום לשגיאות לוגיות קשות או לקצר.</p>
+<h3>3. תרשים חיבור האותות לפי מיקום 📊</h3>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.5; text-align: center;">
+  אותות מודול האב:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;y&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▲&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▲<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1st&nbsp;│&nbsp;&nbsp;&nbsp;2nd&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3rd&nbsp;│&nbsp;&nbsp;&nbsp;4th&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  תת-מודול (half_adder): ( .a&nbsp;&nbsp;,&nbsp;&nbsp;.b&nbsp;&nbsp;───►&nbsp;&nbsp;.sum&nbsp;&nbsp;,&nbsp;&nbsp;.cout )
+</div>
+
+<p><strong>שימו לב:</strong> בחיבור לפי מיקום, סדר האותות בסוגריים קריטי לחלוטין! אם תחליפו בטעות בין <code dir="ltr">s</code> ל-<code dir="ltr">c</code>, החיבור הפיזי בשבב ישתנה לחלוטין ויגרום לשגיאות לוגיות קשות.</p>
 `,
 
       explanationEn: `
-<h3>1. Hardware Hierarchy in Chip Design 🏗️</h3>
-<p>In the semiconductor industry, complex integrated circuits and processors contain billions of transistors. It is impossible to write all the logic in a single flat file. Just like in software engineering where we divide code into functions and classes, in hardware design we build smaller modules that perform simple operations (like gates, decoders, or arithmetic units) and combine them inside a parent module (Top Module).</p>
-<p>This process of embedding a sub-module inside a parent design is called <strong>Module Instantiation</strong>.</p>
+<h3>1. Hardware Hierarchy & The "Building Blocks" Philosophy 🏗️</h3>
+<p>In modern microelectronics and chip design (ASIC/FPGA), integrated circuits contain billions of transistors. It is impossible to describe such complexity in a single flat file or monolithic module.</p>
+<p>In Chapters 2 and 3, we built foundational hardware building blocks:</p>
+<ul>
+  <li><strong><code dir="ltr">half_adder</code></strong> – adds two single bits (Lesson 14).</li>
+  <li><strong><code dir="ltr">full_adder</code></strong> – adds two bits with a carry-in (Lesson 15).</li>
+  <li><strong><code dir="ltr">mux_2to1</code></strong> – selects between two data inputs based on a control line (Lesson 17).</li>
+</ul>
+<p>Just as software developers break complex programs into functions and classes, hardware engineers create self-contained, verified modules and instantiate them inside higher-level modules (Top Module). This process is called <strong>Module Instantiation</strong>.</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
 <h3>2. Positional Port Mapping 📐</h3>
-<p>The simplest way to connect a sub-module is based on the <strong>positional order of its ports</strong>. In this style, we pass signals from the parent module inside parentheses, matching the exact order in which the ports were declared in the sub-module definition.</p>
-<p>The general syntax is:</p>
-<pre dir="ltr"><code>sub_module_name instance_name (signal_a, signal_b, signal_c);</code></pre>
+<p>The simplest way to connect a sub-module is by <strong>the positional order of its ports</strong>. Signals from the parent module are passed inside parentheses, matching the exact order declared in the sub-module definition.</p>
 
-<p>Suppose the following sub-module is already defined in the system:</p>
-<pre dir="ltr"><code>module custom_and (
+<p>General Syntax:</p>
+<pre dir="ltr"><code>sub_module_name instance_name (signal_1, signal_2, signal_3, ...);</code></pre>
+
+<p>Recall the <code dir="ltr">half_adder</code> definition from Lesson 14:</p>
+<pre dir="ltr"><code>module half_adder (
+    input  a,
+    input  b,
+    output sum,
+    output cout
+);
+    assign sum  = a ^ b;
+    assign cout = a & b;
+endmodule</code></pre>
+
+<p>To use <code dir="ltr">half_adder</code> inside a parent design with signals named <code dir="ltr">x</code>, <code dir="ltr">y</code>, <code dir="ltr">s</code>, and <code dir="ltr">c</code>:</p>
+<pre dir="ltr"><code>module arithmetic_unit (
     input  x,
     input  y,
-    output z
+    output s,
+    output c
 );
-    assign z = x & y;
+    // Positional connection: x -> a, y -> b, s -> sum, c -> cout
+    half_adder u_ha (x, y, s, c);
 endmodule</code></pre>
 
-<p>To instantiate this module inside a parent module and connect signals with different names, we write:</p>
-<pre dir="ltr"><code>module parent_design (
-    input  clk_in,
-    input  data_in,
-    output flag_out
-);
-    // Positional connection: x connects to clk_in, y to data_in, and z to flag_out
-    custom_and u_and (clk_in, data_in, flag_out);
-endmodule</code></pre>
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<p><strong>Important:</strong> In positional port mapping, the order of signals in the parentheses is absolutely critical! If you swap the signal positions, the physical connection on the chip will change, leading to major logical bugs or short circuits.</p>
+<h3>3. Positional Signal Mapping Diagram 📊</h3>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.5; text-align: center;">
+  Parent Signals:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;y&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▲&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▲<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1st&nbsp;│&nbsp;&nbsp;&nbsp;2nd&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3rd&nbsp;│&nbsp;&nbsp;&nbsp;4th&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  Sub-module (half_adder): ( .a&nbsp;&nbsp;,&nbsp;&nbsp;.b&nbsp;&nbsp;───►&nbsp;&nbsp;.sum&nbsp;&nbsp;,&nbsp;&nbsp;.cout )
+</div>
+
+<p><strong>Crucial Rule:</strong> Positional mapping depends strictly on port order. If you swap <code dir="ltr">s</code> and <code dir="ltr">c</code>, the physical wiring changes on silicon, causing major logic bugs.</p>
 `,
 
       taskHe: `קיים במערכת מודול מוכן בשם <code dir="ltr">mod_a</code> המוגדר כך:
 <code dir="ltr">module mod_a (input in1, input in2, output out_xor);</code>
+(מודול זה מבצע פעולת XOR בדומה למוצא ה-sum של <code dir="ltr">half_adder</code>).
 <br><br>
 בנו את המודול הראשי <code dir="ltr">top_module</code> (בעל כניסות <code dir="ltr">in1</code>, <code dir="ltr">in2</code> ויציאה <code dir="ltr">out_val</code>). צרו מופע של המודול <code dir="ltr">mod_a</code> בשם <code dir="ltr">u_mod</code> וחברו את כניסותיו ויציאותיו באמצעות חיבור לפי מיקום (Positional Mapping).`,
 
       taskEn: `A pre-defined module <code dir="ltr">mod_a</code> is available with the following signature:
 <code dir="ltr">module mod_a (input in1, input in2, output out_xor);</code>
+(This module computes an XOR operation, exactly like the sum output of a <code dir="ltr">half_adder</code>).
 <br><br>
 Build the top module <code dir="ltr">top_module</code> (which has inputs <code dir="ltr">in1</code>, <code dir="ltr">in2</code> and output <code dir="ltr">out_val</code>). Instantiate <code dir="ltr">mod_a</code> with the instance name <code dir="ltr">u_mod</code> and connect its ports to the top module signals using positional mapping.`,
 
@@ -136,91 +180,121 @@ endmodule`,
 
       explanationHe: `
 <h3>1. מדוע חיבור לפי מיקום מסוכן בתעשייה? ⚠️</h3>
-<p>בשיעור הקודם חברנו פורטים לפי מיקומם. למרות שזו שיטה פשוטה ומהירה, היא נחשבת <strong>ללא בטוחה ומאוד לא מומלצת</strong> בתכנון שבבים תעשייתי. מדוע?</p>
+<p>בשיעור הקודם חיברנו פורטים לפי מיקומם. למרות שזו שיטה קצרה, היא נחשבת <strong>ללא בטוחה ומאוד לא מומלצת</strong> בתכנון שבבים מקצועי (ASIC/FPGA). מדוע?</p>
 <ul>
-  <li>אם מפתח אחר ישנה את סדר הפורטים בהגדרת המודול הפנימי, כל החיבורים במודול הראשי יתבלבלו ללא התרעת שגיאה!</li>
-  <li>במודולים גדולים (הכוללים מאות כניסות ויציאות), קל מאוד לטעות במיקום של חוט בודד ולחבר אותו למקום הלא נכון.</li>
+  <li>אם מפתח ישנה את סדר הפורטים בהגדרת תת-המודול (למשל מ-<code dir="ltr">a, b, sum, cout</code> ל-<code dir="ltr">a, b, cout, sum</code>), כל החיבורים במודול הראשי יתבלבלו ללא התרעת קומפילציה!</li>
+  <li>במודולים גדולים (הכוללים עשרות ומאות פורטים), קל מאוד לטעות במיקום של חוט בודד.</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
 <h3>2. חיבור מפורש לפי שם (Named Port Mapping) 📌</h3>
-<p>כדי למנוע שגיאות אלו, נשתמש בחיבור פורטים לפי שמם הפיזי. בשיטה זו, אנו מציינים במפורש את שם הפורט של תת-המודול (עם נקודה לפניו), ובתוך סוגריים את שם האות במודול האב.</p>
-<p>התחביר הוא:</p>
+<p>התקן המקצועי בתעשייה הוא ציון מפורש של שם הפורט של תת-המודול (עם נקודה לפניו <code dir="ltr">.port_name</code>), ובתוך הסוגריים את שם האות במודול האב <code dir="ltr">(parent_signal)</code>.</p>
+<p>התחביר הכללי:</p>
 <pre dir="ltr"><code>sub_module_name instance_name (
     .sub_port_a(parent_signal_1),
     .sub_port_b(parent_signal_2)
 );</code></pre>
 
-<p>נניח שיש לנו תת-מודול של מקלט תקשורת:</p>
-<pre dir="ltr"><code>module uart_rx (
-    input  sys_clk,
-    output rx_data
+<p>נשתמש במרבב 2-ל-1 (<code dir="ltr">mux_2to1</code>) שבנינו בשיעור 17:</p>
+<pre dir="ltr"><code>module mux_2to1 (
+    input  a,
+    input  b,
+    input  sel,
+    output out
 );
-    // ...
+    assign out = sel ? b : a;
 endmodule</code></pre>
 
-<p>במודול הראשי נחבר אותו כך:</p>
-<pre dir="ltr"><code>module board_top (
-    input  board_clk,
-    output [7:0] led_bus
+<p>במודול הראשי נחבר אותו לפי שם – <strong>וסדר השורות כלל לא משנה!</strong></p>
+<pre dir="ltr"><code>module data_selector (
+    input  ch0,
+    input  ch1,
+    input  mode,
+    output q_out
 );
-    // חיבור לפי שם - סדר השורות לא משנה!
-    uart_rx u_receiver (
-        .rx_data(led_bus[0]),
-        .sys_clk(board_clk)
+    // חיבור לפי שם - sel נכתב ראשון, אחריו b ואז a!
+    mux_2to1 u_mux (
+        .sel(mode),
+        .b(ch1),
+        .a(ch0),
+        .out(q_out)
     );
 endmodule</code></pre>
-<p>כפי שניתן לראות בדוגמה, חיברנו את <code>sys_clk</code> אחרי <code>rx_data</code>, וזה תקין לחלוטין. כלי הסינתזה ידע לקשר אותם נכון לפי שמם המפורש ולא לפי מיקומם.</p>
+
+<p>באופן דומה, עבור המחבר המלא (<code dir="ltr">full_adder</code> משיעור 15):</p>
+<pre dir="ltr"><code>full_adder u_fa (
+    .a(data_a),
+    .b(data_b),
+    .cin(carry_in),
+    .sum(sum_out),
+    .cout(carry_out)
+);</code></pre>
 `,
 
       explanationEn: `
 <h3>1. Why Positional Connection is Dangerous in the Industry? ⚠️</h3>
-<p>In the previous lesson, we connected ports by their position. Although simple and fast, positional mapping is considered <strong>unsafe and highly discouraged</strong> in professional chip design. Why?</p>
+<p>In the previous lesson, we connected ports positionally. While concise, positional mapping is considered <strong>unsafe and highly discouraged</strong> in professional chip design (ASIC/FPGA). Why?</p>
 <ul>
-  <li>If another designer changes the order of ports in the sub-module definition, all connections in the parent module will be scrambled without compile-time errors!</li>
-  <li>In large modules with hundreds of inputs and outputs, it is extremely easy to misplace a single wire and connect it to the wrong port.</li>
+  <li>If a designer refactors the sub-module and reorders ports (e.g. from <code dir="ltr">a, b, sum, cout</code> to <code dir="ltr">a, b, cout, sum</code>), all connections in the parent module will be silently scrambled without compile errors!</li>
+  <li>In complex IP blocks with dozens or hundreds of I/O pins, misplaced connections are almost impossible to catch without formal verification.</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Named Port Mapping 📌</h3>
-<p>To prevent these errors, we specify the port names explicitly. In this style, we prefix the sub-module's port name with a dot (<code>.</code>), followed by the parent signal name in parentheses.</p>
-<p>The syntax is:</p>
+<h3>2. Explicit Named Port Mapping 📌</h3>
+<p>The universal industry standard is to explicitly map each sub-module port (prefixed with a dot <code dir="ltr">.port_name</code>) to the parent signal inside parentheses <code dir="ltr">(parent_signal)</code>.</p>
+<p>General Syntax:</p>
 <pre dir="ltr"><code>sub_module_name instance_name (
     .sub_port_a(parent_signal_1),
     .sub_port_b(parent_signal_2)
 );</code></pre>
 
-<p>Suppose we have a communication receiver sub-module:</p>
-<pre dir="ltr"><code>module uart_rx (
-    input  sys_clk,
-    output rx_data
+<p>Let's look at the <code dir="ltr">mux_2to1</code> multiplexer built in Lesson 17:</p>
+<pre dir="ltr"><code>module mux_2to1 (
+    input  a,
+    input  b,
+    input  sel,
+    output out
 );
-    // ...
+    assign out = sel ? b : a;
 endmodule</code></pre>
 
-<p>In our top module, we instantiate it as follows:</p>
-<pre dir="ltr"><code>module board_top (
-    input  board_clk,
-    output [7:0] led_bus
+<p>In the top-level design, we instantiate it by name — <strong>and port declaration order does not matter!</strong></p>
+<pre dir="ltr"><code>module data_selector (
+    input  ch0,
+    input  ch1,
+    input  mode,
+    output q_out
 );
-    // Named port mapping - the line order does not matter!
-    uart_rx u_receiver (
-        .rx_data(led_bus[0]),
-        .sys_clk(board_clk)
+    // Named port mapping - sel is listed first, followed by b and a!
+    mux_2to1 u_mux (
+        .sel(mode),
+        .b(ch1),
+        .a(ch0),
+        .out(q_out)
     );
 endmodule</code></pre>
-<p>As shown in the example, we connected <code>sys_clk</code> after <code>rx_data</code>, which is perfectly valid. The synthesis tool links them accurately based on their names, not their ordering.</p>
+
+<p>Similarly, for our <code dir="ltr">full_adder</code> building block (Lesson 15):</p>
+<pre dir="ltr"><code>full_adder u_fa (
+    .a(data_a),
+    .b(data_b),
+    .cin(carry_in),
+    .sum(sum_out),
+    .cout(carry_out)
+);</code></pre>
 `,
 
       taskHe: `קיים במערכת מודול בשם <code dir="ltr">mod_a</code> המוגדר כך:
 <code dir="ltr">module mod_a (input in1, input in2, output out_and);</code>
+(מודול זה מבצע פעולת AND, בדומה למוצא ה-cout של <code dir="ltr">half_adder</code>).
 <br><br>
 במודול הראשי <code dir="ltr">top_module</code> (בעל כניסות <code dir="ltr">a</code>, <code dir="ltr">b</code> ויציאה <code dir="ltr">out_val</code>), צרו מופע בשם <code dir="ltr">u_mod</code> וחברו את הפורטים **לפי שם** כך ש-<code dir="ltr">in1</code> יתחבר ל-<code dir="ltr">a</code>, <code dir="ltr">in2</code> יתחבר ל-<code dir="ltr">b</code>, ו-<code dir="ltr">out_and</code> יתחבר ל-<code dir="ltr">out_val</code>.`,
 
       taskEn: `A pre-defined sub-module <code dir="ltr">mod_a</code> exists with the signature:
 <code dir="ltr">module mod_a (input in1, input in2, output out_and);</code>
+(This module performs an AND operation, similar to the carry-out of a <code dir="ltr">half_adder</code>).
 <br><br>
 Inside <code dir="ltr">top_module</code> (with inputs <code dir="ltr">a</code>, <code dir="ltr">b</code> and output <code dir="ltr">out_val</code>), instantiate <code dir="ltr">mod_a</code> as <code dir="ltr">u_mod</code> using explicit named port connections: <code dir="ltr">.in1(a)</code>, <code dir="ltr">.in2(b)</code>, and <code dir="ltr">.out_and(out_val)</code>.`,
 
@@ -270,77 +344,87 @@ endmodule`,
       titleEn: "Multiple Sub-module Instances",
 
       explanationHe: `
-<h3>1. יצירת מספר מופעים של אותו מודול 🏢</h3>
-<p>אחת התכונות החשובות ביותר בהיררכיית חומרה היא היכולת לשכפל מודול אחד מספר פעמים. כמו שבתוכנה ניתן לקרוא לאותה פונקציה מספר פעמים עם פרמטרים שונים, בחומרה ניתן ליצור מופעים פיזיים מרובים של אותו המודול.</p>
-<p>לדוגמה, כדי לבנות אוגר של 4-ביט, ניתן ליצור 4 מופעים נפרדים של דלגלג (Flip-Flop) יחיד. לכל מופע חובה להעניק <strong>שם מופע ייחודי</strong> (כמו <code>u_inv1</code> ו-<code>u_inv2</code>).</p>
+<h3>1. שכפול מודולים לבניית מערכות מורכבות 🏢</h3>
+<p>אחת העוצמות הגדולות של תכנון חומרה מודולרי היא היכולת לשכפל אבן בניין בסיסית מספר רב של פעמים על גבי הסיליקון.</p>
+<p>בשיעור 16 ראינו כיצד יצרנו מחבר 4-ביט שלם (<code dir="ltr">ripple_carry_adder_4bit</code>) על ידי יצירת 4 מופעים נפרדים של <code dir="ltr">full_adder</code> (<code dir="ltr">fa0</code>, <code dir="ltr">fa1</code>, <code dir="ltr">fa2</code>, <code dir="ltr">fa3</code>).</p>
+<p>דוגמה קלאסית נוספת: בניית <strong>מרבב 4-ל-1</strong> באמצעות שלושה מופעים של מרבב 2-ל-1 (<code dir="ltr">mux_2to1</code> משיעור 17)!</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. חיבור מודולים בעזרת קווי קשר פנימיים (wires) 🔗</h3>
-<p>כאשר פלט של מודול אחד צריך להתחבר כקלט למודול שני, עלינו להגדיר חוט פנימי מוגדר כ-<code>wire</code> במודול האב. החוט הזה משמש כ"הלחמה" או נקודת חיבור המקשרת בין המופעים.</p>
+<h3>2. קווי קשר פנימיים (Internal Wires) 🔗</h3>
+<p>כאשר מוצא של מופע אחד צריך להתחבר כקלט למופע אחר, עלינו להצהיר על חוט פנימי באמצעות <code dir="ltr">wire</code> במודול האב. חוט זה מתפקד כמוליך נחושת פנימי המחבר בין שני הרכיבים.</p>
 
-<p>דוגמה סכמטית של שרשור שני חוצצים (Buffers):</p>
-<div style="text-align: center; margin: 1rem 0; font-family: monospace; background: var(--card-bg); padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
-  [in_pin] ---> ( u_buf1 ) ---> [temp_wire] ---> ( u_buf2 ) ---> [out_pin]
+<p>דוגמה לבניית מרבב 4-ל-1 היררכי משלושה מרבבי 2-ל-1:</p>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4;">
+  in0, in1 ──► [ u_mux0 (mux_2to1) ] ──► (wire mux_low)&nbsp;&nbsp;──┐<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──► [ u_mux2 (mux_2to1) ] ──► out<br>
+  in2, in3 ──► [ u_mux1 (mux_2to1) ] ──► (wire mux_high) ──┘
 </div>
 
-<p>נממש דוגמה זו בקוד:</p>
-<pre dir="ltr"><code>// מודול ראשי שמשרשר שני מופעים
-module buffer_chain (
-    input  in_pin,
-    output out_pin
+<p>נממש מבנה זה בקוד Verilog:</p>
+<pre dir="ltr"><code>module mux_4to1_hierarchical (
+    input  in0, in1, in2, in3,
+    input  [1:0] sel,
+    output out
 );
-    wire temp_wire; // חוט המקשר בין יציאת הראשון לכניסת השני
+    wire mux_low;  // חוט מקשר לתוצאת שלב ראשון (in0 מול in1)
+    wire mux_high; // חוט מקשר לתוצאת שלב ראשון (in2 מול in3)
 
-    // מופע ראשון
-    buffer_unit u_buf1 (
-        .in_sig(in_pin),
-        .out_sig(temp_wire)
-    );
+    // שלב 1: בחירה ראשונית לפי sel[0]
+    mux_2to1 u_mux0 (.a(in0), .b(in1), .sel(sel[0]), .out(mux_low));
+    mux_2to1 u_mux1 (.a(in2), .b(in3), .sel(sel[0]), .out(mux_high));
 
-    // מופע שני
-    buffer_unit u_buf2 (
-        .in_sig(temp_wire),
-        .out_sig(out_pin)
-    );
+    // שלב 2: בחירה סופית בין שני החצאים לפי sel[1]
+    mux_2to1 u_mux2 (.a(mux_low), .b(mux_high), .sel(sel[1]), .out(out));
 endmodule</code></pre>
+
+<p><strong>כללי מפתח:</strong></p>
+<ol>
+  <li>לכל מופע חובה לתת <strong>שם מופע ייחודי</strong> (למשל <code dir="ltr">u_inv1</code>, <code dir="ltr">u_inv2</code>).</li>
+  <li>חיבורים בין מופעים מתבצעים תמיד דרך הצהרות <code dir="ltr">wire</code> מקומיות.</li>
+</ol>
 `,
 
       explanationEn: `
-<h3>1. Reusing Sub-modules with Multiple Instances 🏢</h3>
-<p>One of the most powerful features of hardware hierarchy is the ability to duplicate a sub-module. Just like in software programming where you call a function multiple times, in hardware design you can instantiate multiple physical copies of a module on the silicon.</p>
-<p>For example, to build a 4-bit register, you can instantiate 4 separate D Flip-Flops. Every instance must be given a <strong>unique instance name</strong> (such as <code>u_inv1</code> and <code>u_inv2</code>).</p>
+<h3>1. Reusing Sub-modules to Build Complex Systems 🏢</h3>
+<p>One of the core strengths of modular hardware design is the ability to stamp out multiple physical instances of a foundational building block on silicon.</p>
+<p>In Lesson 16, we saw this when building a 4-bit Ripple Carry Adder (<code dir="ltr">ripple_carry_adder_4bit</code>) using 4 instances of <code dir="ltr">full_adder</code> (<code dir="ltr">fa0</code>, <code dir="ltr">fa1</code>, <code dir="ltr">fa2</code>, <code dir="ltr">fa3</code>).</p>
+<p>Another classic architectural pattern: Building a <strong>4-to-1 Multiplexer</strong> using three instances of our 2-to-1 MUX (<code dir="ltr">mux_2to1</code> from Lesson 17)!</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Linking Sub-modules via Internal Wires 🔗</h3>
-<p>When the output of one module needs to connect to the input of another, we declare an intermediate connection using the <code>wire</code> keyword in the top module. This wire acts as a physical solder joint that routes the signal between the two blocks.</p>
+<h3>2. Internal Wires for Inter-instance Routing 🔗</h3>
+<p>When the output of one instance feeds into the input of another, we declare an internal connection using the <code dir="ltr">wire</code> keyword in the top module. This wire acts as a physical interconnect trace on the silicon substrate.</p>
 
-<p>Schematic diagram of chaining two buffers:</p>
-<div style="text-align: center; margin: 1rem 0; font-family: monospace; background: var(--card-bg); padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
-  [in_pin] ---> ( u_buf1 ) ---> [temp_wire] ---> ( u_buf2 ) ---> [out_pin]
+<p>Block diagram of a hierarchical 4-to-1 MUX constructed from three 2-to-1 MUXes:</p>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4;">
+  in0, in1 ──► [ u_mux0 (mux_2to1) ] ──► (wire mux_low)&nbsp;&nbsp;──┐<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──► [ u_mux2 (mux_2to1) ] ──► out<br>
+  in2, in3 ──► [ u_mux1 (mux_2to1) ] ──► (wire mux_high) ──┘
 </div>
 
-<p>Let's represent this in code:</p>
-<pre dir="ltr"><code>// Top module chaining two instances
-module buffer_chain (
-    input  in_pin,
-    output out_pin
+<p>Implementing this hierarchy in Verilog:</p>
+<pre dir="ltr"><code>module mux_4to1_hierarchical (
+    input  in0, in1, in2, in3,
+    input  [1:0] sel,
+    output out
 );
-    wire temp_wire; // Connecting wire between the first buffer and second buffer
+    wire mux_low;  // intermediate wire from lower pair
+    wire mux_high; // intermediate wire from upper pair
 
-    // First instance
-    buffer_unit u_buf1 (
-        .in_sig(in_pin),
-        .out_sig(temp_wire)
-    );
+    // Stage 1: Select between pairs using sel[0]
+    mux_2to1 u_mux0 (.a(in0), .b(in1), .sel(sel[0]), .out(mux_low));
+    mux_2to1 u_mux1 (.a(in2), .b(in3), .sel(sel[0]), .out(mux_high));
 
-    // Second instance
-    buffer_unit u_buf2 (
-        .in_sig(temp_wire),
-        .out_sig(out_pin)
-    );
+    // Stage 2: Final selection between the two stage 1 outputs using sel[1]
+    mux_2to1 u_mux2 (.a(mux_low), .b(mux_high), .sel(sel[1]), .out(out));
 endmodule</code></pre>
+
+<p><strong>Key Rules:</strong></p>
+<ol>
+  <li>Each instance must have a <strong>unique instance name</strong> (e.g. <code dir="ltr">u_inv1</code>, <code dir="ltr">u_inv2</code>).</li>
+  <li>Signals routed between sub-modules must be declared as internal <code dir="ltr">wire</code> nodes.</li>
+</ol>
 `,
 
       taskHe: `במערכת מוגדר מראש מודול מהפך בשם <code dir="ltr">inverter_block</code>:
@@ -741,136 +825,200 @@ endmodule`,
       chapter: 4,
       chapterTitleHe: "פרק 4: היררכיה, מודולים ופרמטרים",
       chapterTitleEn: "Chapter 4: Hierarchy, Modules & Parameters",
-      titleHe: "מפענח חיבור 16-ביט היררכי (Hierarchical Adder) 🧮",
+      titleHe: "מחבר 16-ביט היררכי (Hierarchical 16-bit Adder) 🧮",
       titleEn: "Hierarchical 16-bit Adder",
 
       explanationHe: `
-<h3>1. אינטגרציה היררכית מעשית 🧮</h3>
-<p>כדי לסכם את מה שלמדנו על מודולים, היררכיה ואינסטנסיאציה, נתכנן רכיב חומרה משמעותי: <strong>מפענח חיבור (Adder) של 16 ביט</strong>, המורכב משני מודולים נפרדים של מפענח חיבור של 8 ביט.</p>
-<p>ברמת החומרה, כדי לחבר שני מספרים בני 16 ביט, אנו מחלקים את המספרים לשני חצאים:</p>
+<h3>1. פסגת ההיררכיה: בניית מעגלים גדולים מאבני בניין 🧮</h3>
+<p>כדי לסכם את עקרונות התכנון ההיררכי שלמדנו, נתבונן בכל המסלול שעברנו עד כה:</p>
+<ol>
+  <li><strong>רמת השערים (Gate Level):</strong> שערים לוגיים בסיסיים כמו AND, OR, ו-XOR (פרק 1).</li>
+  <li><strong>אבני הבניין היסודיות (1-Bit):</strong> חצי מחבר (<code dir="ltr">half_adder</code> משיעור 14) ומחבר מלא (<code dir="ltr">full_adder</code> משיעור 15).</li>
+  <li><strong>תת-מערכת 4-ביט:</strong> מחבר זוחל (<code dir="ltr">ripple_carry_adder_4bit</code> משיעור 16) שנבנה משרשור 4 מופעים של <code dir="ltr">full_adder</code>.</li>
+  <li><strong>מערכת-על 16-ביט:</strong> כעת נבנה <strong>מחבר 16-ביט מלא</strong> (<code dir="ltr">hierarchical_adder_16bit</code>) על ידי שרשור 4 מופעים של המחבר הזוחל של 4-ביט!</li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. שרשור מחברי 4-ביט והולכת נשיאה (Carry Chain) 📐</h3>
+<p>כדי לחבר שני מספרים בני 16 ביט (<code dir="ltr">a[15:0]</code> ו-<code dir="ltr">b[15:0]</code>) עם נשיאה בכניסה (<code dir="ltr">cin</code>), אנו מחלקים את הווקטורים ל-4 רבעים (Nibbles של 4 ביט כל אחד):</p>
 <ul>
-  <li>החצי התחתון (הביטים 0 עד 7) מחושב על ידי מפענח החיבור הראשון.</li>
-  <li>הנשיאה (Carry out) מהמפענח הראשון צריכה לעבור כנשיאה בכניסה (Carry in) למפענח החיבור השני, המחשב את הביטים 8 עד 15.</li>
+  <li><strong>רבע 0 (<code dir="ltr">rca0</code>):</strong> מחבר את <code dir="ltr">a[3:0]</code> עם <code dir="ltr">b[3:0]</code> ואת <code dir="ltr">cin</code>, ומייצר את <code dir="ltr">sum[3:0]</code> ונשיאת ביניים <code dir="ltr">c4</code>.</li>
+  <li><strong>רבע 1 (<code dir="ltr">rca1</code>):</strong> מחבר את <code dir="ltr">a[7:4]</code> עם <code dir="ltr">b[7:4]</code> ואת הנשיאה <code dir="ltr">c4</code>, ומייצר את <code dir="ltr">sum[7:4]</code> ונשיאת ביניים <code dir="ltr">c8</code>.</li>
+  <li><strong>רבע 2 (<code dir="ltr">rca2</code>):</strong> מחבר את <code dir="ltr">a[11:8]</code> עם <code dir="ltr">b[11:8]</code> ואת הנשיאה <code dir="ltr">c8</code>, ומייצר את <code dir="ltr">sum[11:8]</code> ונשיאת ביניים <code dir="ltr">c12</code>.</li>
+  <li><strong>רבע 3 (<code dir="ltr">rca3</code>):</strong> מחבר את <code dir="ltr">a[15:12]</code> עם <code dir="ltr">b[15:12]</code> ואת הנשיאה <code dir="ltr">c12</code>, ומייצר את <code dir="ltr">sum[15:12]</code> ואת הנשיאה הסופית <code dir="ltr">cout</code>.</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. תרשים הולכת אות הנשיאה 📐</h3>
-<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4;">
-  a[15:8], b[15:8]   ------>  [ u_add_high (add8) ]  ------> sum_val[15:8]<br>
-                                   ^<br>
-                                   | (carry_mid)<br>
-                                   |<br>
-  a[7:0],  b[7:0]    ------>  [ u_add_low  (add8) ]  ------> sum_val[7:0]<br>
-  cin = 1'b0 (קבוע)  ------>
+<h3>3. תרשים ההיררכיה וזרימת האותות 📊</h3>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4; font-size: 0.85rem; overflow-x: auto;">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===============================================================<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hierarchical_adder_16bit (top_module)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a[15:0], b[15:0], cin ===&gt; sum[15:0], cout<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===============================================================<br><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘<br>
+  cin ───► .cin   .cout ── c4 ───► .cin   .cout ── c8 ───► .cin   .cout ── c12 ──► .cin   .cout ───► cout<br>
+  a[3:0]─► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a[7:4]─► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;a[11:8]► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;a[15:12]►.a     .sum  ──┐<br>
+  b[3:0]─► .b           │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b[7:4]─► .b           │&nbsp;&nbsp;&nbsp;&nbsp;b[11:8]► .b           │&nbsp;&nbsp;&nbsp;&nbsp;b[15:12]►.b           │<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[3:0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[7:4]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[11:8]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[15:12]<br>
 </div>
-<p>בדוגמה זו אנו משתמשים בחוט פנימי (נקרא לו <code>carry_mid</code>) המחבר את היציאה <code>cout</code> של המפענח התחתון אל הכניסה <code>cin</code> של המפענח העליון.</p>
 `,
 
       explanationEn: `
-<h3>1. Practical Hierarchical Integration 🧮</h3>
-<p>To synthesize what we have learned about modules, hierarchy, and port connections, we will design a significant hardware component: a <strong>16-bit binary Adder</strong>, constructed by connecting two pre-defined 8-bit adders.</p>
-<p>In digital design, to add two 16-bit numbers, we divide them into two 8-bit halves:</p>
+<h3>1. The Pinnacle of Hierarchy: Composing Systems from Sub-modules 🧮</h3>
+<p>To conclude our journey into hardware hierarchy and modularity, let us review the complete progression of abstraction:</p>
+<ol>
+  <li><strong>Gate Level:</strong> Primitive gates (AND, OR, XOR) in Chapter 1.</li>
+  <li><strong>Foundational Building Blocks (1-Bit):</strong> <code dir="ltr">half_adder</code> (Lesson 14) and <code dir="ltr">full_adder</code> (Lesson 15).</li>
+  <li><strong>4-Bit Sub-system:</strong> <code dir="ltr">ripple_carry_adder_4bit</code> (Lesson 16), constructed by chaining 4 instances of <code dir="ltr">full_adder</code>.</li>
+  <li><strong>16-Bit Top-Level System:</strong> Now, we construct a <strong>full 16-bit Adder</strong> (<code dir="ltr">hierarchical_adder_16bit</code>) by chaining 4 instances of our 4-bit ripple carry adder!</li>
+</ol>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. Chaining 4-bit Adders & Carry Propagation 📐</h3>
+<p>To add two 16-bit operands (<code dir="ltr">a[15:0]</code> and <code dir="ltr">b[15:0]</code>) with a carry-in (<code dir="ltr">cin</code>), we partition the vectors into four 4-bit nibbles:</p>
 <ul>
-  <li>The lower half (bits 0 to 7) is calculated by the first 8-bit adder.</li>
-  <li>The carry output (Carry out) from the first adder must flow into the carry input (Carry in) of the second 8-bit adder, which computes the higher half (bits 8 to 15).</li>
+  <li><strong>Nibble 0 (<code dir="ltr">rca0</code>):</strong> Adds <code dir="ltr">a[3:0]</code> and <code dir="ltr">b[3:0]</code> with <code dir="ltr">cin</code>, producing <code dir="ltr">sum[3:0]</code> and intermediate carry <code dir="ltr">c4</code>.</li>
+  <li><strong>Nibble 1 (<code dir="ltr">rca1</code>):</strong> Adds <code dir="ltr">a[7:4]</code> and <code dir="ltr">b[7:4]</code> with carry-in <code dir="ltr">c4</code>, producing <code dir="ltr">sum[7:4]</code> and intermediate carry <code dir="ltr">c8</code>.</li>
+  <li><strong>Nibble 2 (<code dir="ltr">rca2</code>):</strong> Adds <code dir="ltr">a[11:8]</code> and <code dir="ltr">b[11:8]</code> with carry-in <code dir="ltr">c8</code>, producing <code dir="ltr">sum[11:8]</code> and intermediate carry <code dir="ltr">c12</code>.</li>
+  <li><strong>Nibble 3 (<code dir="ltr">rca3</code>):</strong> Adds <code dir="ltr">a[15:12]</code> and <code dir="ltr">b[15:12]</code> with carry-in <code dir="ltr">c12</code>, producing <code dir="ltr">sum[15:12]</code> and final carry-out <code dir="ltr">cout</code>.</li>
 </ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Carry Propagation Diagram 📐</h3>
-<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4;">
-  a[15:8], b[15:8]   ------>  [ u_add_high (add8) ]  ------> sum_val[15:8]<br>
-                                   ^<br>
-                                   | (carry_mid)<br>
-                                   |<br>
-  a[7:0],  b[7:0]    ------>  [ u_add_low  (add8) ]  ------> sum_val[7:0]<br>
-  cin = 1'b0 (const) ------>
+<h3>3. Hierarchy & Carry Propagation Diagram 📊</h3>
+<div style="font-family: monospace; background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-radius: 4px; line-height: 1.4; font-size: 0.85rem; overflow-x: auto;">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===============================================================<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hierarchical_adder_16bit (top_module)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a[15:0], b[15:0], cin ===&gt; sum[15:0], cout<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===============================================================<br><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┌───────────────┐<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rca3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;ripple_carry_&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;adder_4bit&nbsp;&nbsp;&nbsp;│<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└───────┬───────┘<br>
+  cin ───► .cin   .cout ── c4 ───► .cin   .cout ── c8 ───► .cin   .cout ── c12 ──► .cin   .cout ───► cout<br>
+  a[3:0]─► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a[7:4]─► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;a[11:8]► .a     .sum  ──┐&nbsp;&nbsp;&nbsp;&nbsp;a[15:12]►.a     .sum  ──┐<br>
+  b[3:0]─► .b           │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b[7:4]─► .b           │&nbsp;&nbsp;&nbsp;&nbsp;b[11:8]► .b           │&nbsp;&nbsp;&nbsp;&nbsp;b[15:12]►.b           │<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[3:0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[7:4]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[11:8]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum[15:12]<br>
 </div>
-<p>In this architecture, we declare an internal wire (e.g. <code>carry_mid</code>) to route the <code>cout</code> signal from the lower adder into the <code>cin</code> port of the upper adder.</p>
 `,
 
-      taskHe: `במערכת מוגדר מראש מודול של מחבר 8-ביט בשם <code dir="ltr">add8</code>:
-<pre dir="ltr"><code>module add8 (
-    input [7:0] a,
-    input [7:0] b,
-    input cin,
-    output [7:0] sum,
+      taskHe: `במערכת מוגדר מראש מודול של מחבר זוחל 4-ביט בשם <code dir="ltr">ripple_carry_adder_4bit</code> (משיעור 16):
+<pre dir="ltr"><code>module ripple_carry_adder_4bit (
+    input  [3:0] a,
+    input  [3:0] b,
+    input  cin,
+    output [3:0] sum,
     output cout
 );</code></pre>
 <br>
-בנו את המודול הראשי <code dir="ltr">top_module</code> (בעל כניסות <code dir="ltr">a</code> ו-<code dir="ltr">b</code> בגודל 16 ביט, ויציאה <code dir="ltr">sum_val</code> בגודל 16 ביט).
+בנו את המודול הראשי <code dir="ltr">top_module</code> (מחבר 16-ביט היררכי) בעל כניסות <code dir="ltr">a</code> ו-<code dir="ltr">b</code> בגודל 16 ביט, כניסת נשיאה ראשית <code dir="ltr">cin</code>, יציאת סכום <code dir="ltr">sum</code> בגודל 16 ביט, ויציאת נשיאה סופית <code dir="ltr">cout</code>.
 <br><br>
-עליכם ליצור שני מופעים של <code dir="ltr">add8</code>:
+עליכם להגדיר חוטים פנימיים לנשיאות הביניים (<code dir="ltr">wire c4, c8, c12;</code>) וליצור 4 מופעים של <code dir="ltr">ripple_carry_adder_4bit</code>:
 <ul>
-  <li>המופע הראשון יקרא <code dir="ltr">u_add_low</code> ויחשב את 8 הביטים התחתונים (חיבור <code dir="ltr">a[7:0]</code> ו-<code dir="ltr">b[7:0]</code>) עם כניסת נשיאה קבועה של אפס (<code dir="ltr">1'b0</code>). הנשיאה שמופקת ממנו תתחבר לחוט פנימי בשם <code dir="ltr">carry_mid</code>.</li>
-  <li>המופע השני יקרא <code dir="ltr">u_add_high</code> ויחשב את 8 הביטים העליונים (חיבור <code dir="ltr">a[15:8]</code> ו-<code dir="ltr">b[15:8]</code>) עם כניסת נשיאה המחוברת ל-<code dir="ltr">carry_mid</code>. את יציאת ה-cout שלו השאירו פתוחה/לא מחוברת (<code dir="ltr">()</code>).</li>
+  <li><code dir="ltr">rca0</code>: מחבר את <code dir="ltr">a[3:0]</code> ו-<code dir="ltr">b[3:0]</code> עם נשיאה בכניסה <code dir="ltr">cin</code>, מפיק <code dir="ltr">sum[3:0]</code> ונשיאה החוצה <code dir="ltr">c4</code>.</li>
+  <li><code dir="ltr">rca1</code>: מחבר את <code dir="ltr">a[7:4]</code> ו-<code dir="ltr">b[7:4]</code> עם נשיאה בכניסה <code dir="ltr">c4</code>, מפיק <code dir="ltr">sum[7:4]</code> ונשיאה החוצה <code dir="ltr">c8</code>.</li>
+  <li><code dir="ltr">rca2</code>: מחבר את <code dir="ltr">a[11:8]</code> ו-<code dir="ltr">b[11:8]</code> עם נשיאה בכניסה <code dir="ltr">c8</code>, מפיק <code dir="ltr">sum[11:8]</code> ונשיאה החוצה <code dir="ltr">c12</code>.</li>
+  <li><code dir="ltr">rca3</code>: מחבר את <code dir="ltr">a[15:12]</code> ו-<code dir="ltr">b[15:12]</code> עם נשיאה בכניסה <code dir="ltr">c12</code>, מפיק <code dir="ltr">sum[15:12]</code> ונשיאה סופית <code dir="ltr">cout</code>.</li>
 </ul>
-חברו את המודולים **לפי שם**.`,
+חברו את הפורטים **לפי שם** (Named Port Connection).`,
 
-      taskEn: `A pre-defined 8-bit adder module named <code dir="ltr">add8</code> is available in the library:
-<pre dir="ltr"><code>module add8 (
-    input [7:0] a,
-    input [7:0] b,
-    input cin,
-    output [7:0] sum,
+      taskEn: `A pre-defined 4-bit ripple carry adder module named <code dir="ltr">ripple_carry_adder_4bit</code> (from Lesson 16) is available in the library:
+<pre dir="ltr"><code>module ripple_carry_adder_4bit (
+    input  [3:0] a,
+    input  [3:0] b,
+    input  cin,
+    output [3:0] sum,
     output cout
 );</code></pre>
 <br>
-Build the top module <code dir="ltr">top_module</code> (which has 16-bit inputs <code dir="ltr">a</code>, <code dir="ltr">b</code> and a 16-bit output <code dir="ltr">sum_val</code>).
+Build the top module <code dir="ltr">top_module</code> (hierarchical 16-bit adder) with 16-bit inputs <code dir="ltr">a</code> and <code dir="ltr">b</code>, carry-in <code dir="ltr">cin</code>, 16-bit sum output <code dir="ltr">sum</code>, and carry-out <code dir="ltr">cout</code>.
 <br><br>
-Instantiate two copies of <code dir="ltr">add8</code>:
+Declare internal intermediate carry wires (<code dir="ltr">wire c4, c8, c12;</code>) and instantiate 4 copies of <code dir="ltr">ripple_carry_adder_4bit</code>:
 <ul>
-  <li>The first instance named <code dir="ltr">u_add_low</code> computes the lower 8 bits (connecting <code dir="ltr">a[7:0]</code> and <code dir="ltr">b[7:0]</code>) with carry-in tied to <code dir="ltr">1'b0</code>. The carry-out should connect to an internal wire named <code dir="ltr">carry_mid</code>.</li>
-  <li>The second instance named <code dir="ltr">u_add_high</code> computes the upper 8 bits (connecting <code dir="ltr">a[15:8]</code> and <code dir="ltr">b[15:8]</code>) with carry-in connected to <code dir="ltr">carry_mid</code>. Leave its carry-out port unconnected (empty parenthesis <code dir="ltr">()</code>).</li>
+  <li><code dir="ltr">rca0</code>: adds <code dir="ltr">a[3:0]</code> and <code dir="ltr">b[3:0]</code> with carry-in <code dir="ltr">cin</code>, outputting <code dir="ltr">sum[3:0]</code> and carry-out <code dir="ltr">c4</code>.</li>
+  <li><code dir="ltr">rca1</code>: adds <code dir="ltr">a[7:4]</code> and <code dir="ltr">b[7:4]</code> with carry-in <code dir="ltr">c4</code>, outputting <code dir="ltr">sum[7:4]</code> and carry-out <code dir="ltr">c8</code>.</li>
+  <li><code dir="ltr">rca2</code>: adds <code dir="ltr">a[11:8]</code> and <code dir="ltr">b[11:8]</code> with carry-in <code dir="ltr">c8</code>, outputting <code dir="ltr">sum[11:8]</code> and carry-out <code dir="ltr">c12</code>.</li>
+  <li><code dir="ltr">rca3</code>: adds <code dir="ltr">a[15:12]</code> and <code dir="ltr">b[15:12]</code> with carry-in <code dir="ltr">c12</code>, outputting <code dir="ltr">sum[15:12]</code> and final carry-out <code dir="ltr">cout</code>.</li>
 </ul>
-Connect the modules **by name**.`,
+Connect all ports **by name** (Named Port Connection).`,
 
       starterCode: `module top_module (
     input [15:0] a,
     input [15:0] b,
-    output [15:0] sum_val
+    input cin,
+    output [15:0] sum,
+    output cout
 );
-    // הגדר חוט מקשר פנימי לנשיאה / Declare the intermediate carry wire
+    // הגדירו חוטי נשיאה פנימיים c4, c8, c12 / Declare intermediate carry wires c4, c8, c12
     
-    // צור מופע של המחבר התחתון u_add_low / Instantiate lower 8-bit adder u_add_low
-    
-    // צור מופע של המחבר העליון u_add_high / Instantiate upper 8-bit adder u_add_high
+    // צרו 4 מופעים של ripple_carry_adder_4bit בשמות rca0, rca1, rca2, rca3 / Instantiate 4 copies of ripple_carry_adder_4bit (rca0, rca1, rca2, rca3)
 
 endmodule`,
 
       solutionCode: `module top_module (
     input [15:0] a,
     input [15:0] b,
-    output [15:0] sum_val
+    input cin,
+    output [15:0] sum,
+    output cout
 );
-    wire carry_mid;
-    add8 u_add_low (
-        .a(a[7:0]),
-        .b(b[7:0]),
-        .cin(1'b0),
-        .sum(sum_val[7:0]),
-        .cout(carry_mid)
+    wire c4, c8, c12;
+
+    ripple_carry_adder_4bit rca0 (
+        .a(a[3:0]),
+        .b(b[3:0]),
+        .cin(cin),
+        .sum(sum[3:0]),
+        .cout(c4)
     );
-    add8 u_add_high (
-        .a(a[15:8]),
-        .b(b[15:8]),
-        .cin(carry_mid),
-        .sum(sum_val[15:8]),
-        .cout()
+
+    ripple_carry_adder_4bit rca1 (
+        .a(a[7:4]),
+        .b(b[7:4]),
+        .cin(c4),
+        .sum(sum[7:4]),
+        .cout(c8)
+    );
+
+    ripple_carry_adder_4bit rca2 (
+        .a(a[11:8]),
+        .b(b[11:8]),
+        .cin(c8),
+        .sum(sum[11:8]),
+        .cout(c12)
+    );
+
+    ripple_carry_adder_4bit rca3 (
+        .a(a[15:12]),
+        .b(b[15:12]),
+        .cin(c12),
+        .sum(sum[15:12]),
+        .cout(cout)
     );
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, a: 0, b: 0, sum_val: 0 },
-        { time: 5, a: 1000, b: 2000, sum_val: 3000 },
-        { time: 10, a: 32768, b: 32768, sum_val: 0 },
-        { time: 15, a: 500, b: 600, sum_val: 1100 }
+        { time: 0, a: 0, b: 0, cin: 0, sum: 0, cout: 0 },
+        { time: 5, a: 255, b: 1, cin: 0, sum: 256, cout: 0 },
+        { time: 10, a: 4095, b: 1, cin: 0, sum: 4096, cout: 0 },
+        { time: 15, a: 65535, b: 0, cin: 1, sum: 0, cout: 1 },
+        { time: 20, a: 32768, b: 32768, cin: 0, sum: 0, cout: 1 },
+        { time: 25, a: 12345, b: 23456, cin: 1, sum: 35802, cout: 0 }
       ],
 
       hints: {
-        he: "הגדירו wire carry_mid; והעבירו sum_val[7:0] למחבר התחתון ו-sum_val[15:8] למחבר העליון.",
-        en: "Declare wire carry_mid; and pass sum_val[7:0] to the lower adder and sum_val[15:8] to the upper adder."
+        he: "הגדירו חוטים מקשרים לנשיאות: wire c4, c8, c12; ולאחר מכן צרו 4 מופעים של ripple_carry_adder_4bit (למשל: rca0 מחבר את a[3:0], b[3:0], cin ומפיק sum[3:0] ו-c4; rca1 מחבר את a[7:4], b[7:4], c4 ומפיק sum[7:4] ו-c8, וכן הלאה).",
+        en: "Declare internal carry wires: wire c4, c8, c12; then instantiate 4 copies of ripple_carry_adder_4bit (e.g. rca0 connecting a[3:0], b[3:0], cin and outputting sum[3:0], c4; rca1 connecting a[7:4], b[7:4], c4 and outputting sum[7:4], c8, and so on)."
       }
     }
   ];
