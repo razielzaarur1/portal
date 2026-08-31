@@ -353,8 +353,9 @@ endmodule`,
       expectedOutputs: [
         { time: 0, clk: 0, we_a: 0, addr_a: 0, data_in_a: 0, addr_b: 5, data_out_b: 0 },
         { time: 5, clk: 1, we_a: 1, addr_a: 5, data_in_a: 77, addr_b: 5, data_out_b: 77 },
-        { time: 10, clk: 1, we_a: 1, addr_a: 9, data_in_a: 88, addr_b: 5, data_out_b: 77 },
-        { time: 15, clk: 0, we_a: 0, addr_a: 0, data_in_a: 0, addr_b: 9, data_out_b: 88 }
+        { time: 10, clk: 0, we_a: 1, addr_a: 9, data_in_a: 88, addr_b: 5, data_out_b: 77 },
+        { time: 15, clk: 1, we_a: 1, addr_a: 9, data_in_a: 88, addr_b: 5, data_out_b: 77 },
+        { time: 20, clk: 0, we_a: 0, addr_a: 0, data_in_a: 0, addr_b: 9, data_out_b: 88 }
       ],
 
       hints: {

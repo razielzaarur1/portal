@@ -214,9 +214,11 @@ endmodule`,
         { time: 0, clk: 0, reset: 1, in: 0, out: 0 },
         { time: 5, clk: 1, reset: 1, in: 0, out: 0 },
         { time: 10, clk: 0, reset: 0, in: 1, out: 0 },
-        { time: 15, clk: 1, reset: 0, in: 1, out: 1 },
-        { time: 20, clk: 0, reset: 0, in: 0, out: 1 },
-        { time: 25, clk: 1, reset: 0, in: 0, out: 0 }
+        { time: 15, clk: 1, reset: 0, in: 1, out: 0 },
+        { time: 20, clk: 0, reset: 0, in: 0, out: 0 },
+        { time: 25, clk: 1, reset: 0, in: 0, out: 1 },
+        { time: 30, clk: 0, reset: 0, in: 0, out: 1 },
+        { time: 35, clk: 1, reset: 0, in: 0, out: 0 }
       ],
 
       hints: {

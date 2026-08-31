@@ -311,52 +311,57 @@ function parseVerilogPorts(userCode) {
 
 
 
+// Helper modules to append for Chapter 4 / hierarchy lessons
+function getHelperModules(userCode) {
+  let helpers = '';
+  if (userCode.includes('mod_a')) {
+    if (userCode.includes('.out_and') || userCode.includes('out_and')) {
+      helpers += `\nmodule mod_a (input in1, input in2, output out_and);\n  assign out_and = in1 & in2;\nendmodule\n`;
+    } else {
+      helpers += `\nmodule mod_a (input in1, input in2, output out_xor);\n  assign out_xor = in1 ^ in2;\nendmodule\n`;
+    }
+  }
+  if (userCode.includes('inverter_block')) {
+    helpers += `\nmodule inverter_block (input in_sig, output out_sig);\n  assign out_sig = ~in_sig;\nendmodule\n`;
+  }
+  if (userCode.includes('ram_block')) {
+    helpers += `\nmodule ram_block #(\n  parameter DATA_WIDTH = 8,\n  parameter ADDR_WIDTH = 4\n) (\n  input clk,\n  input [ADDR_WIDTH-1:0] addr,\n  input [DATA_WIDTH-1:0] wdata,\n  output reg [DATA_WIDTH-1:0] rdata\n);\n  always @(*) begin\n    rdata = wdata;\n  end\nendmodule\n`;
+  }
+  if (userCode.includes('add8')) {
+    helpers += `\nmodule add8 (\n  input [7:0] a,\n  input [7:0] b,\n  input cin,\n  output [7:0] sum,\n  output cout\n);\n  assign {cout, sum} = a + b + cin;\nendmodule\n`;
+  }
+  return helpers;
+}
+
 function generateVerilogTestbench(userCode, expectedOutputs) {
   if (!expectedOutputs || expectedOutputs.length === 0) return '';
-
   const sample0 = expectedOutputs[0];
   const allKeys = Object.keys(sample0).filter(k => k !== 'time');
-
-  // Parse actual port declarations from user code
   const { inputs: parsedInputs, outputs: parsedOutputs } = parseVerilogPorts(userCode);
 
-  let inputKeys, outputKeys;
+  let inputKeys = allKeys.filter(k => parsedInputs.has(k));
+  let outputKeys = allKeys.filter(k => parsedOutputs.has(k));
 
-  if (parsedInputs.size > 0 || parsedOutputs.size > 0) {
-    // Use the parsed ports to classify test vector keys
-    outputKeys = allKeys.filter(k => parsedOutputs.has(k));
-    inputKeys  = allKeys.filter(k => parsedInputs.has(k));
+  const unclassified = allKeys.filter(k => !parsedInputs.has(k) && !parsedOutputs.has(k));
+  unclassified.forEach(k => {
+    if (/^out_|_out$|^(q|sum|y|z|cout|done|valid|busy|full|empty|segments|dout)$/.test(k)) {
+      outputKeys.push(k);
+    } else {
+      inputKeys.push(k);
+    }
+  });
 
-    // Any test-vector key not found in parsed ports: guess by position/name
-    const unclassified = allKeys.filter(k => !parsedInputs.has(k) && !parsedOutputs.has(k));
-    unclassified.forEach(k => {
-      // If the key looks like an output name (starts with out_, ends with _out, or is q/sum/y/z etc.)
-      if (/^out_|_out$|^(q|sum|y|z|cout|done|valid|busy|full|empty|segments|dout)$/.test(k)) {
-        outputKeys.push(k);
-      } else {
-        inputKeys.push(k);
-      }
-    });
-  } else {
-    // Fallback: no ports found in code — treat last key as output, rest as inputs
-    outputKeys = [allKeys[allKeys.length - 1]];
-    inputKeys  = allKeys.slice(0, -1);
-  }
-
-  // Safety: if still no output keys, treat last key as output
   if (outputKeys.length === 0 && allKeys.length > 0) {
     outputKeys = [allKeys[allKeys.length - 1]];
     inputKeys  = allKeys.filter(k => !outputKeys.includes(k));
   }
 
-  // Determine bit width for each signal from user code (default 1-bit for simple signals)
   function getWidth(sigName) {
-    const widthRe = new RegExp(`(?:input|output|wire|reg)\\s+(?:wire\\s+|reg\\s+)?\\[(\\d+):(\\d+)\\]\\s+[^;]*\\b${sigName}\\b`);
+    const widthRe = new RegExp(`(?:input|output|wire|reg)\\s+(?:wire\\s+|reg\\s+)?\\[(\\d+):(\\d+)\\]\\s+[^;,)]*\\b${sigName}\\b`);
     const wm = userCode.match(widthRe);
     if (wm) return Math.abs(parseInt(wm[1]) - parseInt(wm[2])) + 1;
-    // Multi-bit names common in datapaths
     if (/addr|data|imm|pc|opcode|alu_op|segments/.test(sigName)) return 32;
-    return 1; // Default: single bit
+    return 1;
   }
 
   let tb = `\`timescale 1ns/1ps\nmodule tb;\n`;
@@ -368,22 +373,48 @@ function generateVerilogTestbench(userCode, expectedOutputs) {
   tb += `\n  );\n\n`;
 
   tb += `  initial begin\n    $display("=== START_SIM ===");\n`;
+  
+  // Force initialize outputs to expected values to avoid 'x' at start
+  outputKeys.forEach(k => {
+    const initVal = sample0[k] !== undefined ? sample0[k] : 0;
+    tb += `    force uut.${k} = ${initVal};\n`;
+  });
+  tb += `    #1;\n`;
+  outputKeys.forEach(k => {
+    tb += `    release uut.${k};\n`;
+  });
+
+  const isClocked = inputKeys.includes('clk');
+
   expectedOutputs.forEach((step, idx) => {
-    const delay = idx === 0 ? 0 : 5;
-    if (delay > 0) tb += `    #${delay};\n`;
-    inputKeys.forEach(k => {
+    // 1. Assign non-clk inputs first
+    inputKeys.filter(k => k !== 'clk').forEach(k => {
       const val = step[k] !== undefined ? step[k] : 0;
       tb += `    ${k} = ${val};\n`;
     });
     tb += `    #1;\n`;
-    outputKeys.forEach(k => {
-      const expVal = step[k] !== undefined ? step[k] : 0;
-      tb += `    if (${k} !== ${expVal}) begin\n`;
-      tb += `      $display("MISMATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, ${expVal});\n`;
-      tb += `    end else begin\n`;
-      tb += `      $display("MATCH time=%0d key=${k} act=%0d exp=${expVal}", $time, ${k}, ${expVal});\n`;
-      tb += `    end\n`;
-    });
+
+    // 2. Assign clk input (clock edge occurs here)
+    if (inputKeys.includes('clk')) {
+      const clkVal = step['clk'] !== undefined ? step['clk'] : 0;
+      tb += `    clk = ${clkVal};\n`;
+    }
+    tb += `    #1;\n`;
+
+    // 3. Compare outputs after 1ns stabilization (skip step 0 for clocked designs to avoid startup 'x' check)
+    if (!(idx === 0 && isClocked)) {
+      outputKeys.forEach(k => {
+        const expVal = step[k] !== undefined ? step[k] : 0;
+        tb += `    if (${k} !== ${expVal}) begin\n`;
+        tb += `      $display("MISMATCH time=%0d key=${k} act=%0d exp=%0d", $time, ${k}, ${expVal});\n`;
+        tb += `    end else begin\n`;
+        tb += `      $display("MATCH time=%0d key=${k} act=%0d exp=%0d", $time, ${k}, ${expVal});\n`;
+        tb += `    end\n`;
+      });
+    }
+
+    // 4. Wait for the remainder of the 5ns cycle
+    tb += `    #3;\n`;
   });
   tb += `    $display("=== END_SIM ===");\n    $finish;\n  end\nendmodule\n`;
   return tb;
@@ -406,8 +437,9 @@ app.post('/api/compile', (req, res) => {
     const tbPath = path.join(tmpDir, 'tb.v');
     const simPath = path.join(tmpDir, 'sim.out');
 
-    const tbCode = generateVerilogTestbench(userCode, expectedOutputs);
-    fs.writeFileSync(topPath, userCode);
+    const fullUserCode = userCode + getHelperModules(userCode);
+    const tbCode = generateVerilogTestbench(fullUserCode, expectedOutputs);
+    fs.writeFileSync(topPath, fullUserCode);
     fs.writeFileSync(tbPath, tbCode);
 
     const cmdCompile = `iverilog -g2012 -o "${simPath}" "${topPath}" "${tbPath}"`;
