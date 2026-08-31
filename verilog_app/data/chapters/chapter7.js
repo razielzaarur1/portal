@@ -449,19 +449,18 @@ ring_reg <= {ring_reg[2:0], ring_reg[3]};</code></pre>
 ring_reg <= {ring_reg[2:0], ring_reg[3]};</code></pre>
 `,
 
-      taskHe: `בנו מונה טבעת (Ring Counter) של 4 ביט במודול <code dir="ltr">top_module</code> בעל כניסות <code dir="ltr">clk</code>, <code dir="ltr">reset</code> (איפוס סינכרוני ל-0 לשם תאימות בדיקה), וכניסה טורית עזר <code dir="ltr">in</code> (המשמשת את הסימולטור המקומי), ויציאה מקבילית <code dir="ltr">q</code> [3:0].
+      taskHe: `בנו מונה טבעת (Ring Counter) של 4 ביט במודול <code dir="ltr">top_module</code> בעל כניסות <code dir="ltr">clk</code> ו-<code dir="ltr">reset</code> (איפוס סינכרוני ל-4'b0001), ויציאה מקבילית <code dir="ltr">q</code> [3:0].
 בעליית השעון:
-- אם <code dir="ltr">reset</code> פעיל, היציאה <code dir="ltr">q</code> מאופסת ל-0.
+- אם <code dir="ltr">reset</code> פעיל (שווה ל-1), היציאה מאותחלת ל-<code dir="ltr">4'b0001</code> (הביט הפעיל היחיד).
 - אחרת, הזיזו את האוגר שמאלה בצורה מעגלית: <code dir="ltr">q <= {q[2:0], q[3]}</code>.`,
-      taskEn: `Design a 4-bit Ring Counter in <code dir="ltr">top_module</code> with clock <code dir="ltr">clk</code>, synchronous <code dir="ltr">reset</code>, a dummy serial input <code dir="ltr">in</code> (used for simulation timing compatibility), and 4-bit output <code dir="ltr">q</code>.
+      taskEn: `Design a 4-bit Ring Counter in <code dir="ltr">top_module</code> with clock <code dir="ltr">clk</code>, synchronous <code dir="ltr">reset</code> (initializes to 4'b0001), and 4-bit output <code dir="ltr">q</code>.
 On the rising clock edge:
-- If <code dir="ltr">reset</code> is high (1), clear the output <code dir="ltr">q <= 0</code>.
+- If <code dir="ltr">reset</code> is high (1), initialize <code dir="ltr">q <= 4'b0001</code>.
 - Otherwise, shift the bits circularly to the left: <code dir="ltr">q <= {q[2:0], q[3]}</code>.`,
 
       starterCode: `module top_module (
     input clk,
     input reset,
-    input in,
     output reg [3:0] q
 );
     // כתבו את לוגיקת מונה הטבעת כאן / Write your Ring Counter logic here
@@ -471,12 +470,11 @@ endmodule`,
       solutionCode: `module top_module (
     input clk,
     input reset,
-    input in,
     output reg [3:0] q
 );
     always @(posedge clk) begin
         if (reset) begin
-            q <= 4'b0000;
+            q <= 4'b0001;
         end else begin
             q <= {q[2:0], q[3]};
         end
@@ -484,23 +482,21 @@ endmodule`,
 endmodule`,
 
       expectedOutputs: [
-        { time: 0, clk: 0, reset: 1, in: 1, q: 0 },
-        { time: 5, clk: 1, reset: 1, in: 1, q: 0 },
-        { time: 10, clk: 0, reset: 0, in: 1, q: 0 },
-        { time: 15, clk: 1, reset: 0, in: 1, q: 1 },
-        { time: 20, clk: 0, reset: 0, in: 0, q: 1 },
-        { time: 25, clk: 1, reset: 0, in: 0, q: 2 },
-        { time: 30, clk: 0, reset: 0, in: 0, q: 2 },
-        { time: 35, clk: 1, reset: 0, in: 0, q: 4 },
-        { time: 40, clk: 0, reset: 0, in: 0, q: 4 },
-        { time: 45, clk: 1, reset: 0, in: 0, q: 8 },
-        { time: 50, clk: 0, reset: 0, in: 1, q: 8 },
-        { time: 55, clk: 1, reset: 0, in: 1, q: 1 }
+        { time: 0, clk: 0, reset: 1, q: 1 },
+        { time: 5, clk: 1, reset: 1, q: 1 },
+        { time: 10, clk: 0, reset: 0, q: 1 },
+        { time: 15, clk: 1, reset: 0, q: 2 },
+        { time: 20, clk: 0, reset: 0, q: 2 },
+        { time: 25, clk: 1, reset: 0, q: 4 },
+        { time: 30, clk: 0, reset: 0, q: 4 },
+        { time: 35, clk: 1, reset: 0, q: 8 },
+        { time: 40, clk: 0, reset: 0, q: 8 },
+        { time: 45, clk: 1, reset: 0, q: 1 }
       ],
 
       hints: {
-        he: "הקפידו לשרשר את q[3] חזרה למיקום LSB: {q[2:0], q[3]}. הסימולטור מייצר את הדחיפה הראשונית של 1 בעזרת כניסת in, אך החומרה שלכם צריכה לממש את הקישור המעגלי הרגיל.",
-        en: "Make sure to concatenate q[3] back to the LSB position: {q[2:0], q[3]}. The simulator initiates the starting '1' using the input 'in', but your Verilog must implement the circular wiring."
+        he: "בעת איפוס, אתחלו ל-4'b0001 כדי שיהיה ביט 1 שיסתובב במעגל: if (reset) q <= 4'b0001; else q <= {q[2:0], q[3]};",
+        en: "On reset, initialize to 4'b0001 so a '1' bit circulates: if (reset) q <= 4'b0001; else q <= {q[2:0], q[3]};"
       }
     },
 

@@ -324,13 +324,15 @@ class AppRouter {
       if (waveformRenderer) waveformRenderer.clear();
       if (circuitRenderer) circuitRenderer.clear();
 
-      // Run Simulation
-      const result = await (window.Simulator ? window.Simulator.testSolution(userCode, lesson) : { passed: false, log: 'Simulator not loaded' });
+      // Run Simulation with live progress tracking
+      const result = await (window.Simulator ? window.Simulator.testSolution(userCode, lesson, (statusMsg) => {
+        if (logBox) logBox.textContent = `# ${statusMsg}\n`;
+      }) : { passed: false, log: 'Simulator not loaded' });
 
       if (runBtn) runBtn.disabled = false;
 
-      // 1. Render ModelSim Terminal Console Output
-      if (logBox) logBox.textContent = result.log;
+      // 1. Render ModelSim / Icarus Verilog Console Output
+      if (logBox) logBox.textContent = result.log || '(no console output)';
 
       // 2. Render HDLBits Status Banner
       if (result.passed) {
@@ -340,7 +342,7 @@ class AppRouter {
         const nextTarget = nextLesson ? `#lesson/${nextLessonId}` : '#lessons';
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 4px;">Status: Success!</h2>
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 4px;">Status: Success! ✅</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
               ${t('successMsg')}
             </p>
@@ -350,7 +352,7 @@ class AppRouter {
       } else if (result.status === 'Compile Error') {
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Compile Error!</h2>
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Compile Error! ⚠️</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary);">
               Please check the syntax errors reported in the compiler log above.
             </p>
@@ -359,17 +361,19 @@ class AppRouter {
       } else {
         statusBanner.innerHTML = `
           <div style="margin-bottom: var(--space-md);">
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Incorrect!</h2>
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Incorrect! ❌</h2>
             <p style="font-size: 0.9rem; color: var(--text-secondary);">
-              Output has <strong>${result.mismatches}</strong> mismatches out of ${result.totalSamples} samples. Check the timing diagram comparison below.
+              Output has <strong>${result.mismatches !== undefined ? result.mismatches : 'some'}</strong> mismatches out of ${result.totalSamples || (lesson.expectedOutputs || []).length} samples. Check the timing diagram comparison below.
             </p>
           </div>
         `;
       }
 
-      // 3. Render HDLBits Timing Diagram (Yours, Ref, Mismatch)
+      // 3. Render VCD Waveforms or HDLBits Timing Diagram
       if (waveformRenderer) {
-        if (result.status !== 'Compile Error' && result.comparisons && result.comparisons.length > 0) {
+        if (result.status !== 'Compile Error' && result.vcd) {
+          waveformRenderer.render(result.vcd);
+        } else if (result.status !== 'Compile Error' && result.comparisons && result.comparisons.length > 0) {
           waveformRenderer.render(result.comparisons);
         } else {
           waveformRenderer.clear();

@@ -966,51 +966,95 @@ endmodule`,
       titleEn: "4-bit Ripple Carry Adder (from 4 Full Adders)",
 
       explanationHe: `
-<h3>1. מחבר זוחל 4-ביט (4-bit Ripple Carry Adder) ⛓️</h3>
-assign c1     = (a[0] &amp; b[0]) | (cin &amp; (a[0] ^ b[0]));
+<h3>1. מהו מחבר זוחל 4-ביט (4-bit Ripple Carry Adder)? ⛓️</h3>
+<p>כדי לחבר שני מספרים בינאריים בני 4 ביטים (<code dir="ltr">a[3:0]</code> ו-<code dir="ltr">b[3:0]</code>), אנו מבצעים חיבור בטור בדיוק כפי שאנו מחברים מספרים עשרוניים במאונך (חיבור ארוך עם נשיאה מטור לטור).</p>
+<p>הרכיב הפשוט והאלגנטי ביותר לביצוע משימה זו בחומרה נקרא <strong>מחבר זוחל (Ripple Carry Adder)</strong>. אנו משרשרים <strong>4 מופעים של המודול <code dir="ltr">full_adder</code></strong> שבנינו בשיעור הקודם!</p>
 
-// שלב 1
-assign sum[1] = a[1] ^ b[1] ^ c1;  // משתמש ב-c1 כנשיאה בכניסה
-assign c2     = (a[1] &amp; b[1]) | (c1 &amp; (a[1] ^ b[1]));</code></pre>
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<p><strong>חסרון מרכזי:</strong> כפי שניתן לראות בדיאגרמה, שלב 3 אינו יכול לחשב את תוצאתו הסופית עד ששלב 2 סיים לחשב את <code dir="ltr">c3</code>, אשר תלוי ב-<code dir="ltr">c2</code> משלב 1, שתלוי ב-<code dir="ltr">c1</code> משלב 0. "זחילה" זו יוצרת השהיית התפשטות (propagation delay) שמאטה את המעגל ככל שרוחב הביטים גדל.</p>
+<h3>2. שרשור אבני הבניין: כיצד 4 מחברים מלאים מתחברים יחד? 🏗️</h3>
+<p>כל שלב מטפל בביט אחד מתוך ה-4:</p>
+<ul>
+  <li><strong>שלב 0 (LSB - <code dir="ltr">fa0</code>)</strong>: מחבר את <code dir="ltr">a[0]</code>, <code dir="ltr">b[0]</code> ואת הנשיאה הראשונית <code dir="ltr">cin</code>. הוא מפיק את הביט הראשון של הסכום <code dir="ltr">sum[0]</code> ונשיאה <code dir="ltr">c1</code>.</li>
+  <li><strong>שלב 1 (<code dir="ltr">fa1</code>)</strong>: מחבר את <code dir="ltr">a[1]</code>, <code dir="ltr">b[1]</code> ואת נשיאת הביניים <code dir="ltr">c1</code> שהגיעה מ-<code dir="ltr">fa0</code>. הוא מפיק את <code dir="ltr">sum[1]</code> ונשיאת ביניים <code dir="ltr">c2</code>.</li>
+  <li><strong>שלב 2 (<code dir="ltr">fa2</code>)</strong>: מחבר את <code dir="ltr">a[2]</code>, <code dir="ltr">b[2]</code> ואת נשיאת הביניים <code dir="ltr">c2</code>. הוא מפיק את <code dir="ltr">sum[2]</code> ונשיאת ביניים <code dir="ltr">c3</code>.</li>
+  <li><strong>שלב 3 (MSB - <code dir="ltr">fa3</code>)</strong>: מחבר את <code dir="ltr">a[3]</code>, <code dir="ltr">b[3]</code> ואת נשיאת הביניים <code dir="ltr">c3</code>. הוא מפיק את <code dir="ltr">sum[3]</code> ואת הנשיאה הסופית של המעגל <code dir="ltr">cout</code>!</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. חוטי ביניים פנימיים (Internal Wires) 📐</h3>
+<p>כדי לקשר את מוצא הנשיאה של כל שלב אל כניסת הנשיאה של השלב הבא, עלינו להגדיר 3 חוטי ביניים פנימיים:</p>
+<pre dir="ltr"><code>wire c1, c2, c3;</code></pre>
+
+<p>חיבור המופעים (בחיבור לפי שם או לפי מיקום):</p>
+<pre dir="ltr"><code>full_adder fa0 (.a(a[0]), .b(b[0]), .cin(cin), .sum(sum[0]), .cout(c1));
+full_adder fa1 (.a(a[1]), .b(b[1]), .cin(c1),  .sum(sum[1]), .cout(c2));
+full_adder fa2 (.a(a[2]), .b(b[2]), .cin(c2),  .sum(sum[2]), .cout(c3));
+full_adder fa3 (.a(a[3]), .b(b[3]), .cin(c3),  .sum(sum[3]), .cout(cout));</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. תרשים חיווט סכמטי של התפשטות הנשיאה 📊</h3>
+<pre dir="ltr"><code>a[3] b[3]          a[2] b[2]          a[1] b[1]          a[0] b[0]
+   │   │              │   │              │   │              │   │
+ ┌─▼───▼─────┐      ┌─▼───▼─────┐      ┌─▼───▼─────┐      ┌─▼───▼─────┐
+ │    fa3    │◄─────┤    fa2    │◄─────┤    fa1    │◄─────┤    fa0    │◄── cin
+ └─┬───┬─────┘  c3  └─┬───┬─────┘  c2  └─┬───┬─────┘  c1  └─┬───┬─────┘
+   │   │              │   │              │   │              │   │
+   ▼   ▼              ▼   ▼              ▼   ▼              ▼   ▼
+ cout sum[3]         sum[2]             sum[1]             sum[0]</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. שיקולי תכנון בחומרה: השהיית התפשטות (Propagation Delay) ⏱️</h3>
+<p>שימו לב מדוע המעגל נקרא "מחבר זוחל" (Ripple): שלב <code dir="ltr">fa3</code> אינו יכול לחשב את תוצאתו הסופית עד שהנשיאה "זוחלת" דרך כל השלבים הקודמים (<code dir="ltr">fa0 &rarr; fa1 &rarr; fa2 &rarr; fa3</code>). השהיה זו גדלה ככל שמחברים יותר ביטים (למשל במחבר 64 ביט). בפרקים מתקדמים נלמד כיצד מחבר מסוג Carry-Lookahead (שיעור 75) פותר בעיה זו ומאיץ את החישוב!</p>
 `,
 
       explanationEn: `
-<h3>1. 4-bit Ripple Carry Adder (RCA) ⛓️</h3>
-<p>To add multi-bit numbers (like two 4-bit numbers <code dir="ltr">a[3:0]</code> and <code dir="ltr">b[3:0]</code>), we must mimic the way we perform manual decimal addition ("long addition" with carries).</p>
-<p>The simplest way to implement this in hardware is a <strong>Ripple Carry Adder</strong>. We chain 4 individual 1-bit Full Adders in series, so that the carry-out (<code dir="ltr">cout</code>) of each stage feeds directly into the carry-in (<code dir="ltr">cin</code>) of the next higher bit stage.</p>
+<h3>1. What is a 4-bit Ripple Carry Adder (RCA)? ⛓️</h3>
+<p>To add two 4-bit numbers (<code dir="ltr">a[3:0]</code> and <code dir="ltr">b[3:0]</code>), digital circuits perform column addition just like manual arithmetic, passing carries from right to left.</p>
+<p>The standard hierarchical architecture for this is the <strong>Ripple Carry Adder</strong>. We chain <strong>4 instances of the <code dir="ltr">full_adder</code> module</strong> built in Lesson 15!</p>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>2. Circuit Diagram 📊</h3>
-<p>The diagram below shows how the carry signal ripples through the chain from right (LSB) to left (MSB):</p>
-<pre dir="ltr"><code>a[3] b[3]      a[2] b[2]      a[1] b[1]      a[0] b[0]
-   │   │          │   │          │   │          │   │
- ┌─▼───▼─┐      ┌─▼───▼─┐      ┌─▼───▼─┐      ┌─▼───▼─┐
- │  FA3  │◄─────┤  FA2  │◄─────┤  FA1  │◄─────┤  FA0  │◄── cin (initial)
- └─┬───┬─┘  c3  └─┬───┬─┘  c2  └─┬───┬─┘  c1  └─┬───┬─┘
-   │   │          │   │          │   │          │   │
-   ▼   ▼          ▼   ▼          ▼   ▼          ▼   ▼
- cout sum[3]     sum[2]         sum[1]         sum[0]</code></pre>
+<h3>2. The Building Blocks Chain: 4 Full Adders 🏗️</h3>
+<p>Each full adder slice handles one bit position:</p>
+<ul>
+  <li><strong>Stage 0 (LSB - <code dir="ltr">fa0</code>)</strong>: Adds <code dir="ltr">a[0]</code>, <code dir="ltr">b[0]</code>, and incoming <code dir="ltr">cin</code>. Emits <code dir="ltr">sum[0]</code> and carry <code dir="ltr">c1</code>.</li>
+  <li><strong>Stage 1 (<code dir="ltr">fa1</code>)</strong>: Adds <code dir="ltr">a[1]</code>, <code dir="ltr">b[1]</code>, and intermediate carry <code dir="ltr">c1</code>. Emits <code dir="ltr">sum[1]</code> and carry <code dir="ltr">c2</code>.</li>
+  <li><strong>Stage 2 (<code dir="ltr">fa2</code>)</strong>: Adds <code dir="ltr">a[2]</code>, <code dir="ltr">b[2]</code>, and intermediate carry <code dir="ltr">c2</code>. Emits <code dir="ltr">sum[2]</code> and carry <code dir="ltr">c3</code>.</li>
+  <li><strong>Stage 3 (MSB - <code dir="ltr">fa3</code>)</strong>: Adds <code dir="ltr">a[3]</code>, <code dir="ltr">b[3]</code>, and intermediate carry <code dir="ltr">c3</code>. Emits <code dir="ltr">sum[3]</code> and the final carry-out <code dir="ltr">cout</code>!</li>
+</ul>
 
 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
 
-<h3>3. Internal Connections: The <code dir="ltr">wire</code> Declaration 📐</h3>
-<p>To connect the output of one gate/stage to the input of another, we need internal nodes. These nodes are not module inputs or outputs; they exist only as internal connections.</p>
-<p>In Verilog, we declare these internal paths using the <code dir="ltr">wire</code> keyword:</p>
-<pre dir="ltr"><code>// Declare three internal carry wires:
-wire c1, c2, c3;</code></pre>
-<p>We then use these wires to pass the carry bit from one stage to the next:</p>
-<pre dir="ltr"><code>// Bit 0 Stage (LSB)
-assign sum[0] = a[0] ^ b[0] ^ cin;
-assign c1     = (a[0] &amp; b[0]) | (cin &amp; (a[0] ^ b[0]));
+<h3>3. Intermediate Wires (<code dir="ltr">wire</code>) 📐</h3>
+<p>To connect the carry-out of each adder stage to the carry-in of the next stage, we declare 3 internal wires:</p>
+<pre dir="ltr"><code>wire c1, c2, c3;</code></pre>
 
-// Bit 1 Stage
-assign sum[1] = a[1] ^ b[1] ^ c1;  // Uses c1 as carry-in
-assign c2     = (a[1] &amp; b[1]) | (c1 &amp; (a[1] ^ b[1]));</code></pre>
+<p>Instantiating the 4 Full Adder units:</p>
+<pre dir="ltr"><code>full_adder fa0 (.a(a[0]), .b(b[0]), .cin(cin), .sum(sum[0]), .cout(c1));
+full_adder fa1 (.a(a[1]), .b(b[1]), .cin(c1),  .sum(sum[1]), .cout(c2));
+full_adder fa2 (.a(a[2]), .b(b[2]), .cin(c2),  .sum(sum[2]), .cout(c3));
+full_adder fa3 (.a(a[3]), .b(b[3]), .cin(c3),  .sum(sum[3]), .cout(cout));</code></pre>
 
-<p><strong>Trade-off:</strong> As you can see, the final stage (FA3) cannot calculate its output until the carry bit ripples through all previous stages (FA0 &rarr; FA1 &rarr; FA2 &rarr; FA3). This creates a propagation delay that grows linearly with the number of bits, making Ripple Carry Adders slower for wide data buses.</p>
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. Schematic Carry Propagation Diagram 📊</h3>
+<pre dir="ltr"><code>a[3] b[3]          a[2] b[2]          a[1] b[1]          a[0] b[0]
+   │   │              │   │              │   │              │   │
+ ┌─▼───▼─────┐      ┌─▼───▼─────┐      ┌─▼───▼─────┐      ┌─▼───▼─────┐
+ │    fa3    │◄─────┤    fa2    │◄─────┤    fa1    │◄─────┤    fa0    │◄── cin
+ └─┬───┬─────┘  c3  └─┬───┬─────┘  c2  └─┬───┬─────┘  c1  └─┬───┬─────┘
+   │   │              │   │              │   │              │   │
+   ▼   ▼              ▼   ▼              ▼   ▼              ▼   ▼
+ cout sum[3]         sum[2]             sum[1]             sum[0]</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>5. Hardware Tradeoffs: Propagation Delay ⏱️</h3>
+<p>The name "Ripple" comes from the fact that the carry bit must ripple through each successive stage before the MSB stabilizes. While simple and modular, this introduces linear latency. In later chapters (Lesson 75), we will explore the Carry-Lookahead Adder (CLA) which precomputes carries in parallel!</p>
 `,
 
       taskHe: `בנו מודול בשם <code dir="ltr">top_module</code> המממש מחבר זוחל 4-ביט (4-bit Ripple Carry Adder).

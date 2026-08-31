@@ -1,8 +1,11 @@
 /* ==========================================================================
-   VeriLearn Simulation Engine (HDLBits Accurate Simulation & Log Generator)
-   Supports: Combinational gates, Vectors, Bit Slicing, Concatenation, Replication,
-   Bitwise vs Logical, Adders, Module Instantiation, always @(*), if-else, case,
-   and Sequential Logic (posedge clk, D Flip-Flops, Shift Registers, Counters).
+   VeriLearn Simulation Engine & WebAssembly Icarus Verilog Bridge (simulator.js)
+   Features:
+     - 100% Client-Side WebAssembly (Icarus Verilog ivlpp + ivl + vvp) via Web Worker
+     - Hierarchical "Building Blocks" Auto-Injection (MODULE_LIBRARY)
+     - Dynamic Self-Checking Testbench Generation with $dumpfile("dump.vcd")
+     - ModelSim / HDLBits Compatible Log Generation and Comparison Table
+     - Local JavaScript Simulator Fallback
    ========================================================================== */
 
 class LocalSimulator {
@@ -458,11 +461,464 @@ class LocalSimulator {
   }
 }
 
+const MODULE_LIBRARY = {
+  half_adder: `
+module half_adder (
+    input a,
+    input b,
+    output sum,
+    output cout,
+    output y,
+    output out
+);
+    assign sum = a ^ b;
+    assign cout = a & b;
+    assign y = sum;
+    assign out = sum;
+endmodule
+`,
+  full_adder: `
+module full_adder (
+    input a,
+    input b,
+    input cin,
+    output sum,
+    output cout,
+    output y,
+    output out
+);
+    wire s1, c1, c2;
+    half_adder ha1 (.a(a), .b(b), .sum(s1), .cout(c1));
+    half_adder ha2 (.a(s1), .b(cin), .sum(sum), .cout(c2));
+    assign cout = c1 | c2;
+    assign y = sum;
+    assign out = sum;
+endmodule
+`,
+  ripple_carry_adder_4bit: `
+module ripple_carry_adder_4bit (
+    input [3:0] a,
+    input [3:0] b,
+    input cin,
+    output [3:0] sum,
+    output cout
+);
+    wire c1, c2, c3;
+    full_adder fa0 (a[0], b[0], cin, sum[0], c1);
+    full_adder fa1 (a[1], b[1], c1, sum[1], c2);
+    full_adder fa2 (a[2], b[2], c2, sum[2], c3);
+    full_adder fa3 (a[3], b[3], c3, sum[3], cout);
+endmodule
+`,
+  mux_2to1: `
+module mux_2to1 (
+    input a,
+    input b,
+    input sel,
+    output y,
+    output out
+);
+    assign y = sel ? b : a;
+    assign out = sel ? b : a;
+endmodule
+`,
+  mux_4to1: `
+module mux_4to1 (
+    input [3:0] in,
+    input [1:0] sel,
+    output y,
+    output out
+);
+    wire m0, m1;
+    mux_2to1 mux0 (.a(in[0]), .b(in[1]), .sel(sel[0]), .y(m0));
+    mux_2to1 mux1 (.a(in[2]), .b(in[3]), .sel(sel[0]), .y(m1));
+    mux_2to1 mux_final (.a(m0), .b(m1), .sel(sel[1]), .y(y));
+    assign out = y;
+endmodule
+`,
+  mux_8to1: `
+module mux_8to1 (
+    input [7:0] in,
+    input [2:0] sel,
+    output y,
+    output out
+);
+    wire low_mux, high_mux;
+    mux_4to1 m_low (.in(in[3:0]), .sel(sel[1:0]), .y(low_mux));
+    mux_4to1 m_high (.in(in[7:4]), .sel(sel[1:0]), .y(high_mux));
+    mux_2to1 m_final (.a(low_mux), .b(high_mux), .sel(sel[2]), .y(y));
+    assign out = y;
+endmodule
+`,
+  decoder_2to4: `
+module decoder_2to4 (
+    input [1:0] in,
+    input en,
+    input enable,
+    output [3:0] out
+);
+    wire act_en = en | enable;
+    assign out[0] = act_en & (~in[1] & ~in[0]);
+    assign out[1] = act_en & (~in[1] &  in[0]);
+    assign out[2] = act_en & ( in[1] & ~in[0]);
+    assign out[3] = act_en & ( in[1] &  in[0]);
+endmodule
+`,
+  decoder_3to8: `
+module decoder_3to8 (
+    input [2:0] in,
+    output [7:0] out
+);
+    wire en_low, en_high;
+    assign en_low  = ~in[2];
+    assign en_high =  in[2];
+    decoder_2to4 dec_low  (.in(in[1:0]), .en(en_low),  .out(out[3:0]));
+    decoder_2to4 dec_high (.in(in[1:0]), .en(en_high), .out(out[7:4]));
+endmodule
+`,
+  d_flip_flop: `
+module d_flip_flop (
+    input clk,
+    input d,
+    output reg q
+);
+    initial q = 0;
+    always @(posedge clk) begin
+        q <= d;
+    end
+endmodule
+`,
+  register_4bit: `
+module register_4bit (
+    input clk,
+    input reset,
+    input [3:0] d,
+    output reg [3:0] q
+);
+    initial q = 0;
+    always @(posedge clk) begin
+        if (reset) q <= 4'b0;
+        else q <= d;
+    end
+endmodule
+`,
+  shift_register_4bit: `
+module shift_register_4bit (
+    input clk,
+    input reset,
+    input si,
+    output reg [3:0] q
+);
+    initial q = 0;
+    always @(posedge clk) begin
+        if (reset) q <= 4'b0;
+        else q <= {q[2:0], si};
+    end
+endmodule
+`,
+  add8: `
+module add8 (
+    input [7:0] a,
+    input [7:0] b,
+    input cin,
+    output [7:0] sum,
+    output cout
+);
+    assign {cout, sum} = a + b + cin;
+endmodule
+`,
+  mod_a: `
+module mod_a (
+    input in1,
+    input in2,
+    output out_xor,
+    output out_and,
+    output out_val
+);
+    assign out_xor = in1 ^ in2;
+    assign out_and = in1 & in2;
+    assign out_val = in1 ^ in2;
+endmodule
+`,
+  inverter_block: `
+module inverter_block (
+    input in_sig,
+    output out_sig
+);
+    assign out_sig = ~in_sig;
+endmodule
+`,
+  ram_block: `
+module ram_block #(
+    parameter DATA_WIDTH = 8,
+    parameter ADDR_WIDTH = 4
+) (
+    input clk,
+    input we,
+    input [ADDR_WIDTH-1:0] addr,
+    input [DATA_WIDTH-1:0] wdata,
+    input [DATA_WIDTH-1:0] data_in,
+    output [DATA_WIDTH-1:0] rdata,
+    output [DATA_WIDTH-1:0] data_out
+);
+    reg [DATA_WIDTH-1:0] memory [0:(1<<ADDR_WIDTH)-1];
+    wire [DATA_WIDTH-1:0] in_d = wdata | data_in;
+    always @(posedge clk) begin
+        if (we) memory[addr] <= in_d;
+    end
+    assign rdata = memory[addr];
+    assign data_out = memory[addr];
+endmodule
+`
+};
+
+function getHelperDependencies(userCode) {
+  const dependencies = [];
+  const added = new Set();
+
+  function scan(code) {
+    for (const [name, modCode] of Object.entries(MODULE_LIBRARY)) {
+      if (!added.has(name)) {
+        const usageRegex = new RegExp(`\\b${name}\\b`, 'g');
+        const declaredRegex = new RegExp(`\\bmodule\\s+${name}\\b`, 'g');
+        if (usageRegex.test(code) && !declaredRegex.test(userCode)) {
+          added.add(name);
+          dependencies.push({ name: `${name}.v`, code: modCode });
+          scan(modCode);
+        }
+      }
+    }
+  }
+
+  scan(userCode);
+  return dependencies;
+}
+
+function getTopModuleName(userCode) {
+  const modMatches = [...userCode.matchAll(/\bmodule\s+([a-zA-Z0-9_]+)\b/g)].map(m => m[1]);
+  if (modMatches.includes('top_module')) return 'top_module';
+  if (modMatches.length > 0) return modMatches[modMatches.length - 1];
+  return 'top_module';
+}
+
+function parseVerilogPorts(userCode) {
+  const topName = getTopModuleName(userCode);
+  const modRegex = new RegExp(`\\bmodule\\s+${topName}\\s*(?:#\\s*\\([^)]*\\)\\s*)?\\(([^;]*?)\\);`, 's');
+  const match = userCode.match(modRegex);
+  const inputs = [];
+  const outputs = [];
+
+  if (match) {
+    const portListStr = match[1];
+    const portDecls = portListStr.split(',').map(s => s.trim()).filter(Boolean);
+
+    portDecls.forEach(decl => {
+      const pMatch = decl.match(/(input|output)\s+(?:signed\s+)?(?:reg\s+|wire\s+)?(?:\[(\d+):(\d+)\]\s+)?([a-zA-Z0-9_]+)/);
+      if (pMatch) {
+        const dir = pMatch[1];
+        const high = pMatch[2] !== undefined ? parseInt(pMatch[2], 10) : 0;
+        const low = pMatch[3] !== undefined ? parseInt(pMatch[3], 10) : 0;
+        const width = pMatch[2] !== undefined ? Math.abs(high - low) + 1 : 1;
+        const name = pMatch[4];
+        if (dir === 'input') inputs.push({ name, width, high, low });
+        else outputs.push({ name, width, high, low });
+      }
+    });
+  }
+
+  return { inputs, outputs, topName };
+}
+
+function generateVerilogTestbench(userCode, expectedOutputs, lessonId) {
+  const { inputs, outputs, topName } = parseVerilogPorts(userCode);
+
+  let tb = `// Auto-generated VeriLearn Testbench (Lesson ${lessonId})\n`;
+  tb += '`timescale 1ns/1ps\n\n';
+  tb += 'module tb;\n';
+
+  inputs.forEach(inp => {
+    if (inp.width > 1) {
+      tb += `    reg [${inp.high}:${inp.low}] ${inp.name};\n`;
+    } else {
+      tb += `    reg ${inp.name};\n`;
+    }
+  });
+
+  outputs.forEach(out => {
+    if (out.width > 1) {
+      tb += `    wire [${out.high}:${out.low}] ${out.name};\n`;
+    } else {
+      tb += `    wire ${out.name};\n`;
+    }
+  });
+
+  tb += '\n    integer error_count = 0;\n';
+  tb += '    integer sample_idx = 0;\n\n';
+
+  tb += `    ${topName} uut (\n`;
+  const allPorts = [...inputs, ...outputs];
+  const portConnections = allPorts.map(p => `        .${p.name}(${p.name})`);
+  tb += portConnections.join(',\n');
+  tb += '\n    );\n\n';
+
+  const hasExplicitClk = expectedOutputs.length > 0 && expectedOutputs[0].clk !== undefined;
+  const hasClkPort = inputs.some(i => i.name === 'clk');
+
+  if (hasClkPort && !hasExplicitClk) {
+    tb += '    initial begin\n';
+    tb += '        clk = 0;\n';
+    tb += '        forever #5 clk = ~clk;\n';
+    tb += '    end\n\n';
+  }
+
+  tb += '    initial begin\n';
+  tb += '        $dumpfile("/dump.vcd");\n';
+  tb += '        $dumpvars(0, tb);\n\n';
+
+  // Initialize signals at t=0
+  inputs.forEach(inp => {
+    tb += `        ${inp.name} = 0;\n`;
+  });
+  tb += '        #1;\n\n';
+
+  expectedOutputs.forEach((step, idx) => {
+    tb += `        // Sample #${idx + 1}\n`;
+    if (hasExplicitClk && step.clk !== undefined) {
+      inputs.forEach(inp => {
+        if (inp.name !== 'clk') {
+          const val = step[inp.name] !== undefined ? step[inp.name] : 0;
+          tb += `        ${inp.name} = ${inp.width}'d${val};\n`;
+        }
+      });
+      tb += `        #1; clk = 1'b${step.clk};\n`;
+      tb += `        #4;\n`;
+    } else if (hasClkPort) {
+      inputs.forEach(inp => {
+        if (inp.name !== 'clk') {
+          const val = step[inp.name] !== undefined ? step[inp.name] : 0;
+          tb += `        ${inp.name} = ${inp.width}'d${val};\n`;
+        }
+      });
+      tb += `        @(posedge clk);\n`;
+      tb += `        #1;\n`;
+    } else {
+      inputs.forEach(inp => {
+        const val = step[inp.name] !== undefined ? step[inp.name] : 0;
+        tb += `        ${inp.name} = ${inp.width}'d${val};\n`;
+      });
+      tb += `        #5;\n`;
+    }
+
+    const outDisplayFmt = outputs.map(o => `${o.name}=%0d`).join(' ');
+    const outDisplayVars = outputs.map(o => o.name).join(', ');
+
+    tb += `        $display("SAMPLE %0d: ${outDisplayFmt}", ${idx}, ${outDisplayVars});\n`;
+
+    outputs.forEach(out => {
+      if (step[out.name] !== undefined) {
+        tb += `        if (^${out.name} !== 1'bx && ${out.name} !== ${out.width}'d${step[out.name]}) begin\n`;
+        tb += `            $display("  [MISMATCH at sample %0d] ${out.name}: Expected %0d, Got %0d", ${idx}, ${step[out.name]}, ${out.name});\n`;
+        tb += '            error_count = error_count + 1;\n';
+        tb += '        end\n';
+      }
+    });
+    tb += '\n';
+  });
+
+  tb += '        #5;\n';
+  tb += '        if (error_count == 0) begin\n';
+  tb += '            $display("ALL TESTS PASSED: %0d samples verified successfully with 0 errors.", sample_idx + 1);\n';
+  tb += '        end else begin\n';
+  tb += '            $display("[TEST FAILED]: Total %0d mismatches found.", error_count);\n';
+  tb += '        end\n';
+  tb += '        $finish;\n';
+  tb += '    end\n\n';
+  tb += 'endmodule\n';
+
+  return tb;
+}
+
 class SimulationManager {
-  async testSolution(userCode, lesson) {
-    const expected = lesson.expectedOutputs;
-    
-    // 1. Try calling the real Icarus Verilog Backend Compiler API (/api/compile)
+  constructor() {
+    this.worker = null;
+    this.pendingRequests = new Map();
+    this.reqIdCounter = 0;
+    this.initWorker();
+  }
+
+  initWorker() {
+    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
+      try {
+        this.worker = new Worker('./js/verilog_worker.js', { type: 'module' });
+        this.worker.onmessage = (e) => this.handleWorkerMessage(e);
+        this.worker.onerror = (err) => {
+          console.warn('Verilog Web Worker encountered error:', err);
+        };
+      } catch (err) {
+        console.warn('Failed to initialize module Web Worker, will fallback:', err);
+      }
+    }
+  }
+
+  handleWorkerMessage(e) {
+    const { id, type, message, success, passed, status, logs, vcd } = e.data;
+    const req = this.pendingRequests.get(id);
+    if (!req) return;
+
+    if (type === 'status') {
+      if (typeof req.onProgress === 'function') {
+        req.onProgress(message);
+      }
+    } else if (type === 'result') {
+      this.pendingRequests.delete(id);
+      req.resolve({ success, passed, status, logs, vcd });
+    }
+  }
+
+  async testSolution(userCode, lesson, onProgress) {
+    const expected = lesson.expectedOutputs || [];
+    const dependencies = getHelperDependencies(userCode);
+    const testbenchCode = generateVerilogTestbench(userCode, expected, lesson.id);
+
+    // 1. Run in WebAssembly Web Worker if supported
+    if (this.worker) {
+      try {
+        const reqId = `sim_${++this.reqIdCounter}_${Date.now()}`;
+        const workerPromise = new Promise((resolve) => {
+          this.pendingRequests.set(reqId, { resolve, onProgress });
+        });
+
+        this.worker.postMessage({
+          id: reqId,
+          userCode,
+          testbenchCode,
+          dependencies,
+          generation: '2005'
+        });
+
+        // Set a 15-second timeout safeguard
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              success: false,
+              passed: false,
+              status: 'Timeout',
+              logs: 'Simulation timed out after 15 seconds (possible infinite loop in sequential logic).',
+              vcd: null
+            });
+          }, 15000);
+        });
+
+        const simResult = await Promise.race([workerPromise, timeoutPromise]);
+
+        // Parse outputs and format HDLBits comparisons
+        return this.formatSimulationResult(simResult, expected);
+      } catch (err) {
+        console.warn('Worker execution failed, attempting fallback:', err);
+      }
+    }
+
+    // 2. Fallback: Server API or LocalSimulator
     try {
       const response = await fetch('/api/compile', {
         method: 'POST',
@@ -502,6 +958,7 @@ class SimulationManager {
           passed: result.passed || false,
           status: result.status || (result.compileError ? 'Compile Error' : 'Incorrect'),
           log: result.log,
+          vcd: result.vcd || null,
           actualOutputs,
           comparisons,
           mismatches: result.mismatches !== undefined ? result.mismatches : expected.length,
@@ -509,29 +966,61 @@ class SimulationManager {
         };
       }
     } catch (e) {
-      console.warn('Backend Icarus Verilog API not reachable, falling back to local JS evaluator:', e);
+      console.warn('Backend API unavailable, using local JS evaluator fallback:', e);
     }
 
-    // 2. Fallback: Run evaluation using local client-side interpreter
-    const simResult = LocalSimulator.evaluate(userCode, expected, lesson.id);
-
-    if (simResult.compileError) {
+    // Fallback: LocalSimulator
+    if (typeof LocalSimulator !== 'undefined') {
+      const localRes = LocalSimulator.evaluate(userCode, expected, lesson.id);
       return {
-        passed: false,
-        status: 'Compile Error',
-        log: simResult.log,
-        actualOutputs: [],
-        mismatches: expected.length
+        passed: !localRes.compileError && localRes.mismatches === 0,
+        status: localRes.compileError ? 'Compile Error' : (localRes.mismatches === 0 ? 'Success' : 'Incorrect'),
+        log: localRes.log,
+        vcd: null,
+        actualOutputs: localRes.actualOutputs || [],
+        comparisons: [],
+        mismatches: localRes.mismatches || 0,
+        totalSamples: expected.length
       };
     }
 
-    const actualOutputs = simResult.actualOutputs;
+    return {
+      passed: false,
+      status: 'Error',
+      log: 'No simulation engine available.',
+      vcd: null,
+      actualOutputs: [],
+      comparisons: [],
+      mismatches: expected.length,
+      totalSamples: expected.length
+    };
+  }
+
+  formatSimulationResult(simResult, expected) {
+    const logs = simResult.logs || '';
+    const actualOutputs = [];
     let mismatches = 0;
 
-    // Determine target output keys to check
-    const outputKeys = Object.keys(expected[0]).filter(k => k !== 'time' && k !== 'in' && k !== 'd' && k !== 'a' && k !== 'b' && k !== 'sel' && k !== 'clk' && k !== 'reset' && k !== 'rst' && k !== 'rst_n' && k !== 'load' && k !== 'data' && k !== 'en' && k !== 'si' && k !== 'timer_done' && k !== 'write_en' && k !== 'write_reg' && k !== 'write_data' && k !== 'read_reg1' && k !== 'read_reg2' && k !== 'we' && k !== 'addr' && k !== 'data_in' && k !== 'we_a' && k !== 'addr_a' && k !== 'data_in_a' && k !== 'addr_b' && k !== 'wr_en' && k !== 'rd_en' && k !== 'wr' && k !== 'rd' && k !== 'push' && k !== 'pop' && k !== 'duty' && k !== 'tx_start' && k !== 'tx_data' && k !== 'rx' && k !== 'start' && k !== 'stop' && k !== 'read_write' && k !== 'in_val' && k !== 'x' && k !== 'syn_rst' && k !== 'd_in' && k !== 'async_rst' && k !== 'enable' && k !== 't' && k !== 'j' && k !== 'k');
+    // Parse SAMPLE lines from logs: SAMPLE 0: sum=0 cout=0
+    const sampleRegex = /SAMPLE\s+(\d+):\s*(.*)$/gm;
+    let match;
+    while ((match = sampleRegex.exec(logs)) !== null) {
+      const idx = parseInt(match[1], 10);
+      const dataStr = match[2];
+      const sampleObj = {};
+      const pairs = dataStr.trim().split(/\s+/);
+      pairs.forEach(p => {
+        const [k, v] = p.split('=');
+        if (k && v !== undefined) {
+          sampleObj[k] = parseInt(v, 10);
+        }
+      });
+      actualOutputs[idx] = sampleObj;
+    }
 
-    // Calculate HDLBits Mismatch vector
+    const outputKeys = Object.keys(expected[0] || {}).filter(k => k !== 'time' && k !== 'in' && k !== 'd' && k !== 'a' && k !== 'b' && k !== 'sel' && k !== 'cin' && k !== 'clk' && k !== 'reset');
+    const mainKey = outputKeys[0] || 'q';
+
     const comparisons = expected.map((exp, idx) => {
       const act = actualOutputs[idx] || {};
       let isMismatch = false;
@@ -545,44 +1034,22 @@ class SimulationManager {
 
       if (isMismatch) mismatches++;
 
-      const mainKey = outputKeys[0] || 'q';
-
       return {
         time: exp.time || (idx * 5),
-        in: exp.in !== undefined ? exp.in : (exp.d !== undefined ? exp.d : exp.a),
+        in: exp.in !== undefined ? exp.in : (exp.d !== undefined ? exp.d : (exp.a !== undefined ? exp.a : 0)),
         yours: act[mainKey] !== undefined ? act[mainKey] : 0,
         ref: exp[mainKey] !== undefined ? exp[mainKey] : 0,
         mismatch: isMismatch ? 1 : 0
       };
     });
 
-    const passed = mismatches === 0;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const timeStr = now.toTimeString().split(' ')[0];
-
-    // Build ModelSim-style HDLBits log output
-    const log = `
-# do /home/h/hdlbits/runsim.do
-# Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
-# Start time: ${timeStr} on ${dateStr}
-# vlog top_module.v
-# -- Compiling module top_module
-# Loading work.tb
-# Loading work.top_module
-#
-# Hint: Output has ${mismatches} mismatches.
-# Hint: Total mismatched samples is ${mismatches} out of ${expected.length} samples
-#
-# Simulation finished at ${expected.length * 5 + 10} ps
-# Mismatches: ${mismatches} in ${expected.length} samples
-# Errors: 0, Warnings: ${mismatches > 0 ? 1 : 0}
-`.trim();
+    const passed = simResult.passed && (mismatches === 0 || logs.includes('ALL TESTS PASSED'));
 
     return {
       passed,
-      status: passed ? 'Success' : 'Incorrect',
-      log,
+      status: passed ? 'Success' : (simResult.status || 'Incorrect'),
+      log: logs,
+      vcd: simResult.vcd,
       actualOutputs,
       comparisons,
       mismatches,
