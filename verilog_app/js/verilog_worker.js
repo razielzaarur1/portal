@@ -7,6 +7,30 @@ import initIvlpp from '../wasm/ivlpp.js';
 import initIvl   from '../wasm/ivl.js';
 import initVvp   from '../wasm/vvp.js';
 
+// Cache WASM binary ArrayBuffers in Worker memory for blazing fast repeated compilations
+const wasmCache = {};
+
+async function loadWasmBinary(name) {
+  if (wasmCache[name]) {
+    return wasmCache[name];
+  }
+
+  // Resolve absolute URL reliably across all browser / mobile / iframe environments
+  const wasmUrl = new URL(`../wasm/${name}`, import.meta.url).href;
+  
+  try {
+    const res = await fetch(wasmUrl);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} while fetching ${wasmUrl}`);
+    }
+    const buf = await res.arrayBuffer();
+    wasmCache[name] = buf;
+    return buf;
+  } catch (err) {
+    throw new Error(`Failed to load WebAssembly binary ${name} from ${wasmUrl}: ${err && err.message ? err.message : err}`);
+  }
+}
+
 function sanitize(str) {
   if (!str) return '';
   return str.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
@@ -28,9 +52,10 @@ flag:DLL=vvp.tgt
 `;
 
 async function runPreprocessing(files) {
+  const wasmBinary = await loadWasmBinary('ivlpp.wasm');
   const code = [];
   const m = await initIvlpp({
-    locateFile: (p) => '../wasm/' + p,
+    wasmBinary,
     print: s => code.push(s),
     printErr: () => {}
   });
@@ -48,9 +73,10 @@ async function runPreprocessing(files) {
 }
 
 async function runCompilation(preprocessedSrc, generation = '2012') {
+  const wasmBinary = await loadWasmBinary('ivl.wasm');
   const err = [];
   const m = await initIvl({
-    locateFile: (p) => '../wasm/' + p,
+    wasmBinary,
     print: () => {},
     printErr: s => err.push(s)
   });
@@ -71,9 +97,10 @@ async function runCompilation(preprocessedSrc, generation = '2012') {
 }
 
 async function runSimulation(vvpBytes) {
+  const wasmBinary = await loadWasmBinary('vvp.wasm');
   const out = [];
   const m = await initVvp({
-    locateFile: (p) => '../wasm/' + p,
+    wasmBinary,
     print: s => out.push(s),
     printErr: s => out.push(s)
   });
@@ -163,7 +190,7 @@ self.onmessage = async function(e) {
       success: false,
       passed: false,
       status: 'Engine Error',
-      logs: `Simulation Worker Error: ${err && err.message ? err.message : err}`,
+      logs: `Simulation Worker Error:\n${err && err.message ? err.message : err}`,
       vcd: null
     });
   }

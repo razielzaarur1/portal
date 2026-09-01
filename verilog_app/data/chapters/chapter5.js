@@ -237,6 +237,7 @@ endmodule`,
     },
 
     // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Lesson 34: Procedural If-Else
     // --------------------------------------------------------------------------
     {
@@ -248,19 +249,106 @@ endmodule`,
       titleEn: "Procedural If-Else Statements",
 
       explanationHe: `
-<h3>1. משפטי if-else בחומרה 🔀</h3>
-<p>משפט התניה <code dir="ltr">if-else</code> בתוך בלוק פרוצדורלי מסונתז בחומרה לבורר (Multiplexer / MUX).</p>
+<h3>1. משפטי התניה if-else בחומרה 🔀</h3>
+<p>בתוך בלוקים פרוצדורליים (<code dir="ltr">always @(*)</code>), משפט ההתניה <code dir="ltr">if-else</code> מאפשר לבחור איזה ערך להקצות לפלט בהתאם לתנאים לוגיים. בחומרה, משפט <code dir="ltr">if-else</code> מתורגם ישירות ל-<strong>מרבב (Multiplexer / MUX)</strong> בעל עדיפות (Priority Multiplexer).</p>
+
+<pre dir="ltr"><code>always @(*) begin
+    if (sel == 1'b1) begin
+        out = in1;  // מתבצע כאשר sel=1
+    end else begin
+        out = in0;  // מתבצע כאשר sel=0
+    end
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. כללי תחביר חשובים ב-Verilog 📋</h3>
+<ul>
+  <li><strong>בלוקי begin / end:</strong> כאשר גוף התנאי מכיל יותר משורה אחת, חובה לתחום אותו ב-<code dir="ltr">begin</code> ו-<code dir="ltr">end</code> (מקביל ל-<code dir="ltr">{ }</code> ב-C/Java).</li>
+  <li><strong>השמות חוסמות (<code dir="ltr">=</code>):</strong> בתוך בלוק צירופי <code dir="ltr">always @(*)</code>, משתמשים בהשמה חוסמת עם <code dir="ltr">=</code> כדי שהפקודות יתבצעו לפי סדר הקריאה.</li>
+  <li><strong>כיסוי ענף ה-else:</strong> במעגל צירופי, <em>חובה</em> תמיד להגדיר ענף <code dir="ltr">else</code> מלא (או ערך ברירת מחדל), כדי שהחומרה לא תייצר Latch לא רצוי!</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. שרשור תנאים (if - else if - else) 🪜</h3>
+<p>כאשר יש יותר משני מצבים, ניתן לשרשר תנאים. המבנה מייצר שרשרת מרבבים מדורגת שבה התנאי הראשון מקבל את הקדימות הגבוהה ביותר:</p>
+
+<pre dir="ltr"><code>// מרבב 4 ל-1 באמצעות שרשרת if-else
+always @(*) begin
+    if (sel == 2'b00) begin
+        out = in0;
+    end else if (sel == 2'b01) begin
+        out = in1;
+    end else if (sel == 2'b10) begin
+        out = in2;
+    end else begin
+        out = in3;
+    end
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. תרשים חומרה של MUX 2-ל-1 📐</h3>
+<pre dir="ltr"><code>       +-------+
+a ---->| 0     |
+       |  MUX  |-----> out (output reg)
+b ---->| 1     |
+       +-------+
+           ^
+           |
+          sel
+</code></pre>
 `,
 
       explanationEn: `
 <h3>1. Procedural If-Else Logic 🔀</h3>
-<p>Conditional <code dir="ltr">if-else</code> constructs inside <code dir="ltr">always</code> blocks synthesize into hardware multiplexers.</p>
+<p>Inside procedural blocks (<code dir="ltr">always @(*)</code>), the <code dir="ltr">if-else</code> conditional construct allows selecting which data to drive to an output based on Boolean conditions. In hardware, <code dir="ltr">if-else</code> synthesizes directly into a <strong>Multiplexer (MUX)</strong>.</p>
+
+<pre dir="ltr"><code>always @(*) begin
+    if (sel == 1'b1) begin
+        out = in1;  // Evaluated when sel=1
+    end else begin
+        out = in0;  // Evaluated when sel=0
+    end
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. Key Verilog Syntax Rules 📋</h3>
+<ul>
+  <li><strong>begin / end blocks:</strong> When a branch contains multiple statements, wrap them inside <code dir="ltr">begin</code> ... <code dir="ltr">end</code> (equivalent to <code dir="ltr">{ }</code> in C/Java).</li>
+  <li><strong>Blocking assignments (<code dir="ltr">=</code>):</strong> Inside combinational <code dir="ltr">always @(*)</code> blocks, use blocking <code dir="ltr">=</code> assignments.</li>
+  <li><strong>Complete else coverage:</strong> Always provide an <code dir="ltr">else</code> branch to avoid creating unintended latch memory.</li>
+</ul>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. Multi-Way Chaining (if - else if - else) 🪜</h3>
+<p>For more than two cases, conditions can be chained to form a priority MUX tree:</p>
+
+<pre dir="ltr"><code>always @(*) begin
+    if (sel == 2'b00) begin
+        out = in0;
+    end else if (sel == 2'b01) begin
+        out = in1;
+    end else if (sel == 2'b10) begin
+        out = in2;
+    end else begin
+        out = in3;
+    end
+end</code></pre>
 `,
 
       taskHe: `בנו בורר MUX 2-ל-1 במודול <code dir="ltr">top_module</code> בעל כניסות <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> ויציאה <code dir="ltr">output reg out</code>.
-אם <code dir="ltr">sel == 1</code> הקצו <code dir="ltr">out = b;</code> אחרת <code dir="ltr">out = a;</code> בתוך בלוק צירופי.`,
+השתמשו בבלוק <code dir="ltr">always @(*)</code> ובמשפט <code dir="ltr">if-else</code>:
+- כאשר <code dir="ltr">sel == 1'b1</code>: הקצו <code dir="ltr">out = b;</code>
+- אחרת (<code dir="ltr">else</code>): הקצו <code dir="ltr">out = a;</code>`,
+
       taskEn: `Build a 2-to-1 MUX inside <code dir="ltr">top_module</code> with inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> and output <code dir="ltr">output reg out</code>.
-If <code dir="ltr">sel == 1</code> set <code dir="ltr">out = b;</code> else set <code dir="ltr">out = a;</code>.`,
+Use a combinational <code dir="ltr">always @(*)</code> block and an <code dir="ltr">if-else</code> construct:
+- When <code dir="ltr">sel == 1'b1</code>: assign <code dir="ltr">out = b;</code>
+- Otherwise (<code dir="ltr">else</code>): assign <code dir="ltr">out = a;</code>`,
 
       starterCode: `module top_module (
     input a,
@@ -268,7 +356,8 @@ If <code dir="ltr">sel == 1</code> set <code dir="ltr">out = b;</code> else set 
     input sel,
     output reg out
 );
-    // כתוב את לוגיקת ה-if-else כאן / Write if-else logic here
+    // כתבו את בלוק ה-always @(*) עם משפט if-else כאן
+    // Write your always @(*) block with if-else construct here
 
 endmodule`,
 
@@ -289,12 +378,14 @@ endmodule`,
 
       expectedOutputs: [
         { time: 0, a: 0, b: 1, sel: 0, out: 0 },
-        { time: 5, a: 0, b: 1, sel: 1, out: 1 }
+        { time: 5, a: 0, b: 1, sel: 1, out: 1 },
+        { time: 10, a: 1, b: 0, sel: 0, out: 1 },
+        { time: 15, a: 1, b: 0, sel: 1, out: 0 }
       ],
 
       hints: {
-        he: "השתמשו ב-if (sel) out = b; else out = a;",
-        en: "Use if (sel) out = b; else out = a;"
+        he: "פתחו בלוק always @(*) begin ובתוכו רשמו: if (sel) out = b; else out = a; בסיום סגרו ב-end.",
+        en: "Open an always @(*) begin block, write: if (sel) out = b; else out = a; and close with end."
       }
     },
 
@@ -310,19 +401,87 @@ endmodule`,
       titleEn: "Procedural Case Statement",
 
       explanationHe: `
-<h3>1. משפט case בחומרה 🎛️</h3>
-<p>משפט <code dir="ltr">case</code> מציג מבנה נקי וקריא לבחירה בין קומבינציות מרובות.</p>
+<h3>1. מהו משפט case ולמה הוא עדיף על if-else? 🎛️</h3>
+<p>משפט <code dir="ltr">case</code> ב-Verilog מספק מבנה נקי, קריא ויעיל במיוחד לבחירה בין מספר רב של ערכים אפשריים. בעוד ששרשרת <code dir="ltr">if-else</code> ארוכה יוצרת היררכיית עדיפות מדורגת (Priority Chain) שעלולה להאט את המעגל, משפט <code dir="ltr">case</code> מסונתז ל-<strong>מרבב מקבילי טהור (Parallel MUX / Decoder)</strong> שבו כל הענפים מוערכים בו-זמנית ובמהירות מרבית.</p>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. מבנה התחביר של case ב-Verilog 📐</h3>
+<pre dir="ltr"><code>always @(*) begin
+    case (selector_signal)
+        val_0: out = data0;
+        val_1: out = data1;
+        val_2: begin
+            // ניתן לתחום ב-begin/end אם יש מספר פקודות
+            out = data2;
+        end
+        default: out = default_val; // חובה למניעת Latches!
+    endcase
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. דוגמה מעשית: מרבב 4 ל-1 עם case 💻</h3>
+<pre dir="ltr"><code>module mux_4to1_case (
+    input [3:0] in,
+    input [1:0] sel,
+    output reg out
+);
+    always @(*) begin
+        case (sel)
+            2'b00: out = in[0];
+            2'b01: out = in[1];
+            2'b10: out = in[2];
+            2'b11: out = in[3];
+            default: out = 1'b0;
+        endcase
+    end
+endmodule</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>4. קיבוץ מספר ערכים לאותו ענף 💡</h3>
+<p>ב-Verilog ניתן להפריד מספר ערכים בפסיק כדי שיבצעו את אותה הפעולה בדיוק:</p>
+<pre dir="ltr"><code>case (code)
+    2'b01, 2'b10: is_middle = 1'b1;
+    default:      is_middle = 1'b0;
+endcase</code></pre>
 `,
 
       explanationEn: `
-<h3>1. Procedural Case Selection 🎛️</h3>
-<p>The <code dir="ltr">case</code> statement simplifies multi-way branching decoders.</p>
+<h3>1. Procedural Case Statement 🎛️</h3>
+<p>The <code dir="ltr">case</code> statement provides a clean, highly readable, and efficient way to handle multi-way branching. While long <code dir="ltr">if-else</code> chains infer priority encoders, a <code dir="ltr">case</code> statement synthesizes into a <strong>parallel multiplexer / decoder</strong> where all options evaluate concurrently.</p>
+
+<pre dir="ltr"><code>always @(*) begin
+    case (sel)
+        2'b00: out = in0;
+        2'b01: out = in1;
+        2'b10: out = in2;
+        2'b11: out = in3;
+        default: out = 1'b0; // Always include default!
+    endcase
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. Key Rules 📋</h3>
+<ul>
+  <li><strong>Exact matching:</strong> In standard <code dir="ltr">case</code>, bits are matched identically (0 matches 0, 1 matches 1).</li>
+  <li><strong>Default branch:</strong> Always provide a <code dir="ltr">default:</code> branch to cover unhandled combinations and avoid unintended latch synthesis.</li>
+  <li><strong>Comma-separated lists:</strong> Multiple values can trigger the same branch (e.g. <code dir="ltr">2'b01, 2'b10:</code>).</li>
+</ul>
 `,
 
-      taskHe: `מימו MUX 2-ל-1 ע"י משפט <code dir="ltr">case (sel)</code> במודול <code dir="ltr">top_module</code> (בעל כניסות <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> ויציאה <code dir="ltr">output reg out</code>).
-עבור <code dir="ltr">1'b0</code> הקצו <code dir="ltr">out = a;</code> ועבור <code dir="ltr">1'b1</code> הקצו <code dir="ltr">out = b;</code>.`,
-      taskEn: `Implement a 2-to-1 MUX using <code dir="ltr">case (sel)</code> in <code dir="ltr">top_module</code> (inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> and output <code dir="ltr">output reg out</code>).
-For <code dir="ltr">1'b0</code> set <code dir="ltr">out = a;</code> and for <code dir="ltr">1'b1</code> set <code dir="ltr">out = b;</code>.`,
+      taskHe: `בנו בורר MUX 2-ל-1 במודול <code dir="ltr">top_module</code> בעל כניסות <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> ויציאה <code dir="ltr">output reg out</code>.
+השתמשו בבלוק <code dir="ltr">always @(*)</code> ובמשפט <code dir="ltr">case (sel)</code>:
+- עבור <code dir="ltr">1'b0</code>: הקצו <code dir="ltr">out = a;</code>
+- עבור <code dir="ltr">1'b1</code>: הקצו <code dir="ltr">out = b;</code>
+- הוסיפו ענף <code dir="ltr">default: out = 1'b0;</code> וסגרו ב-<code dir="ltr">endcase</code>.`,
+
+      taskEn: `Implement a 2-to-1 MUX using a <code dir="ltr">case (sel)</code> statement in <code dir="ltr">top_module</code> (inputs <code dir="ltr">a</code>, <code dir="ltr">b</code>, <code dir="ltr">sel</code> and output <code dir="ltr">output reg out</code>).
+- For <code dir="ltr">1'b0</code>: assign <code dir="ltr">out = a;</code>
+- For <code dir="ltr">1'b1</code>: assign <code dir="ltr">out = b;</code>
+- Add a <code dir="ltr">default: out = 1'b0;</code> branch and terminate with <code dir="ltr">endcase</code>.`,
 
       starterCode: `module top_module (
     input a,
@@ -330,7 +489,8 @@ For <code dir="ltr">1'b0</code> set <code dir="ltr">out = a;</code> and for <cod
     input sel,
     output reg out
 );
-    // כתוב את משפט ה-case כאן / Write case statement here
+    // כתבו את בלוק ה-always עם משפט case כאן
+    // Write your always block with case statement here
 
 endmodule`,
 
@@ -344,18 +504,21 @@ endmodule`,
         case (sel)
             1'b0: out = a;
             1'b1: out = b;
+            default: out = 1'b0;
         endcase
     end
 endmodule`,
 
       expectedOutputs: [
         { time: 0, a: 0, b: 1, sel: 0, out: 0 },
-        { time: 5, a: 0, b: 1, sel: 1, out: 1 }
+        { time: 5, a: 0, b: 1, sel: 1, out: 1 },
+        { time: 10, a: 1, b: 0, sel: 0, out: 1 },
+        { time: 15, a: 1, b: 0, sel: 1, out: 0 }
       ],
 
       hints: {
-        he: "רשמו case (sel) 1'b0: out = a; 1'b1: out = b; endcase",
-        en: "Write case (sel) 1'b0: out = a; 1'b1: out = b; endcase"
+        he: "בתוך הבלוק: case (sel) 1'b0: out = a; 1'b1: out = b; default: out = 1'b0; endcase",
+        en: "Inside the block: case (sel) 1'b0: out = a; 1'b1: out = b; default: out = 1'b0; endcase"
       }
     },
 
@@ -367,52 +530,138 @@ endmodule`,
       chapter: 5,
       chapterTitleHe: "פרק 5: בלוקים פרוצדורליים ו-Always",
       chapterTitleEn: "Chapter 5: Procedural Blocks & Always",
-      titleHe: "משפטי casez ו-casex (Don't Care) ❓",
-      titleEn: "casez & casex Statements",
+      titleHe: "משפטי casez ו-casex (תמיכה ב-Don't Care) ❓",
+      titleEn: "casez & casex Statements (Don't Care)",
 
       explanationHe: `
-<h3>1. תמיכה ב-Don't Care ❓</h3>
-<p><code dir="ltr">casez</code> להתעלמות מביטי z ו-Don't Care (<code dir="ltr">?</code>).</p>
+<h3>1. למה צריך Don't Care ומהו casez? ❓</h3>
+<p>במשפט <code dir="ltr">case</code> רגיל, כל ביט מושווה במדויק (1 מושווה ל-1, ו-0 מושווה ל-0). עם זאת, במעגלים רבים (כגון <strong>מקודד קדימויות — Priority Encoder</strong> או פענוח כתובות חלקי), מעניין אותנו רק ערכם של חלק מהביטים, ולגבי שאר הביטים מתקיים מצב <strong>Don't Care</strong> (לא משנה אם הם '0' או '1').</p>
+
+<p>משפט <strong><code dir="ltr">casez</code></strong> מאפשר להשתמש בתו <strong><code dir="ltr">?</code></strong> (או <code dir="ltr">z</code>) בתוך דפוסי ההשוואה, כאשר התו <code dir="ltr">?</code> מתאים (Matches) לכל ערך אפשרי!</p>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. דוגמה קלאסית: מקודד קדימויות 4 ל-2 🥇</h3>
+<p>מקודד קדימויות מקבל 4 אותות בקשה (<code dir="ltr">req[3:0]</code>) ומוציא את האינדקס של הבקשה הפעילה הגבוהה ביותר. אם <code dir="ltr">req[3] == 1</code>, כל שאר הביטים <code dir="ltr">req[2:0]</code> אינם משפיעים כלל:</p>
+
+<pre dir="ltr"><code>always @(*) begin
+    casez (req)
+        4'b1???: grant = 2'd3; // אם req[3]=1, מתעלמים מ-req[2:0]
+        4'b01??: grant = 2'd2; // אם req[3]=0 ו-req[2]=1, מתעלמים מ-req[1:0]
+        4'b001?: grant = 2'd1; // אם req[3:2]=0 ו-req[1]=1, מתעלמים מ-req[0]
+        4'b0001: grant = 2'd0; // אם רק req[0]=1
+        default: grant = 2'd0; // אם אין אף בקשה פעילה
+    endcase
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. ההבדל הקריטי בין casez ל-casex ⚠️</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem;">
+  <thead>
+    <tr style="background: rgba(99,102,241,0.1); border-bottom: 1px solid var(--border-color);">
+      <th style="padding: 8px; text-align: right;">פקודה</th>
+      <th style="padding: 8px; text-align: right;">מתעלם מ-</th>
+      <th style="padding: 8px; text-align: right;">המלצת שימוש בתעשייה</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 8px;"><code dir="ltr">casez</code></td>
+      <td style="padding: 8px;"><code dir="ltr">z</code> ו-<code dir="ltr">?</code> (High-Impedance / Don't Care)</td>
+      <td style="padding: 8px; color: #10b981;"><strong>תקן מומלץ ובטוח (Industry Standard)</strong></td>
+    </tr>
+    <tr>
+      <td style="padding: 8px;"><code dir="ltr">casex</code></td>
+      <td style="padding: 8px;"><code dir="ltr">z</code>, <code dir="ltr">?</code> וגם <strong><code dir="ltr">x</code></strong> (Unknown)</td>
+      <td style="padding: 8px; color: #ef4444;">לא מומלץ (עלול להסתיר שגיאות אתחול ואיפוס בסימולציה)</td>
+    </tr>
+  </tbody>
+</table>
 `,
 
       explanationEn: `
-<h3>1. Don't Care Matching ❓</h3>
-<p><code dir="ltr">casez</code> ignores high-impedance and don't care bits (<code dir="ltr">?</code>).</p>
+<h3>1. Why Don't Care and casez? ❓</h3>
+<p>Standard <code dir="ltr">case</code> performs exact binary bit matching. However, in designs like <strong>Priority Encoders</strong> or address decoders, only specific MSB bits matter while the remaining bits are in a <strong>Don't Care</strong> condition.</p>
+
+<p>The <strong><code dir="ltr">casez</code></strong> construct treats the character <strong><code dir="ltr">?</code></strong> (and <code dir="ltr">z</code>) as wildcard / don't-care bits that match any incoming logic value (0 or 1).</p>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>2. Classic Example: 4-to-2 Priority Encoder 🥇</h3>
+<pre dir="ltr"><code>always @(*) begin
+    casez (req)
+        4'b1???: grant = 2'd3; // Highest priority: bit 3 active
+        4'b01??: grant = 2'd2; // Bit 2 active (when bit 3 is 0)
+        4'b001?: grant = 2'd1; // Bit 1 active
+        4'b0001: grant = 2'd0; // Bit 0 active
+        default: grant = 2'd0;
+    endcase
+end</code></pre>
+
+<hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.2rem 0;">
+
+<h3>3. casez vs. casex ⚠️</h3>
+<ul>
+  <li><code dir="ltr">casez</code>: Treats only <code dir="ltr">z</code> and <code dir="ltr">?</code> as don't-care. <strong>Recommended industry best-practice</strong>.</li>
+  <li><code dir="ltr">casex</code>: Also treats unknown <code dir="ltr">x</code> as don't care, which risks masking simulation initialization bugs.</li>
+</ul>
 `,
 
-      taskHe: `בנו מודול <code dir="ltr">top_module</code> בעל כניסת 2-ביט <code dir="ltr">in</code> ויציאה <code dir="ltr">output reg out</code>.
-השתמשו ב-case (in) עבור 2'b00 הקצו out = 0; עבור שאר המקרים out = 1;`,
-      taskEn: `Build <code dir="ltr">top_module</code> with 2-bit input <code dir="ltr">in</code> and output <code dir="ltr">output reg out</code>.
-Set out = 0 for 2'b00, else set out = 1.`,
+      taskHe: `בנו מקודד קדימויות 4-ביט במודול <code dir="ltr">top_module</code> בעל כניסת וקטור <code dir="ltr">in</code> [3:0] ויציאת וקטור <code dir="ltr">output reg [1:0] out</code>.
+השתמשו בבלוק <code dir="ltr">always @(*)</code> ובמשפט <code dir="ltr">casez (in)</code> עם תווי Don't Care (<code dir="ltr">?</code>):
+- כאשר <code dir="ltr">in[3] == 1</code> (<code dir="ltr">4'b1???</code>): הקצו <code dir="ltr">out = 2'd3;</code>
+- כאשר <code dir="ltr">in[2] == 1</code> (<code dir="ltr">4'b01??</code>): הקצו <code dir="ltr">out = 2'd2;</code>
+- כאשר <code dir="ltr">in[1] == 1</code> (<code dir="ltr">4'b001?</code>): הקצו <code dir="ltr">out = 2'd1;</code>
+- כאשר <code dir="ltr">in[0] == 1</code> (<code dir="ltr">4'b0001</code>): הקצו <code dir="ltr">out = 2'd0;</code>
+- אחרת (<code dir="ltr">default</code>): הקצו <code dir="ltr">out = 2'd0;</code>`,
+
+      taskEn: `Build a 4-bit Priority Encoder in module <code dir="ltr">top_module</code> with input vector <code dir="ltr">in</code> [3:0] and output <code dir="ltr">output reg [1:0] out</code>.
+Use a combinational <code dir="ltr">always @(*)</code> block and a <code dir="ltr">casez (in)</code> construct with Don't Care wildcards (<code dir="ltr">?</code>):
+- When <code dir="ltr">in[3] == 1</code> (<code dir="ltr">4'b1???</code>): assign <code dir="ltr">out = 2'd3;</code>
+- When <code dir="ltr">in[2] == 1</code> (<code dir="ltr">4'b01??</code>): assign <code dir="ltr">out = 2'd2;</code>
+- When <code dir="ltr">in[1] == 1</code> (<code dir="ltr">4'b001?</code>): assign <code dir="ltr">out = 2'd1;</code>
+- When <code dir="ltr">in[0] == 1</code> (<code dir="ltr">4'b0001</code>): assign <code dir="ltr">out = 2'd0;</code>
+- Otherwise (<code dir="ltr">default</code>): assign <code dir="ltr">out = 2'd0;</code>`,
 
       starterCode: `module top_module (
-    input [1:0] in,
-    output reg out
+    input [3:0] in,
+    output reg [1:0] out
 );
-    // כתוב את ה-case כאן / Write case block here
+    // כתבו את מקודד הקדימויות בעזרת casez ו-? כאן
+    // Write your priority encoder using casez and ? here
 
 endmodule`,
 
       solutionCode: `module top_module (
-    input [1:0] in,
-    output reg out
+    input [3:0] in,
+    output reg [1:0] out
 );
     always @(*) begin
-        case (in)
-            2'b00: out = 1'b0;
-            default: out = 1'b1;
+        casez (in)
+            4'b1???: out = 2'd3;
+            4'b01??: out = 2'd2;
+            4'b001?: out = 2'd1;
+            4'b0001: out = 2'd0;
+            default: out = 2'd0;
         endcase
     end
 endmodule`,
 
       expectedOutputs: [
         { time: 0, in: 0, out: 0 },
-        { time: 5, in: 1, out: 1 }
+        { time: 5, in: 1, out: 0 },
+        { time: 10, in: 2, out: 1 },
+        { time: 15, in: 3, out: 1 },
+        { time: 20, in: 4, out: 2 },
+        { time: 25, in: 7, out: 2 },
+        { time: 30, in: 8, out: 3 },
+        { time: 35, in: 15, out: 3 }
       ],
 
       hints: {
-        he: "השתמשו ב-case (in) 2'b00: out = 0; default: out = 1; endcase",
-        en: "Use case (in) 2'b00: out = 0; default: out = 1; endcase"
+        he: "בתוך always @(*) רשמו: casez (in) 4'b1???: out = 2'd3; 4'b01??: out = 2'd2; 4'b001?: out = 2'd1; 4'b0001: out = 2'd0; default: out = 2'd0; endcase",
+        en: "Inside always @(*) write: casez (in) 4'b1???: out = 2'd3; 4'b01??: out = 2'd2; 4'b001?: out = 2'd1; 4'b0001: out = 2'd0; default: out = 2'd0; endcase"
       }
     },
 

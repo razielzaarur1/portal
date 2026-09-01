@@ -835,16 +835,17 @@ class SimulationManager {
   }
 
   initWorker() {
-    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
-      try {
-        this.worker = new Worker('./js/verilog_worker.js', { type: 'module' });
+    try {
+      if (typeof Worker !== 'undefined') {
+        this.worker = new Worker('js/verilog_worker.js', { type: 'module' });
         this.worker.onmessage = (e) => this.handleWorkerMessage(e);
         this.worker.onerror = (err) => {
-          console.warn('Verilog Web Worker encountered error:', err);
+          console.warn('Icarus Verilog WASM Worker error:', err);
         };
-      } catch (err) {
-        console.warn('Failed to initialize module Web Worker, will fallback:', err);
       }
+    } catch (e) {
+      console.warn('Failed to initialize WebAssembly Web Worker, fallback enabled:', e);
+      this.worker = null;
     }
   }
 
@@ -863,7 +864,7 @@ class SimulationManager {
     }
   }
 
-  async testSolution(userCode, lesson, onProgress) {
+  async simulate(userCode, lesson, onProgress) {
     const expected = lesson.expectedOutputs || [];
     const dependencies = getHelperDependencies(userCode);
     const testbenchCode = generateVerilogTestbench(userCode, expected, lesson.id);
@@ -899,8 +900,12 @@ class SimulationManager {
 
         const simResult = await Promise.race([workerPromise, timeoutPromise]);
 
-        // Parse outputs and format HDLBits comparisons
-        return this.formatSimulationResult(simResult, expected);
+        // If worker ran successfully without engine abort, return formatted result
+        if (simResult && simResult.status !== 'Engine Error') {
+          return this.formatSimulationResult(simResult, expected);
+        }
+
+        console.warn('WASM engine encountered an error, falling back to LocalSimulator:', simResult.logs);
       } catch (err) {
         console.warn('Worker execution failed, attempting fallback:', err);
       }
