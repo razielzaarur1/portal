@@ -330,78 +330,92 @@ class AppRouter {
       if (waveformRenderer) waveformRenderer.clear();
       if (circuitRenderer) circuitRenderer.clear();
 
-      // Run Simulation with live progress tracking
-      const result = await (window.Simulator ? window.Simulator.testSolution(userCode, lesson, (statusMsg) => {
-        if (logBox) logBox.textContent = `# ${statusMsg}\n`;
-      }) : { passed: false, log: 'Simulator not loaded' });
+      try {
+        // Run Simulation with live progress tracking
+        const simFn = window.Simulator ? (window.Simulator.simulate || window.Simulator.testSolution) : null;
+        const result = simFn ? await simFn.call(window.Simulator, userCode, lesson, (statusMsg) => {
+          if (logBox) logBox.textContent = `# ${statusMsg}\n`;
+        }) : { passed: false, log: 'Simulator not loaded' };
 
-      if (runBtn) runBtn.disabled = false;
+        // 1. Render ModelSim / Icarus Verilog Console Output
+        if (logBox) logBox.textContent = result.log || '(no console output)';
 
-      // 1. Render ModelSim / Icarus Verilog Console Output
-      if (logBox) logBox.textContent = result.log || '(no console output)';
-
-      // 2. Render Engine Badge & HDLBits Status Banner
-      const engineBadge = `
-        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: ${result.isWasm ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; color: ${result.isWasm ? '#10b981' : '#f59e0b'}; margin-bottom: 12px; border: 1px solid ${result.isWasm ? '#10b981' : '#f59e0b'};">
-          ${result.isWasm ? '⚡ מנוע: Icarus Verilog WebAssembly (WASM — 100% Client-Side)' : '⚠️ מנוע: Local JavaScript Evaluator (Fallback)'}
-        </div>
-      `;
-
-      if (result.passed) {
-        window.Progress.completeLesson(lesson.id);
-        const nextLessonId = lesson.id + 1;
-        const nextLesson = (window.CURRICULUM || []).find(l => l.id === nextLessonId);
-        const nextTarget = nextLesson ? `#lesson/${nextLessonId}` : '#lessons';
-        statusBanner.innerHTML = `
-          <div style="margin-bottom: var(--space-md);">
-            ${engineBadge}
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 4px;">Status: Success! ✅</h2>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
-              ${t('successMsg')}
-            </p>
-            <button onclick="window.location.hash='${nextTarget}'" class="btn btn-primary btn-sm">${nextLesson ? t('nextLessonBtn') : t('navLessons')}</button>
+        // 2. Render Engine Badge & HDLBits Status Banner
+        const engineBadge = `
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: ${result.isWasm ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; color: ${result.isWasm ? '#10b981' : '#f59e0b'}; margin-bottom: 12px; border: 1px solid ${result.isWasm ? '#10b981' : '#f59e0b'};">
+            ${result.isWasm ? '⚡ מנוע: Icarus Verilog WebAssembly (WASM — 100% Client-Side)' : '⚠️ מנוע: Local JavaScript Evaluator (Fallback)'}
           </div>
         `;
-      } else if (result.status === 'Compile Error') {
-        statusBanner.innerHTML = `
-          <div style="margin-bottom: var(--space-md);">
-            ${engineBadge}
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Compile Error! ⚠️</h2>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
-              Please check the syntax errors reported in the compiler log above.
-            </p>
-          </div>
-        `;
-      } else {
-        statusBanner.innerHTML = `
-          <div style="margin-bottom: var(--space-md);">
-            ${engineBadge}
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Incorrect! ❌</h2>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
-              Output has <strong>${result.mismatches !== undefined ? result.mismatches : 'some'}</strong> mismatches out of ${result.totalSamples || (lesson.expectedOutputs || []).length} samples. Check the timing diagram comparison below.
-            </p>
-          </div>
-        `;
-      }
 
-      // 3. Render VCD Waveforms or HDLBits Timing Diagram
-      if (waveformRenderer) {
-        if (result.status !== 'Compile Error' && result.vcd) {
-          waveformRenderer.render(result.vcd);
-        } else if (result.status !== 'Compile Error' && result.comparisons && result.comparisons.length > 0) {
-          waveformRenderer.render(result.comparisons);
+        if (result.passed) {
+          window.Progress.completeLesson(lesson.id);
+          const nextLessonId = lesson.id + 1;
+          const nextLesson = (window.CURRICULUM || []).find(l => l.id === nextLessonId);
+          const nextTarget = nextLesson ? `#lesson/${nextLessonId}` : '#lessons';
+          statusBanner.innerHTML = `
+            <div style="margin-bottom: var(--space-md);">
+              ${engineBadge}
+              <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 4px;">Status: Success! ✅</h2>
+              <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
+                ${t('successMsg')}
+              </p>
+              <button onclick="window.location.hash='${nextTarget}'" class="btn btn-primary btn-sm">${nextLesson ? t('nextLessonBtn') : t('navLessons')}</button>
+            </div>
+          `;
+        } else if (result.status === 'Compile Error') {
+          statusBanner.innerHTML = `
+            <div style="margin-bottom: var(--space-md);">
+              ${engineBadge}
+              <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Compile Error! ⚠️</h2>
+              <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                Please check the syntax errors reported in the compiler log above.
+              </p>
+            </div>
+          `;
         } else {
-          waveformRenderer.clear();
+          statusBanner.innerHTML = `
+            <div style="margin-bottom: var(--space-md);">
+              ${engineBadge}
+              <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Incorrect! ❌</h2>
+              <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                Output has <strong>${result.mismatches !== undefined ? result.mismatches : 'some'}</strong> mismatches out of ${result.totalSamples || (lesson.expectedOutputs || []).length} samples. Check the timing diagram comparison below.
+              </p>
+            </div>
+          `;
         }
-      }
 
-      // 4. Render Dynamic Circuit Schematic Matching User Code
-      if (circuitRenderer) {
-        if (result.status !== 'Compile Error') {
-          circuitRenderer.render(userCode);
-        } else {
-          circuitRenderer.clear(true);
+        // 3. Render VCD Waveforms or HDLBits Timing Diagram
+        if (waveformRenderer) {
+          if (result.status !== 'Compile Error' && result.vcd) {
+            waveformRenderer.render(result.vcd);
+          } else if (result.status !== 'Compile Error' && result.comparisons && result.comparisons.length > 0) {
+            waveformRenderer.render(result.comparisons);
+          } else {
+            waveformRenderer.clear();
+          }
         }
+
+        // 4. Render Dynamic Circuit Schematic Matching User Code
+        if (circuitRenderer) {
+          if (result.status !== 'Compile Error') {
+            circuitRenderer.render(userCode);
+          } else {
+            circuitRenderer.clear(true);
+          }
+        }
+      } catch (err) {
+        console.error('Simulation execution error:', err);
+        if (logBox) logBox.textContent = `Error executing simulation:\n${err && err.message ? err.message : err}`;
+        if (statusBanner) {
+          statusBanner.innerHTML = `
+            <div style="margin-bottom: var(--space-md);">
+              <h2 style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-bottom: 4px;">Status: Error! ⚠️</h2>
+              <p style="font-size: 0.9rem; color: var(--text-secondary);">${err && err.message ? err.message : err}</p>
+            </div>
+          `;
+        }
+      } finally {
+        if (runBtn) runBtn.disabled = false;
       }
 
       // Smooth scroll into output container

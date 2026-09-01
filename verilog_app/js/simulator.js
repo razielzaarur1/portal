@@ -942,6 +942,10 @@ class SimulationManager {
     };
   }
 
+  async testSolution(userCode, lesson, onProgress) {
+    return this.simulate(userCode, lesson, onProgress);
+  }
+
   formatSimulationResult(simResult, expected) {
     const rawLogs = simResult.logs || '';
     const wasmHeader = `[Engine: Icarus Verilog WebAssembly (WASM - 100% Client-Side)]\n--------------------------------------------------------------\n`;
