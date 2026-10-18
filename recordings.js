@@ -18,7 +18,7 @@ const COMMON_COURSE_ALIASES = [
  */
 function isRecordingsFolderName(name) {
     if (!name) return false;
-    return /(הקלט|מילואים|תגבור|זום|zoom|הרצא|שיעור\s*מוקלט|תרגול\s*מוקלט)/i.test(name);
+    return /(הקלט|מילואים|תגבור|זום|zoom|מוקלט)/i.test(name);
 }
 
 /**
@@ -439,6 +439,17 @@ function initRecordingsRoutes(app, db, getBaseDir) {
             const resolved = await resolveRecordingsFolder(courseId, reqPath, baseDir, db);
 
             if (!resolved) {
+                return res.json({ hasRecordings: false, hasMiluim: false });
+            }
+
+            // Verify folder actually contains recordings (.url or video files)
+            let hasFiles = false;
+            try {
+                const files = fs.readdirSync(resolved.fullPath);
+                hasFiles = files.some(f => f.toLowerCase().endsWith('.url') || /\.(mp4|mkv|webm)$/i.test(f));
+            } catch (e) {}
+
+            if (!hasFiles) {
                 return res.json({ hasRecordings: false, hasMiluim: false });
             }
 

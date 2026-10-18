@@ -113,7 +113,7 @@
     </div>
 
     <script>
-        (function() {
+        function checkCourseRecordings() {
             const iframe = document.getElementById('course-drive-iframe');
             if (!iframe) return;
             const src = iframe.getAttribute('src') || '';
@@ -137,7 +137,13 @@
                         }
                     }
                 }).catch(() => {});
-        })();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkCourseRecordings);
+        } else {
+            checkCourseRecordings();
+        }
     </script>
 
     <!-- מוזרק אוטומטית: חלונית הדרייב -->

@@ -25,6 +25,24 @@
 
     
     <style>
+        .options-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+        .option-btn {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            border-radius: 16px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+        }
         .opt-recordings {
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
             border: 1px solid #bfdbfe !important;
@@ -39,6 +57,7 @@
             min-width: 260px;
             flex: 1;
             max-width: 430px;
+            cursor: pointer;
         }
         .opt-recordings:hover {
             transform: translateY(-2px);
@@ -85,7 +104,7 @@
     </div>
 
     <script>
-        (function() {
+        function checkCourseRecordings() {
             const iframe = document.getElementById('course-drive-iframe');
             if (!iframe) return;
             const src = iframe.getAttribute('src') || '';
@@ -109,7 +128,13 @@
                         }
                     }
                 }).catch(() => {});
-        })();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkCourseRecordings);
+        } else {
+            checkCourseRecordings();
+        }
     </script>
 
     <!-- מוזרק אוטומטית: חלונית הדרייב -->
