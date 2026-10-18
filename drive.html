@@ -76,6 +76,8 @@
         const LinkIcon = (props) => <IconBase {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></IconBase>;
         const ExternalLink = (props) => <IconBase {...props}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></IconBase>;
         const Share2 = (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></IconBase>;
+        const Video = (props) => <IconBase {...props}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></IconBase>;
+        const Play = (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconBase>;
 
         function App() {
           const urlParams = new URLSearchParams(window.location.search);
@@ -97,6 +99,7 @@
           const [currentPath, setCurrentPath] = useState(''); 
           const [pathHistory, setPathHistory] = useState([]); 
           const [viewingFile, setViewingFile] = useState(null); 
+          const [recordingsInfo, setRecordingsInfo] = useState(null); 
 
           
           const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -380,12 +383,53 @@ const [previewLoading, setPreviewLoading] = useState(false);
             fetchLocalFiles(previousPath || "/");
           };
 
-          const getFileIcon = (filename) => {
-            const ext = filename.split('.').pop().toLowerCase();
+          const getFileIcon = (filename, isUrl) => {
+            const ext = (filename || '').split('.').pop().toLowerCase();
+            if (ext === 'url' || isUrl) return <Video className="text-red-500" size={24} />;
             if (['jpg', 'png', 'gif', 'jpeg'].includes(ext)) return <ImageIcon className="text-purple-500" size={24} />;
             if (['pdf'].includes(ext)) return <FileText className="text-red-500" size={24} />;
             return <File className="text-slate-400" size={24} />;
           };
+
+          const formatFileSize = (item) => {
+            const ext = (item.name || '').split('.').pop().toLowerCase();
+            if (ext === 'url' || item.isUrl) return 'קישור לצפייה';
+            const bytes = item.size || 0;
+            if (bytes === 0) return '0 B';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+          };
+
+          const handleFileClick = (item) => {
+            const ext = (item.name || '').split('.').pop().toLowerCase();
+            if (ext === 'url' || item.isUrl) {
+              const target = item.targetUrl || getDownloadUrl(item);
+              window.open(target, '_blank', 'noopener,noreferrer');
+              return;
+            }
+            setViewingFile(item);
+          };
+
+          useEffect(() => {
+            let checkUrl = null;
+            if (courseIdParam) {
+              checkUrl = `/api/recordings/check?courseId=${courseIdParam}`;
+            } else if (currentPath) {
+              checkUrl = `/api/recordings/check?path=${encodeURIComponent(currentPath)}`;
+            }
+            if (checkUrl) {
+              fetch(checkUrl).then(r => r.json()).then(data => {
+                if (data && (data.hasRecordings || data.hasMiluim)) {
+                  setRecordingsInfo(data);
+                } else {
+                  setRecordingsInfo(null);
+                }
+              }).catch(() => setRecordingsInfo(null));
+            } else {
+              setRecordingsInfo(null);
+            }
+          }, [courseIdParam, currentPath]);
 
           const getDownloadUrl = (file) => {
             const basePath = currentPath === "" ? "" : currentPath;
@@ -690,6 +734,33 @@ const [previewLoading, setPreviewLoading] = useState(false);
                     </div>
                   )}
 
+                  {recordingsInfo && (
+                    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-4 rounded-xl shadow-md flex items-center justify-between flex-wrap gap-4 border border-red-500">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 text-white">
+                          <Play size={20} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-base flex items-center gap-2">
+                            <span>הקלטות שיעורים ותרגולים מוקלטים ומעקב התקדמות</span>
+                            <span className="text-[11px] bg-white text-red-700 font-extrabold px-2 py-0.5 rounded-full">חדש</span>
+                          </div>
+                          <div className="text-xs text-red-100 mt-0.5">
+                            שיעורים מסודרים, צפייה ישירה בחלון חדש, סימון שיעורים שנצפו וכפתור לשיעור הבא
+                          </div>
+                        </div>
+                      </div>
+                      <a
+                        href={`lessons.html?${recordingsInfo.courseId ? 'courseId=' + recordingsInfo.courseId : 'path=' + encodeURIComponent(recordingsInfo.folderPath)}`}
+                        target={isEmbed ? "_top" : "_self"}
+                        className="bg-white text-red-700 hover:bg-red-50 font-bold px-4 py-2 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 mr-auto sm:mr-0"
+                      >
+                        <span>מעבר לעמוד ההקלטות</span>
+                        <ChevronRight size={16} className="rotate-180" />
+                      </a>
+                    </div>
+                  )}
+
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="bg-slate-100 border-b border-slate-200 p-4 flex items-center justify-between flex-wrap gap-4">
                        <div className="flex items-center gap-3">
@@ -790,17 +861,29 @@ const [previewLoading, setPreviewLoading] = useState(false);
                                         ) : null;
                                      })()}
                                   </span>
+                                  {/(הקלט|מילואים|תגבור|זום)/i.test(item.name) && (
+                                    <a
+                                      href={`lessons.html?path=${encodeURIComponent(item.path)}`}
+                                      target={isEmbed ? "_top" : "_self"}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="mr-auto ml-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+                                      title="מעבר לממשק שיעורים והקלטות עם מעקב התקדמות"
+                                    >
+                                      <Play size={12} />
+                                      <span>מערכת שיעורים והקלטות</span>
+                                    </a>
+                                  )}
                                   <ChevronRight size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors rotate-180 ml-4 shrink-0" />
                                 </button>
                               ) : (
                                 <div className="flex-1 flex items-center p-4 text-right hover:bg-slate-50 transition-colors">
                                   <div className="bg-slate-100 p-2 rounded-lg ml-4 shrink-0">
-                                    {getFileIcon(item.name)}
+                                    {getFileIcon(item.name, item.isUrl)}
                                   </div>
                                   
                                   <div 
                                     className="flex-1 cursor-pointer flex flex-col justify-center" 
-                                    onClick={() => setViewingFile(item)}
+                                    onClick={() => handleFileClick(item)}
                                   >
                                     <span className="font-medium text-slate-700 flex items-center gap-2 hover:text-blue-600 transition-colors">
                                       {item.name}
@@ -811,7 +894,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                                       )}
                                     </span>
                                     <span className="text-xs text-slate-400 mt-1">
-                                      {(item.size / 1024 / 1024).toFixed(2)} MB
+                                      {formatFileSize(item)}
                                       {isAdmin && editMode && item.metadata && (
                                           <span className="mr-2 text-blue-500 font-medium bg-blue-50 px-2 py-0.5 rounded">
                                             <i className="fas fa-user-edit ml-1"></i> הועלה ע"י: {item.metadata.uploader_name}
@@ -820,34 +903,50 @@ const [previewLoading, setPreviewLoading] = useState(false);
                                     </span>
                                   </div>
                                   
-                                  <div className="flex items-center gap-1 shrink-0 ml-4">
-                                    <button
-                                      onClick={() => setViewingFile(item)}
-                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
-                                      title="הצג קובץ באתר"
-                                    >
-                                      <Eye size={20} />
-                                    </button>
+                                  <div className="flex items-center gap-1.5 shrink-0 ml-4">
+                                    {(item.isUrl || item.name.toLowerCase().endsWith('.url')) ? (
+                                      <a
+                                        href={item.targetUrl || getDownloadUrl(item)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3.5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                                        title="פתח סרטון בחלון חדש"
+                                      >
+                                        <Play size={14} />
+                                        <span>צפה בסרטון</span>
+                                        <ExternalLink size={12} className="opacity-80" />
+                                      </a>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => setViewingFile(item)}
+                                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+                                          title="הצג קובץ באתר"
+                                        >
+                                          <Eye size={20} />
+                                        </button>
 
-                                    <a
-                                      href={getDownloadUrl(item)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
-                                      title="פתח בכרטיסייה חדשה (קליק גלגלת או Ctrl+קליק לפתיחה ברקע)"
-                                    >
-                                      <ExternalLink size={20} />
-                                    </a>
+                                        <a
+                                          href={getDownloadUrl(item)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+                                          title="פתח בכרטיסייה חדשה (קליק גלגלת או Ctrl+קליק לפתיחה ברקע)"
+                                        >
+                                          <ExternalLink size={20} />
+                                        </a>
 
-                                    <a 
-                                      href={getDownloadUrl(item)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
-                                      title="הורד קובץ"
-                                    >
-                                      <Download size={20} />
-                                    </a>
+                                        <a 
+                                          href={getDownloadUrl(item)} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+                                          title="הורד קובץ"
+                                        >
+                                          <Download size={20} />
+                                        </a>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}
@@ -893,7 +992,7 @@ const [previewLoading, setPreviewLoading] = useState(false);
                 <div className="fixed inset-0 bg-slate-900/80 z-50 flex flex-col p-2 md:p-8 animate-in fade-in duration-200">
                   <div className="bg-white rounded-t-xl p-4 flex justify-between items-center shadow-sm max-w-6xl w-full mx-auto">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="shrink-0">{getFileIcon(viewingFile.name)}</div>
+                      <div className="shrink-0">{getFileIcon(viewingFile.name, viewingFile.isUrl)}</div>
                       <h3 className="font-bold text-slate-800 text-lg break-words whitespace-normal" dir="auto">
                         {viewingFile.name}
                       </h3>
@@ -965,6 +1064,26 @@ const [previewLoading, setPreviewLoading] = useState(false);
                           <div className="flex flex-col items-center justify-center text-slate-500 p-8 text-center w-full h-full bg-slate-50">
                             <AlertCircle size={48} className="mb-4 text-red-400" />
                             <p className="text-xl font-bold text-slate-700 mb-2">שגיאה בטעינת הקובץ</p>
+                          </div>
+                        );
+                      } else if (ext === 'url' || viewingFile.isUrl) {
+                        const target = viewingFile.targetUrl || getDownloadUrl(viewingFile);
+                        return (
+                          <div className="flex flex-col items-center justify-center text-slate-700 p-8 text-center w-full h-full bg-slate-50">
+                            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                              <Video size={40} />
+                            </div>
+                            <h4 className="text-2xl font-bold mb-2">קישור אינטרנט לסרטון</h4>
+                            <p className="text-slate-500 mb-6 max-w-md">קובץ זה מפנה לסרטון שיעור שנפתח בחלון נפרד.</p>
+                            <a 
+                              href={target} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-xl transition-all shadow-md font-bold flex items-center gap-2 text-base"
+                            >
+                              <Play size={20} />
+                              פתח עכשיו בחלון חדש
+                            </a>
                           </div>
                         );
                       } else {

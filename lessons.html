@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הקלטות שיעורים - מערכת צפייה ומעקב התקדמות</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Rubik', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            200: '#fecaca',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-hover {
+            transition: all 0.25s ease;
+        }
+        .glass-card-hover:hover {
+            transform: translateY(-2px);
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.15);
+        }
+        .series-tab-active {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+        }
+        .checkbox-custom {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .checkbox-custom:active {
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-card p-4 sm:p-6 rounded-2xl">
+            <div class="flex items-center gap-4">
+                <button onclick="handleGoBack()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium border border-slate-700">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>חזרה</span>
+                </button>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5">
+                            <i class="fas fa-video text-[10px]"></i> הקלטות שיעורים
+                        </span>
+                        <span id="course-badge" class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-full font-medium">
+                            טוען קורס...
+                        </span>
+                    </div>
+                    <h1 id="course-title" class="text-2xl sm:text-3xl font-extrabold text-white mt-1 tracking-tight">
+                        שיעורים מוקלטים
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 self-end sm:self-center">
+                <a href="drive.html" id="open-in-drive-btn" class="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium border border-slate-700 flex items-center gap-2 transition-colors">
+                    <i class="fas fa-folder-open text-amber-400"></i>
+                    <span>פתח בתיקיית קבצים</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loading-spinner" class="glass-card rounded-2xl p-16 flex flex-col items-center justify-center text-center space-y-4">
+            <div class="w-12 h-12 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin"></div>
+            <p class="text-slate-300 text-lg font-medium">מנתח ומסדר את שיעורי הקורס...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-box" class="hidden glass-card rounded-2xl p-8 border-red-500/30 text-center space-y-4">
+            <div class="w-14 h-14 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                <i class="fas fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-xl font-bold text-white" id="error-message">לא נמצאו שיעורים</h2>
+            <button onclick="location.reload()" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors">
+                נסה שוב
+            </button>
+        </div>
+
+        <!-- Courses Hub View (Shown when no specific course is selected) -->
+        <div id="courses-hub-view" class="hidden space-y-6">
+            <div class="glass-card rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-red-950/20 border-red-500/20">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="w-10 h-10 rounded-xl bg-red-600/30 text-red-400 border border-red-500/30 flex items-center justify-center text-lg">
+                        <i class="fas fa-graduation-cap"></i>
+                    </span>
+                    <h2 class="text-2xl font-black text-white">מאגר הקלטות שיעורים ותרגולים</h2>
+                </div>
+                <p class="text-slate-300 text-sm max-w-2xl">
+                    בחר קורס לצפייה ברשימת השיעורים המוקלטים, חלוקה לסדרות, פתיחה ישירה של השיעורים ומעקב אחר התקדמותך.
+                </p>
+            </div>
+
+            <div id="courses-hub-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Courses injected dynamically -->
+            </div>
+        </div>
+
+        <!-- Main Content (Hidden until loaded) -->
+        <div id="main-content" class="hidden space-y-6">
+
+            <!-- Progress & Next Lesson Hero -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Next Lesson Card -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between border-red-500/30 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-red-950/20">
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 flex items-center gap-1.5">
+                                <i class="fas fa-play text-[10px]"></i> צפייה מומלצת
+                            </span>
+                            <span id="active-series-indicator" class="text-xs text-slate-400 font-medium"></span>
+                        </div>
+                        <h2 id="next-lesson-title" class="text-xl sm:text-2xl font-black text-white mb-2">
+                            שיעור 1
+                        </h2>
+                        <p id="next-lesson-desc" class="text-sm text-slate-300 max-w-xl">
+                            לחץ לצפייה ישירה בשיעור בחלון חדש. סימון השיעור כנצפה מתבצע בצ'קבוקס לפי בחירתך.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 flex flex-wrap items-center gap-3 relative z-10">
+                        <button id="next-lesson-btn" onclick="handleWatchNextLesson()" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-red-600/30 flex items-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                            <i class="fas fa-play"></i>
+                            <span id="next-lesson-btn-text">צפה בשיעור הבא</span>
+                            <i class="fas fa-arrow-up-right-from-square text-xs opacity-75 mr-1"></i>
+                        </button>
+                        
+                        <button id="mark-next-watched-btn" onclick="handleToggleNextLessonWatched()" class="px-4 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-sm font-medium flex items-center gap-2 transition-colors">
+                            <i class="far fa-circle-check"></i>
+                            <span>סמן כנצפה</span>
+                        </button>
+                    </div>
+
+                    <!-- Background Glow -->
+                    <div class="absolute -left-12 -bottom-12 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                </div>
+
+                <!-- Overall Progress Card -->
+                <div class="glass-card rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <i class="fas fa-chart-pie text-red-400"></i>
+                                <span>התקדמות כללית</span>
+                            </h3>
+                            <span id="progress-percentage" class="text-2xl font-black text-red-400">0%</span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-800 rounded-full h-3.5 p-0.5 border border-slate-700 mb-3 overflow-hidden">
+                            <div id="progress-bar-fill" class="bg-gradient-to-r from-red-500 to-rose-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+
+                        <div class="flex justify-between text-xs text-slate-400 font-medium">
+                            <span id="watched-count-text">0 מתוך 0 נצפו</span>
+                            <span id="remaining-count-text">0 נותרו</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        <button onclick="handleMarkAllCurrentWatched(true)" class="text-slate-400 hover:text-white transition-colors underline">
+                            סמן הכל כנצפה
+                        </button>
+                        <button onclick="handleMarkAllCurrentWatched(false)" class="text-slate-500 hover:text-red-400 transition-colors">
+                            אפס סימונים
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Series Selection Tabs (Only rendered if multiple series exist) -->
+            <div id="series-tabs-container" class="hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        בחר סדרת שיעורים:
+                    </span>
+                    <span id="series-count-badge" class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700"></span>
+                </div>
+                <div id="series-tabs-list" class="flex flex-wrap gap-2.5">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Lessons List Header & Filters -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+                <div>
+                    <h3 id="series-section-title" class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>רשימת השיעורים</span>
+                        <span id="series-lessons-count" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700 font-normal">
+                            0 שיעורים
+                        </span>
+                    </h3>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex items-center gap-2 self-start sm:self-auto bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+                    <button onclick="setFilter('all')" id="filter-btn-all" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition-colors">
+                        הכל
+                    </button>
+                    <button onclick="setFilter('unwatched')" id="filter-btn-unwatched" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+                        טרם נצפו
+                    </button>
+                    <button onclick="setFilter('watched')" id="filter-btn-watched" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+                        נצפו
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lessons Grid -->
+            <div id="lessons-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Lesson cards injected dynamically -->
+            </div>
+
+            <!-- Empty Filter State -->
+            <div id="empty-filter-state" class="hidden glass-card rounded-2xl p-12 text-center text-slate-400 space-y-2">
+                <i class="fas fa-check-circle text-4xl text-slate-600"></i>
+                <p class="text-base font-medium text-slate-300">אין שיעורים התואמים לסינון הנוכחי</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // State
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseIdParam = urlParams.get('courseId');
+        const pathParam = urlParams.get('path');
+        const tz = localStorage.getItem('student_tz') || '';
+
+        let courseData = null;
+        let activeSeriesIndex = 0;
+        let watchedSet = new Set();
+        let currentFilter = 'all'; // 'all' | 'unwatched' | 'watched'
+
+        // Local Storage Key (supports recording_watched_ and legacy miluim_watched_)
+        const rawKey = courseIdParam || (pathParam ? encodeURIComponent(pathParam) : 'general');
+        const storageKey = `recording_watched_${rawKey}`;
+        const legacyStorageKey = `miluim_watched_${rawKey}`;
+
+        function loadLocalWatched() {
+            try {
+                const stored = localStorage.getItem(storageKey) || localStorage.getItem(legacyStorageKey);
+                if (stored) {
+                    const arr = JSON.parse(stored);
+                    if (Array.isArray(arr)) {
+                        arr.forEach(id => watchedSet.add(id));
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function saveLocalWatched() {
+            try {
+                const json = JSON.stringify(Array.from(watchedSet));
+                localStorage.setItem(storageKey, json);
+                localStorage.setItem(legacyStorageKey, json);
+            } catch(e) {}
+        }
+
+        async function init() {
+            if (!courseIdParam && !pathParam) {
+                // Show Hub View for all courses
+                try {
+                    const res = await fetch('/api/recordings/all');
+                    const data = await res.json();
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                    document.getElementById('course-badge').innerText = 'מאגר הקלטות';
+                    document.getElementById('course-title').innerText = 'מאגר הקלטות שיעורים ותרגולים';
+                    renderCoursesHub(data.courses || []);
+                } catch(e) {
+                    console.error(e);
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                    document.getElementById('error-message').innerText = 'שגיאה בטעינת הקורסים';
+                    document.getElementById('error-box').classList.remove('hidden');
+                }
+                return;
+            }
+
+            loadLocalWatched();
+
+            try {
+                let fetchUrl = `/api/recordings/lessons?tz=${tz}`;
+                if (courseIdParam) fetchUrl += `&courseId=${courseIdParam}`;
+                if (pathParam) fetchUrl += `&path=${encodeURIComponent(pathParam)}`;
+
+                const res = await fetch(fetchUrl);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'לא נמצאה תיקיית הקלטות');
+                }
+
+                courseData = await res.json();
+
+                // Merge server watched map
+                if (courseData.watchedMap) {
+                    for (const id in courseData.watchedMap) {
+                        if (courseData.watchedMap[id]) watchedSet.add(id);
+                    }
+                    saveLocalWatched();
+                }
+
+                render();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading-spinner').classList.add('hidden');
+                document.getElementById('error-message').innerText = err.message;
+                document.getElementById('error-box').classList.remove('hidden');
+            }
+        }
+
+        function renderCoursesHub(courses) {
+            const hubView = document.getElementById('courses-hub-view');
+            const grid = document.getElementById('courses-hub-grid');
+            hubView.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            if (courses.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-slate-400 p-8 glass-card rounded-xl">לא נמצאו קורסים עם הקלטות כרגע.</div>';
+                return;
+            }
+
+            courses.forEach(c => {
+                const card = document.createElement('a');
+                card.href = `lessons.html?courseId=${c.id}`;
+                card.className = 'glass-card glass-card-hover rounded-2xl p-5 flex flex-col justify-between border-slate-700/60 transition-all text-right group';
+                
+                const yearText = c.year === 1 ? 'שנה א\'' : (c.year === 2 ? 'שנה ב\'' : `שנה ${c.year}`);
+                const semText = c.semester === 'A' ? 'סמסטר א\'' : 'סמסטר ב\'';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-0.5 rounded-full font-medium">
+                                ${yearText} • ${semText}
+                            </span>
+                            <span class="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
+                                ${c.totalLessons} שיעורים
+                            </span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-red-400 transition-colors mb-1">
+                            ${c.name}
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            ${c.hasMultipleSeries ? `${c.seriesCount} סדרות תרגול מוקלטות` : 'סדרת שיעורים מוקלטים מלאה'}
+                        </p>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-red-400 group-hover:text-red-300">
+                        <span>כניסה לשיעורים ומעקב</span>
+                        <i class="fas fa-arrow-left transition-transform group-hover:-translate-x-1"></i>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function render() {
+            document.getElementById('loading-spinner').classList.add('hidden');
+            document.getElementById('error-box').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+
+            // Header titles
+            document.getElementById('course-title').innerText = `${courseData.courseName} - הקלטות שיעורים`;
+            document.getElementById('course-badge').innerText = courseData.courseName;
+
+            // Link to drive
+            if (courseData.folderPath) {
+                document.getElementById('open-in-drive-btn').href = `drive.html?path=${encodeURIComponent(courseData.folderPath)}`;
+            }
+
+            // Series tabs setup
+            renderSeriesTabs();
+
+            // Render current series lessons & progress
+            renderActiveSeries();
+        }
+
+        function renderSeriesTabs() {
+            const tabsContainer = document.getElementById('series-tabs-container');
+            const tabsList = document.getElementById('series-tabs-list');
+            tabsList.innerHTML = '';
+
+            if (!courseData.hasMultipleSeries || courseData.seriesList.length <= 1) {
+                tabsContainer.classList.add('hidden');
+                return;
+            }
+
+            tabsContainer.classList.remove('hidden');
+            document.getElementById('series-count-badge').innerText = `${courseData.seriesList.length} סדרות תרגול`;
+
+            courseData.seriesList.forEach((series, idx) => {
+                const totalInSeries = series.lessons.length;
+                const watchedInSeries = series.lessons.filter(l => watchedSet.has(l.id)).length;
+                const isActive = idx === activeSeriesIndex;
+
+                const tabBtn = document.createElement('button');
+                tabBtn.className = `px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2.5 transition-all ${
+                    isActive ? 'series-tab-active' : 'glass-card hover:bg-slate-800 text-slate-300'
+                }`;
+                tabBtn.onclick = () => {
+                    activeSeriesIndex = idx;
+                    renderSeriesTabs();
+                    renderActiveSeries();
+                };
+
+                tabBtn.innerHTML = `
+                    <span>${series.seriesName || `סדרה ${idx + 1}`}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${
+                        isActive ? 'bg-black/25 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }">${watchedInSeries}/${totalInSeries}</span>
+                `;
+
+                tabsList.appendChild(tabBtn);
+            });
+        }
+
+        function getActiveSeries() {
+            if (!courseData || !courseData.seriesList.length) return null;
+            return courseData.seriesList[activeSeriesIndex] || courseData.seriesList[0];
+        }
+
+        function renderActiveSeries() {
+            const activeSeries = getActiveSeries();
+            if (!activeSeries) return;
+
+            // Section title
+            const seriesTitleEl = document.getElementById('series-section-title');
+            if (courseData.hasMultipleSeries && activeSeries.seriesName) {
+                seriesTitleEl.innerHTML = `
+                    <span>שיעורים: ${activeSeries.seriesName}</span>
+                    <span id="series-lessons-count" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700 font-normal">
+                        ${activeSeries.lessons.length} שיעורים
+                    </span>
+                `;
+            } else {
+                seriesTitleEl.innerHTML = `
+                    <span>רשימת השיעורים</span>
+                    <span id="series-lessons-count" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700 font-normal">
+                        ${activeSeries.lessons.length} שיעורים
+                    </span>
+                `;
+            }
+
+            // Calculate progress for current series & overall
+            const totalLessons = activeSeries.lessons.length;
+            const watchedLessons = activeSeries.lessons.filter(l => watchedSet.has(l.id)).length;
+            const pct = totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
+
+            document.getElementById('progress-percentage').innerText = `${pct}%`;
+            document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+            document.getElementById('watched-count-text').innerText = `${watchedLessons} מתוך ${totalLessons} נצפו`;
+            document.getElementById('remaining-count-text').innerText = `${totalLessons - watchedLessons} נותרו`;
+
+            // Next lesson calculation
+            const nextLesson = activeSeries.lessons.find(l => !watchedSet.has(l.id));
+            const nextTitleEl = document.getElementById('next-lesson-title');
+            const nextDescEl = document.getElementById('next-lesson-desc');
+            const nextBtn = document.getElementById('next-lesson-btn');
+            const markNextBtn = document.getElementById('mark-next-watched-btn');
+            const nextIndicator = document.getElementById('active-series-indicator');
+
+            if (courseData.hasMultipleSeries && activeSeries.seriesName) {
+                nextIndicator.innerText = activeSeries.seriesName;
+            } else {
+                nextIndicator.innerText = '';
+            }
+
+            if (nextLesson) {
+                nextTitleEl.innerText = nextLesson.displayName;
+                nextDescEl.innerText = `שיעור מומלץ לצפייה הבאה מתוך ${activeSeries.seriesName || 'רשימת השיעורים'}. לחיצה תפתח את הסרטון ישירות בחלון חדש ותסמן כנצפה.`;
+                nextBtn.disabled = false;
+                nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('next-lesson-btn-text').innerText = `צפה בשיעור הבא (${nextLesson.displayName})`;
+                markNextBtn.classList.remove('hidden');
+                markNextBtn.dataset.lessonId = nextLesson.id;
+            } else {
+                nextTitleEl.innerHTML = `כל הכבוד! סיימת את כל השיעורים 🎉`;
+                nextDescEl.innerText = `צפית בכל ${totalLessons} השיעורים ${activeSeries.seriesName ? 'ב' + activeSeries.seriesName : 'בקורס זה'}.`;
+                nextBtn.disabled = true;
+                nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('next-lesson-btn-text').innerText = `כל השיעורים נצפו!`;
+                markNextBtn.classList.add('hidden');
+            }
+
+            // Render lessons grid
+            renderLessonsGrid(activeSeries.lessons);
+        }
+
+        function renderLessonsGrid(lessons) {
+            const grid = document.getElementById('lessons-grid');
+            const emptyState = document.getElementById('empty-filter-state');
+            grid.innerHTML = '';
+
+            const filtered = lessons.filter(l => {
+                const isWatched = watchedSet.has(l.id);
+                if (currentFilter === 'watched') return isWatched;
+                if (currentFilter === 'unwatched') return !isWatched;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(lesson => {
+                const isWatched = watchedSet.has(lesson.id);
+
+                const card = document.createElement('div');
+                card.className = `glass-card glass-card-hover rounded-xl p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer select-none ${
+                    isWatched ? 'border-emerald-500/30 bg-slate-900/40' : ''
+                }`;
+
+                // Clicking the card opens the lesson
+                card.onclick = (e) => {
+                    // Ignore clicks on checkbox itself to avoid double action
+                    if (e.target.closest('.checkbox-btn')) return;
+                    openLesson(lesson);
+                };
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <button class="checkbox-btn checkbox-custom shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isWatched 
+                                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                                : 'bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700 border border-slate-700'
+                        }" title="${isWatched ? 'סמן כלא נצפה' : 'סמן כנצפה'}" onclick="handleToggleWatched('${lesson.id}', event)">
+                            <i class="${isWatched ? 'fas fa-check' : 'far fa-circle'} text-sm"></i>
+                        </button>
+
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-base text-white truncate ${isWatched ? 'text-slate-300' : ''}">
+                                    ${lesson.displayName}
+                                </h4>
+                                ${isWatched ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">נצפה</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-400 truncate mt-0.5">
+                                ${lesson.extraTitle ? lesson.extraTitle + ' • ' : ''}לחץ לצפייה ישירה בחלון חדש
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="${lesson.url || '#'}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 rounded-lg bg-red-600/90 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm" onclick="event.stopPropagation();">
+                            <i class="fas fa-play text-[10px]"></i>
+                            <span class="hidden sm:inline">צפייה</span>
+                        </a>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function openLesson(lesson) {
+            if (!lesson.url) {
+                alert('לא נמצא קישור תקף עבור שיעור זה');
+                return;
+            }
+            window.open(lesson.url, '_blank', 'noopener,noreferrer');
+        }
+
+        function handleWatchNextLesson() {
+            const activeSeries = getActiveSeries();
+            if (!activeSeries) return;
+            const nextLesson = activeSeries.lessons.find(l => !watchedSet.has(l.id));
+            if (nextLesson) {
+                openLesson(nextLesson);
+            }
+        }
+
+        function handleToggleNextLessonWatched() {
+            const btn = document.getElementById('mark-next-watched-btn');
+            const lessonId = btn.dataset.lessonId;
+            if (lessonId) {
+                toggleLessonWatched(lessonId);
+            }
+        }
+
+        function handleToggleWatched(lessonId, event) {
+            if (event) event.stopPropagation();
+            toggleLessonWatched(lessonId);
+        }
+
+        function toggleLessonWatched(lessonId) {
+            const willBeWatched = !watchedSet.has(lessonId);
+            markLessonWatched(lessonId, willBeWatched);
+        }
+
+        function markLessonWatched(lessonId, isWatched) {
+            if (isWatched) {
+                watchedSet.add(lessonId);
+            } else {
+                watchedSet.delete(lessonId);
+            }
+            saveLocalWatched();
+
+            // Sync with backend if student tz is available
+            if (tz && courseData) {
+                const cid = courseData.courseId || courseData.folderPath;
+                fetch('/api/recordings/progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tz,
+                        courseId: cid,
+                        lessonId,
+                        watched: isWatched
+                    })
+                }).catch(() => {});
+            }
+
+            renderSeriesTabs();
+            renderActiveSeries();
+        }
+
+        function handleMarkAllCurrentWatched(isWatched) {
+            const activeSeries = getActiveSeries();
+            if (!activeSeries) return;
+
+            activeSeries.lessons.forEach(l => {
+                if (isWatched) watchedSet.add(l.id);
+                else watchedSet.delete(l.id);
+
+                if (tz && courseData) {
+                    const cid = courseData.courseId || courseData.folderPath;
+                    fetch('/api/recordings/progress', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tz,
+                            courseId: cid,
+                            lessonId: l.id,
+                            watched: isWatched
+                        })
+                    }).catch(() => {});
+                }
+            });
+
+            saveLocalWatched();
+            renderSeriesTabs();
+            renderActiveSeries();
+        }
+
+        function setFilter(filterType) {
+            currentFilter = filterType;
+
+            ['all', 'unwatched', 'watched'].forEach(f => {
+                const btn = document.getElementById(`filter-btn-${f}`);
+                if (f === filterType) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition-colors';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors';
+                }
+            });
+
+            const activeSeries = getActiveSeries();
+            if (activeSeries) {
+                renderLessonsGrid(activeSeries.lessons);
+            }
+        }
+
+        function handleGoBack() {
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -118,6 +118,24 @@ db.serialize(() => {
             folder_path TEXT
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS recordings_progress (
+            tz TEXT,
+            course_id TEXT,
+            lesson_id TEXT,
+            watched INTEGER,
+            updated_at INTEGER,
+            PRIMARY KEY (tz, course_id, lesson_id)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS miluim_progress (
+            tz TEXT,
+            course_id TEXT,
+            lesson_id TEXT,
+            watched INTEGER,
+            updated_at INTEGER,
+            PRIMARY KEY (tz, course_id, lesson_id)
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS proposals (
             id TEXT PRIMARY KEY,
             tz TEXT,
@@ -1053,12 +1071,23 @@ app.post('/api/courses/link', requireAdmin, (req, res) => {
     });
 });
 
+function getBaseDir() {
+    if (fs.existsSync('/app/studies')) return '/app/studies';
+    if (fs.existsSync('D:/לימודים רזיאל')) return 'D:/לימודים רזיאל';
+    if (fs.existsSync('E:/לימודים רזיאל')) return 'E:/לימודים רזיאל';
+    return path.join(__dirname, 'studies');
+}
+
+const recordingsModule = require('./recordings.js');
+recordingsModule.initRecordingsRoutes(app, db, getBaseDir);
+
 app.get('/api/courses/link/:courseId', (req, res) => {
     const courseId = req.params.courseId;
     db.get("SELECT folder_path FROM course_folders WHERE course_id = ?", [courseId], (err, row) => {
         if (err) return res.status(500).json({ error: "Database error" });
-        if (!row) return res.json({ folderPath: null });
-        res.json({ folderPath: row.folder_path });
+        if (row && row.folder_path) return res.json({ folderPath: row.folder_path });
+        const autoFolder = recordingsModule.autoFindCourseFolder(courseId, getBaseDir(), db);
+        res.json({ folderPath: autoFolder || null });
     });
 });
 
@@ -1108,7 +1137,7 @@ app.get('/api/drive/list', async (req, res) => {
                 }
             }
             
-            const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+            const baseDir = getBaseDir();
             const sharedResolvedPath = path.join(baseDir, sharedFolder.path);
             const sharedStat = fs.existsSync(sharedResolvedPath) ? fs.statSync(sharedResolvedPath) : null;
             if (sharedStat && sharedStat.isFile()) {
@@ -1167,7 +1196,7 @@ app.get('/api/drive/list', async (req, res) => {
             return res.status(403).json({ error: "Access denied due to permissions" });
         }
 
-        const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+        const baseDir = getBaseDir();
         const resolvedPath = path.join(baseDir, queryPath);
         
         // Ensure the path is within the baseDir to prevent directory traversal
@@ -1199,10 +1228,20 @@ app.get('/api/drive/list', async (req, res) => {
                 const itemPath = (normalizedPath === '/' ? '/' + item.name : normalizedPath + '/' + item.name).replace(/\\/g, '/');
                 
                 let size = 0;
+                let isUrl = false;
+                let targetUrl = null;
                 if (item.isFile()) {
                     try {
                         const itemStat = await fs.promises.stat(path.join(resolvedPath, item.name));
                         size = itemStat.size;
+                        if (item.name.toLowerCase().endsWith('.url')) {
+                            isUrl = true;
+                            const fileContent = await fs.promises.readFile(path.join(resolvedPath, item.name), 'utf8');
+                            const urlMatch = fileContent.match(/URL=(.+)/i);
+                            if (urlMatch) {
+                                targetUrl = urlMatch[1].trim();
+                            }
+                        }
                     } catch(e) {}
                 }
                 
@@ -1210,7 +1249,9 @@ app.get('/api/drive/list', async (req, res) => {
                     name: item.name,
                     isDirectory: item.isDirectory(),
                     size: size,
-                    path: itemPath
+                    path: itemPath,
+                    isUrl: isUrl,
+                    targetUrl: targetUrl
                 });
             }
             
@@ -1291,7 +1332,7 @@ app.get('/studies/*', async (req, res) => {
             }
         }
         
-        const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+        const baseDir = getBaseDir();
         const resolvedPath = path.join(baseDir, reqPath);
         
         // Prevent directory traversal
@@ -1343,6 +1384,17 @@ app.get('/studies/*', async (req, res) => {
                 db.run("INSERT INTO file_downloads (path, tz, timestamp) VALUES (?, ?, ?)", [reqPath, tz || 'unknown', Date.now()]);
             }
         } catch(e) {}
+
+        // Directly redirect .url internet shortcut files to their target URL unless download=1
+        if (reqPath.toLowerCase().endsWith('.url') && req.query.download !== '1') {
+            try {
+                const urlContent = fs.readFileSync(resolvedPath, 'utf8');
+                const urlMatch = urlContent.match(/URL=(.+)/i);
+                if (urlMatch) {
+                    return res.redirect(urlMatch[1].trim());
+                }
+            } catch(e) {}
+        }
 
         res.sendFile(resolvedPath);
     } catch(err) {
@@ -1399,7 +1451,7 @@ app.get('/api/drive/download-zip', async (req, res) => {
             }
         }
         
-        const baseDir = fs.existsSync('/app/studies') ? '/app/studies' : 'D:/לימודים רזיאל';
+        const baseDir = getBaseDir();
         const resolvedPath = path.join(baseDir, reqPath);
         
         if (!resolvedPath.startsWith(path.resolve(baseDir))) {
