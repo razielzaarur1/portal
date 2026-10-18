@@ -501,7 +501,7 @@
                             <div class="font-bold text-sm text-slate-800 truncate group-hover:text-blue-600 transition-colors">
                                 ${lesson.displayName}
                             </div>
-                            ${lesson.extraTitle ? `<div class="text-[11px] text-slate-400 truncate">${lesson.extraTitle}</div>` : ''}
+                            ${lesson.lessonDate ? `<div class="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5"><i class="far fa-calendar-alt text-[10px] text-blue-500"></i><span>${lesson.lessonDate}</span></div>` : (lesson.extraTitle ? `<div class="text-[11px] text-slate-400 truncate mt-0.5">${lesson.extraTitle}</div>` : '')}
                         </div>
                     </div>
 

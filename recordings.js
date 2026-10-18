@@ -51,34 +51,66 @@ function parseLessonFile(filename, courseName = '') {
     // Secondary cleanup in case "מילואים" or "הקלטות" was after the course name (e.g. "פיזיקה 3 מילואים סדרה א 1")
     name = name.replace(/^(?:הקלטות|הקלטת|הקלטה|תרגול|תגבור|שיעור|מילואים)\s*/i, '').trim();
 
-    let series = null;
+    // 4. Detect Date & Semester patterns: e.g. "6.4.2025", "06.08.2025", "1.9.2025"
+    let lessonDate = null;
+    let semesterSeries = null;
+    const dateMatch = name.match(/[-–—\s]*\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/);
+    if (dateMatch) {
+        const fullDateMatch = dateMatch[0];
+        const day = parseInt(dateMatch[1], 10);
+        const month = parseInt(dateMatch[2], 10);
+        let year = parseInt(dateMatch[3], 10);
+        if (year < 100) year += 2000;
+
+        const formattedDay = String(day).padStart(2, '0');
+        const formattedMonth = String(month).padStart(2, '0');
+        lessonDate = `${formattedDay}.${formattedMonth}.${year}`;
+
+        // Academic Semesters in Israel:
+        // Months 3..7 (March - July) => Spring / אביב
+        // Months 8..12, 1..2 (August - February) => Winter / חורף
+        if (month >= 3 && month <= 7) {
+            semesterSeries = `אביב ${year}`;
+        } else {
+            semesterSeries = `חורף ${year}`;
+        }
+
+        name = name.replace(fullDateMatch, '').trim();
+    }
+
+    let series = semesterSeries;
     let lessonTitle = name;
     let lessonNum = null;
     let part = null;
 
-    // 4. Detect Series patterns: 'סדרה א', 'סדרה ב', 'סדרה קצרה', 'סדרה 1'
-    const seriesMatch = name.match(/^(סדרה\s+[א-ת0-9]+)\s*(.*)$/i);
-    if (seriesMatch) {
-        series = seriesMatch[1].trim();
-        lessonTitle = seriesMatch[2].trim();
+    // 5. Detect Series patterns if not already set by semester: 'סדרה א', 'סדרה ב', 'סדרה קצרה', 'סדרה 1'
+    if (!series) {
+        const seriesMatch = name.match(/^(סדרה\s+[א-ת0-9]+)\s*(.*)$/i);
+        if (seriesMatch) {
+            series = seriesMatch[1].trim();
+            lessonTitle = seriesMatch[2].trim();
+        }
     }
 
-    // 5. Detect Part patterns: 'חלק א', 'חלק ב', 'חלק 1', 'חלק 2'
+    // Secondary prefix strip after series/course/date: e.g. "תגבור 1", "תרגול 1"
+    lessonTitle = lessonTitle.replace(/^(?:הקלטות|הקלטת|הקלטה|תרגול|תגבור|שיעור|מילואים)\s*/i, '').trim();
+
+    // 6. Detect Part patterns: 'חלק א', 'חלק ב', 'חלק 1', 'חלק 2'
     const partMatch = lessonTitle.match(/(.*?)(?:\s*[-–]?\s*חלק\s*([א-ת0-9]+))$/i);
     if (partMatch) {
         lessonTitle = partMatch[1].trim();
         part = 'חלק ' + partMatch[2].trim();
     }
 
-    // 6. Detect 'המשך X' or 'המשך'
+    // 7. Detect 'המשך X' or 'המשך'
     const hemshechMatch = lessonTitle.match(/^המשך\s*(\d+)?$/i);
     if (hemshechMatch) {
         lessonNum = hemshechMatch[1] ? parseInt(hemshechMatch[1], 10) : null;
         part = 'המשך' + (lessonNum ? ` ${lessonNum}` : '');
         lessonTitle = '';
     } else {
-        // Detect lesson number standalone or prefixed with 'שיעור'
-        const numMatch = lessonTitle.match(/^(?:שיעור\s*|מפגש\s*|תרגול\s*)?(\d+)$/i);
+        // Detect lesson number standalone or prefixed with 'שיעור' / 'תרגול' / 'תגבור'
+        const numMatch = lessonTitle.match(/^(?:שיעור\s*|מפגש\s*|תרגול\s*|תגבור\s*)?(\d+)$/i);
         if (numMatch) {
             lessonNum = parseInt(numMatch[1], 10);
             lessonTitle = '';
@@ -92,7 +124,7 @@ function parseLessonFile(filename, courseName = '') {
         }
     }
 
-    // 7. Format clean display name
+    // 8. Format clean display name
     let displayName = '';
     if (lessonNum !== null) {
         displayName = `שיעור ${lessonNum}`;
@@ -114,6 +146,7 @@ function parseLessonFile(filename, courseName = '') {
         series,
         lessonNum,
         part,
+        lessonDate,
         extraTitle: lessonTitle,
         displayName
     };
@@ -378,15 +411,21 @@ function getRecordingsLessons(folderFullPath, courseName = '') {
         // Multiple series: group each series
         const groups = {};
         for (const l of rawLessons) {
-            const sName = l.series || 'סדרה ראשית';
+            const sName = l.series || 'רגיל';
             if (!groups[sName]) groups[sName] = [];
             groups[sName].push(l);
         }
 
-        // Sort series names nicely (e.g. סדרה א before סדרה ב, סדרה ראשית first)
+        // Sort series names nicely:
+        // 1. 'רגיל' / 'סדרה ראשית' always first
+        // 2. 'סדרה א' next
+        // 3. Semesters: 'חורף 2024', 'אביב 2025', 'חורף 2025' ...
+        // 4. Other series
         const sortedSeriesNames = Object.keys(groups).sort((a, b) => {
-            if (a === 'סדרה ראשית') return -1;
-            if (b === 'סדרה ראשית') return 1;
+            if (a === 'רגיל' || a === 'סדרה ראשית') return -1;
+            if (b === 'רגיל' || b === 'סדרה ראשית') return 1;
+            if (a === 'סדרה א') return -1;
+            if (b === 'סדרה א') return 1;
             return a.localeCompare(b, 'he');
         });
 
