@@ -88,6 +88,113 @@
         .digital { --accent: var(--digital-color); --bg-soft: #f3e8ff; }
         .stats { --accent: #ec4899; --bg-soft: #fce7f3; } 
 
+        /* Support Banner */
+        .support-banner {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 20px;
+            padding: 14px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        .support-banner::before {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(to bottom, #00b2a9, #0a66c2);
+        }
+        .support-content {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+        }
+        .support-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: #e0f2fe;
+            color: #0284c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .support-message {
+            font-size: 0.84rem;
+            color: #334155;
+            line-height: 1.45;
+        }
+        .support-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .btn-bit {
+            background: #00b2a9;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 9px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0, 178, 169, 0.25);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .btn-bit:hover {
+            background: #009991;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 178, 169, 0.35);
+        }
+        .btn-linkedin {
+            background: #0a66c2;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 9px 14px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .btn-linkedin:hover {
+            background: #084e96;
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            .support-banner {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 14px 16px;
+                gap: 12px;
+            }
+            .support-actions {
+                width: 100%;
+            }
+            .btn-bit, .btn-linkedin {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+
         /* Semester Accordion */
         .semester-container { margin-bottom: 25px; background: var(--card-bg); border-radius: 24px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(255,255,255,0.6); }
         .semester-header { padding: 20px 25px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; transition: background 0.2s; }
@@ -248,6 +355,29 @@
     </div>
 
     <main class="main-content">
+        <!-- באנר תמיכה וקשר -->
+        <div class="support-banner">
+            <div class="support-content">
+                <div class="support-avatar">
+                    <i class="fas fa-heart text-blue-500"></i>
+                </div>
+                <div class="support-message">
+                    החזקת הפורטל דורשת הוצאות שוטפות על חשמל, שרתים ואחסון שאני מממן בעצמי. כדי שאוכל להמשיך להחזיק את האתר פעיל, מעודכן ומתפתח – כל עזרה ותמיכה מוערכת מאוד!
+                </div>
+            </div>
+
+            <div class="support-actions">
+                <a href="https://www.bitpay.co.il/app/me/5D2605E8-408B-3B6D-D691-F0CCF5E02CC98F22" target="_blank" rel="noopener noreferrer" class="btn-bit" style="direction: rtl;">
+                    <img src="bit_logo.png" alt="Bit" style="width: 24px; height: 24px; border-radius: 6px; display: block; object-fit: contain;">
+                    <span>תמיכה ב-Bit</span>
+                </a>
+                <a href="https://www.linkedin.com/in/raziel-zaarur-494036388" target="_blank" rel="noopener noreferrer" class="btn-linkedin" style="direction: rtl;">
+                    <img src="linkedin_logo.png" alt="LinkedIn" style="width: 22px; height: 22px; border-radius: 5px; display: block; object-fit: contain;">
+                    <span>LinkedIn</span>
+                </a>
+            </div>
+        </div>
+
         <div class="quick-tools">
             <div class="section-label"><i class="fas fa-tools"></i> אזור אישי וכלים</div>
             <div class="grid">
