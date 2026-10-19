@@ -2266,11 +2266,21 @@ app.get('/api/admin/advanced-stats', requireAdmin, (req, res) => {
         { key: 'uniqueConversations', sql: "SELECT COUNT(DISTINCT tz) as count FROM chat_messages" },
     ];
 
+    // ----- SUPPORT / OUTBOUND CLICKS -----
+    const supportQueries = [
+        { key: 'totalBitClicks', sql: "SELECT COUNT(*) as count FROM page_views WHERE path = 'click:bit'" },
+        { key: 'totalLinkedinClicks', sql: "SELECT COUNT(*) as count FROM page_views WHERE path = 'click:linkedin'" },
+        { key: 'uniqueBitUsers', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE path = 'click:bit' AND tz != 'anonymous'" },
+        { key: 'uniqueLinkedinUsers', sql: "SELECT COUNT(DISTINCT tz) as count FROM page_views WHERE path = 'click:linkedin' AND tz != 'anonymous'" },
+        { key: 'recentClicks', sql: "SELECT pv.tz, s.name, pv.path, pv.timestamp FROM page_views pv LEFT JOIN students s ON pv.tz = s.tz WHERE pv.path IN ('click:bit', 'click:linkedin') ORDER BY pv.timestamp DESC LIMIT 30" },
+    ];
+
     // Run all query groups
     runAll(usersQueries, (usersData) => {
         runAll(driveQueries, (driveData) => {
             runAll(gradeQueries, (gradeData) => {
                 runAll(chatQueries, (chatData) => {
+                    runAll(supportQueries, (supportData) => {
 
                     // Fetch student names for top students
                     db.all("SELECT tz, name FROM students", [], (err, allStudentsList) => {
@@ -2367,8 +2377,16 @@ app.get('/api/admin/advanced-stats', requireAdmin, (req, res) => {
                                 uniqueConversations: g(chatData.uniqueConversations),
                                 avgResponseMinutes,
                                 topStudentsMsgs: chatData.topStudentsMsgs || [],
+                            },
+                            support: {
+                                totalBitClicks: g(supportData.totalBitClicks),
+                                totalLinkedinClicks: g(supportData.totalLinkedinClicks),
+                                uniqueBitUsers: g(supportData.uniqueBitUsers),
+                                uniqueLinkedinUsers: g(supportData.uniqueLinkedinUsers),
+                                recentClicks: supportData.recentClicks || []
                             }
                         });
+                    });
                     });
                 });
             });
@@ -2415,6 +2433,14 @@ app.get('/api/admin/stat-users/:type', requireAdmin, (req, res) => {
         case 'newMonth':
             sql = "SELECT tz FROM students WHERE joined_at > ? AND tz != '322368564'";
             params = [now - 30 * DAY];
+            break;
+        case 'bit':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE path = 'click:bit' AND tz != 'anonymous'";
+            params = [];
+            break;
+        case 'linkedin':
+            sql = "SELECT DISTINCT tz FROM page_views WHERE path = 'click:linkedin' AND tz != 'anonymous'";
+            params = [];
             break;
         case 'total':
         default:

@@ -367,11 +367,11 @@
             </div>
 
             <div class="support-actions">
-                <a href="https://www.bitpay.co.il/app/me/5D2605E8-408B-3B6D-D691-F0CCF5E02CC98F22" target="_blank" rel="noopener noreferrer" class="btn-bit" style="direction: rtl;">
+                <a href="https://www.bitpay.co.il/app/me/5D2605E8-408B-3B6D-D691-F0CCF5E02CC98F22" target="_blank" rel="noopener noreferrer" class="btn-bit" style="direction: rtl;" onclick="trackOutbound('bit')">
                     <img src="bit_logo.png" alt="Bit" style="width: 24px; height: 24px; border-radius: 6px; display: block; object-fit: contain;">
                     <span>תמיכה ב-Bit</span>
                 </a>
-                <a href="https://www.linkedin.com/in/raziel-zaarur-494036388" target="_blank" rel="noopener noreferrer" class="btn-linkedin" style="direction: rtl;">
+                <a href="https://www.linkedin.com/in/raziel-zaarur-494036388" target="_blank" rel="noopener noreferrer" class="btn-linkedin" style="direction: rtl;" onclick="trackOutbound('linkedin')">
                     <img src="linkedin_logo.png" alt="LinkedIn" style="width: 22px; height: 22px; border-radius: 5px; display: block; object-fit: contain;">
                     <span>LinkedIn</span>
                 </a>
@@ -884,6 +884,15 @@
             }
             input.disabled = false;
             input.focus();
+        }
+
+        function trackOutbound(platform) {
+            const tz = localStorage.getItem('student_tz') || (currentUserData ? currentUserData.tz : '') || 'anonymous';
+            fetch('/api/track', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tz: tz, path: 'click:' + platform })
+            }).catch(() => {});
         }
 
         // Start

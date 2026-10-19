@@ -201,6 +201,7 @@
         .adv-category-header.drive-hdr  { background: linear-gradient(135deg,#059669,#34d399); }
         .adv-category-header.grades-hdr { background: linear-gradient(135deg,#7c3aed,#a78bfa); }
         .adv-category-header.chat-hdr   { background: linear-gradient(135deg,#d97706,#fbbf24); }
+        .adv-category-header.support-hdr { background: linear-gradient(135deg,#00b2a9,#0a66c2); }
 
         .adv-category-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
 
@@ -854,7 +855,7 @@
             return;
         }
 
-        const u = d.users, dr = d.drive, gr = d.grades, ch = d.chat;
+        const u = d.users, dr = d.drive, gr = d.grades, ch = d.chat, sup = d.support || {};
 
         // Fetch grades overview
         let gradesOverviewResult = [];
@@ -943,6 +944,26 @@
             r => `${r.count} הודעות`,
             'color:#d97706'
         );
+
+        // ---- SUPPORT / OUTBOUND CLICKS LIST ----
+        const supportClicksList = (sup.recentClicks || []).length === 0
+            ? '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:12px;">אין עדיין לחיצות מתועדות</div>'
+            : (sup.recentClicks || []).map(r => {
+                const isBit = r.path === 'click:bit';
+                const tagColor = isBit ? '#00b2a9' : '#0a66c2';
+                const tagBg = isBit ? '#e6f7f6' : '#e8f4fd';
+                const tagText = isBit ? 'Bit' : 'LinkedIn';
+                const timeStr = r.timestamp ? new Date(r.timestamp).toLocaleString('he-IL', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                return `
+                    <div class="adv-list-item" style="padding: 7px 0; border-bottom: 1px solid #f1f5f9;">
+                        <span style="background:${tagBg};color:${tagColor};font-weight:700;font-size:0.75rem;padding:2px 8px;border-radius:6px;min-width:65px;text-align:center;display:inline-block;">${tagText}</span>
+                        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:0.85rem;">
+                            ${r.name ? `${r.name} <span style="font-size:0.75rem;color:var(--muted);font-weight:normal;">(${r.tz})</span>` : (r.tz || 'אנונימי')}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--muted);direction:ltr;font-family:monospace;">${timeStr}</div>
+                    </div>
+                `;
+            }).join('');
 
         // ---- RENDER FINAL HTML ----
         container.innerHTML = `<div class="adv-stats-grid">
@@ -1138,6 +1159,37 @@
                     <div>
                         <div class="adv-sub-title"><i class="fas fa-comment-dots"></i> הסטודנטים שפנו הכי הרבה</div>
                         <div class="adv-list">${topMsgList}</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== SUPPORT & OUTBOUND CLICKS CATEGORY ===== -->
+            <div class="adv-category">
+                <div class="adv-category-header support-hdr">
+                    <i class="fas fa-heart"></i> תמיכה וקישורים חיצוניים (Bit & LinkedIn)
+                </div>
+                <div class="adv-category-body">
+
+                    <div class="adv-mini-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        ${mini(sup.totalBitClicks, 'לחיצות על Bit', 'color-teal', 'bit')}
+                        ${mini(sup.uniqueBitUsers, 'סטודנטים ב-Bit', 'color-teal', 'bit')}
+                        ${mini(sup.totalLinkedinClicks, 'לחיצות LinkedIn', 'color-blue', 'linkedin')}
+                        ${mini(sup.uniqueLinkedinUsers, 'סטודנטים ב-LinkedIn', 'color-blue', 'linkedin')}
+                    </div>
+
+                    <div class="adv-alert info" style="font-size:0.8rem; margin: 4px 0;">
+                        <i class="fas fa-info-circle"></i>
+                        לחץ על אחד הכרטיסים למעלה לצפייה ברשימת הסטודנטים המלאה
+                    </div>
+
+                    <hr class="adv-divider">
+
+                    <div>
+                        <div class="adv-sub-title"><i class="fas fa-history"></i> לחיצות אחרונות (מי לחץ ומתי)</div>
+                        <div class="adv-list" style="max-height: 260px; overflow-y: auto;">
+                            ${supportClicksList}
+                        </div>
                     </div>
 
                 </div>
